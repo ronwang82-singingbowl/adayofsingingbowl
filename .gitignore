@@ -1,0 +1,10 @@
+# macOS
+.DS_Store
+
+# Backup
+index_backup.html
+
+# Scripts
+*.py
+*.js
+!index.html
