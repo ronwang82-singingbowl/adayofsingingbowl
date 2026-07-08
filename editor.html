@@ -348,9 +348,10 @@ function buildForm(){
   const top = document.createElement("div"); top.className="topbar";
   top.innerHTML = `
     <h1>缽日網站編輯器</h1>
-    <p>左邊改內容，右邊即時看預覽。改完按「下載網站檔案」，把檔案拖進 GitHub 覆蓋掉舊的 index.html 就會自動發布。</p>
+    <p>左邊改內容，右邊即時看預覽。改完可以直接按「一鍵發布到網站」更新線上版本，或按「下載網站檔案」手動備存。</p>
     <div class="btn-row">
-      <button class="tool primary" id="exportSite">下載網站檔案 (index.html)</button>
+      <button class="tool primary" id="publishSite" style="background:#2ea44f;border-color:#2ea44f;">一鍵發布到網站</button>
+      <button class="tool" id="exportSite">下載網站檔案 (index.html)</button>
       <button class="tool" id="saveDraft">下載草稿 (可下次繼續編輯)</button>
       <button class="tool" id="loadDraft">載入草稿</button>
       <input type="file" id="draftFile" accept="application/json">
@@ -361,10 +362,8 @@ function buildForm(){
   const howto = el(`<div class="howto">
     <b>發布步驟：</b>
     <ol>
-      <li>按上面「下載網站檔案」</li>
-      <li>打開你的 GitHub 專案，點 index.html，按右上角編輯／上傳圖示</li>
-      <li>用剛下載的新檔案取代舊的，按 Commit（存檔）</li>
-      <li>大約 1 分鐘後，正式網址就會更新</li>
+      <li>直接點擊「一鍵發布到網站」並輸入您的 GitHub Token 即刻更新。</li>
+      <li>或按「下載網站檔案」下載 index.html 檔案手動上傳備存。</li>
     </ol>
   </div>`);
   panel.appendChild(howto);
@@ -502,6 +501,7 @@ function buildForm(){
     b.appendChild(fieldInput("網頁標題", state.pageTitle, v=>state.pageTitle=v));
   }));
 
+  document.getElementById("publishSite").onclick = publishSite;
   document.getElementById("exportSite").onclick = exportSite;
   document.getElementById("saveDraft").onclick = saveDraft;
   document.getElementById("loadDraft").onclick = ()=> document.getElementById("draftFile").click();
@@ -660,23 +660,65 @@ function buildFullSiteHTML(){
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>${esc(state.pageTitle)}</title>
+<meta name="description" content="缽日｜台北頌缽身心整合體驗與一對一深度對話。用聲音的振動陪你卸下防備，透過真誠的對話看見盲點，找到願意踏出的下一步。">
+<meta name="keywords" content="頌缽,身心整合,深度對話,療癒,覺察,台北,心靈成長,聲音療癒">
+<meta name="author" content="缽日">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://ronwang82-singingbowl.github.io/adayofsingingbowl/">
+
+<!-- Open Graph -->
+<meta property="og:title" content="缽日｜用聲音陪你找回流動的力量">
+<meta property="og:description" content="一場聲音與對話交織的體驗，陪你穿越卡住的地方，重新看見自己的下一步。台北頌缽身心整合體驗。">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://ronwang82-singingbowl.github.io/adayofsingingbowl/">
+<meta property="og:locale" content="zh_TW">
+<meta property="og:site_name" content="缽日">
+
+<!-- Twitter Card -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="缽日｜用聲音陪你找回流動的力量">
+<meta name="twitter:description" content="一場聲音與對話交織的體驗，陪你穿越卡住的地方，重新看見自己的下一步。">
+
+<title>\${esc(state.pageTitle)}</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;500;600;700&family=Noto+Sans+TC:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
   body{ margin:0; }
   .stage{ min-height:100vh; }
-  ${document.getElementById("stage") ? "" : ""}
-  ${stageOnlyCSS()}
+  \${document.getElementById("stage") ? "" : ""}
+  \${stageOnlyCSS()}
 </style>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "HealthAndBeautyBusiness",
+  "name": "缽日",
+  "description": "頌缽身心整合體驗與一對一深度對話，用聲音陪你找回流動的力量",
+  "url": "https://ronwang82-singingbowl.github.io/adayofsingingbowl/",
+  "areaServed": {
+    "@type": "City",
+    "name": "台北市"
+  },
+  "priceRange": "$$",
+  "knowsLanguage": "zh-TW"
+}
+</script>
+<!-- Google Analytics 4 -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-P06V1V1JG3"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-P06V1V1JG3');
+</script>
 </head>
 <body>
 <div class="stage">
-${bodyMarkup}
+\${bodyMarkup}
 </div>
 </body>
-</html>`;
+</html>\`;
 }
 
 function stageOnlyCSS(){
@@ -700,6 +742,77 @@ function download(filename, content, mime){
   a.href = URL.createObjectURL(blob);
   a.download = filename;
   a.click();
+}
+
+async function publishSite(){
+  const token = prompt("請輸入您的 GitHub Personal Access Token (PAT)：\\n(每次發布需重新輸入以確保安全性，此 Token 不會儲存在網頁中)");
+  if(!token) return;
+
+  const btn = document.getElementById("publishSite");
+  const oldText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = "正在發布...";
+  btn.style.opacity = "0.7";
+
+  const owner = "ronwang82-singingbowl";
+  const repo = "adayofsingingbowl";
+  const path = "index.html";
+  const branch = "main";
+
+  try {
+    // 1. Get the current file SHA
+    const getUrl = \`https://api.github.com/repos/\${owner}/\${repo}/contents/\${path}?ref=\${branch}\`;
+    const getRes = await fetch(getUrl, {
+      headers: {
+        "Authorization": \`token \${token}\`,
+        "Accept": "application/vnd.github+json"
+      }
+    });
+
+    if (!getRes.ok) {
+      const errData = await getRes.json();
+      throw new Error(\`無法獲取原檔案資訊: \${errData.message || getRes.statusText}\`);
+    }
+
+    const fileData = await getRes.json();
+    const sha = fileData.sha;
+
+    // 2. Generate new HTML content
+    const newHTML = buildFullSiteHTML();
+
+    // 3. Base64 encode the content (handling UTF-8)
+    const base64Content = btoa(unescape(encodeURIComponent(newHTML)));
+
+    // 4. Update file via PUT
+    const putUrl = \`https://api.github.com/repos/\${owner}/\${repo}/contents/\${path}\`;
+    const putRes = await fetch(putUrl, {
+      method: "PUT",
+      headers: {
+        "Authorization": \`token \${token}\`,
+        "Accept": "application/vnd.github+json",
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        message: "Update index.html via web editor",
+        content: base64Content,
+        sha: sha,
+        branch: branch
+      })
+    });
+
+    if (!putRes.ok) {
+      const errData = await putRes.json();
+      throw new Error(\`上傳檔案失敗: \${errData.message || putRes.statusText}\`);
+    }
+
+    alert("✅ 發布成功！\\nGitHub Pages 大約需要 1 分鐘進行部署，請稍候重新整理網頁查看最新內容。");
+  } catch (error) {
+    alert(\`❌ 發布失敗！\\n錯誤原因：\${error.message}\\n請確認您的 Token 是否正確，且擁有 "repo" 權限。\`);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = oldText;
+    btn.style.opacity = "1";
+  }
 }
 
 function exportSite(){
