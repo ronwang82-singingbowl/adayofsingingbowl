@@ -679,15 +679,15 @@ function buildFullSiteHTML(){
 <meta name="twitter:title" content="缽日｜用聲音陪你找回流動的力量">
 <meta name="twitter:description" content="一場聲音與對話交織的體驗，陪你穿越卡住的地方，重新看見自己的下一步。">
 
-<title>\${esc(state.pageTitle)}</title>
+<title>${esc(state.pageTitle)}</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;500;600;700&family=Noto+Sans+TC:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
   body{ margin:0; }
   .stage{ min-height:100vh; }
-  \${document.getElementById("stage") ? "" : ""}
-  \${stageOnlyCSS()}
+  ${document.getElementById("stage") ? "" : ""}
+  ${stageOnlyCSS()}
 </style>
 <script type="application/ld+json">
 {
@@ -715,10 +715,10 @@ function buildFullSiteHTML(){
 </head>
 <body>
 <div class="stage">
-\${bodyMarkup}
+${bodyMarkup}
 </div>
 </body>
-</html>\`;
+</html>`;
 }
 
 function stageOnlyCSS(){
@@ -745,7 +745,7 @@ function download(filename, content, mime){
 }
 
 async function publishSite(){
-  const token = prompt("請輸入您的 GitHub Personal Access Token (PAT)：\\n(每次發布需重新輸入以確保安全性，此 Token 不會儲存在網頁中)");
+  const token = prompt("請輸入您的 GitHub Personal Access Token (PAT)：\n(每次發布需重新輸入以確保安全性，此 Token 不會儲存在網頁中)");
   if(!token) return;
 
   const btn = document.getElementById("publishSite");
@@ -761,17 +761,17 @@ async function publishSite(){
 
   try {
     // 1. Get the current file SHA
-    const getUrl = \`https://api.github.com/repos/\${owner}/\${repo}/contents/\${path}?ref=\${branch}\`;
+    const getUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${path}?ref=${branch}`;
     const getRes = await fetch(getUrl, {
       headers: {
-        "Authorization": \`token \${token}\`,
+        "Authorization": `token ${token}`,
         "Accept": "application/vnd.github+json"
       }
     });
 
     if (!getRes.ok) {
       const errData = await getRes.json();
-      throw new Error(\`無法獲取原檔案資訊: \${errData.message || getRes.statusText}\`);
+      throw new Error(`無法獲取原檔案資訊: ${errData.message || getRes.statusText}`);
     }
 
     const fileData = await getRes.json();
@@ -784,11 +784,11 @@ async function publishSite(){
     const base64Content = btoa(unescape(encodeURIComponent(newHTML)));
 
     // 4. Update file via PUT
-    const putUrl = \`https://api.github.com/repos/\${owner}/\${repo}/contents/\${path}\`;
+    const putUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
     const putRes = await fetch(putUrl, {
       method: "PUT",
       headers: {
-        "Authorization": \`token \${token}\`,
+        "Authorization": `token ${token}`,
         "Accept": "application/vnd.github+json",
         "Content-Type": "application/json"
       },
@@ -802,12 +802,12 @@ async function publishSite(){
 
     if (!putRes.ok) {
       const errData = await putRes.json();
-      throw new Error(\`上傳檔案失敗: \${errData.message || putRes.statusText}\`);
+      throw new Error(`上傳檔案失敗: ${errData.message || putRes.statusText}`);
     }
 
-    alert("✅ 發布成功！\\nGitHub Pages 大約需要 1 分鐘進行部署，請稍候重新整理網頁查看最新內容。");
+    alert("✅ 發布成功！\nGitHub Pages 大約需要 1 分鐘進行部署，請稍候重新整理網頁查看最新內容。");
   } catch (error) {
-    alert(\`❌ 發布失敗！\\n錯誤原因：\${error.message}\\n請確認您的 Token 是否正確，且擁有 "repo" 權限。\`);
+    alert(`❌ 發布失敗！\n錯誤原因：${error.message}\n請確認您的 Token 是否正確，且擁有 "repo" 權限。`);
   } finally {
     btn.disabled = false;
     btn.textContent = oldText;
