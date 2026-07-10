@@ -1321,6 +1321,11 @@ async function fetchCloudData() {
           } else {
             renderDashboard();
           }
+        } else {
+          // 找不到此用戶（如資料庫重建），強制登出並清除無效的本地 Session
+          currentUser = null;
+          localStorage.removeItem("singbowl_current_user_id");
+          onUserLogoutSuccess();
         }
       }
     }
