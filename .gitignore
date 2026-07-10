@@ -8,3 +8,4 @@ index_backup.html
 *.py
 *.js
 !index.html
+!member/*.js
