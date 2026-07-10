@@ -44,8 +44,21 @@ function dbGet(key, defaultData) {
   return data ? JSON.parse(data) : defaultData;
 }
 
-// Cloud Database Config (npoint.io)
-const BLOB_URL = "https://api.npoint.io/65b18d90ae677a592035";
+// Firebase Realtime Database Config
+const firebaseConfig = {
+  apiKey: "AIzaSyBHHHTPJuNcuDtaXDwbxHiudt92bdo2ecA",
+  authDomain: "adayofsingingbowl.firebaseapp.com",
+  databaseURL: "https://adayofsingingbowl-default-rtdb.firebaseio.com",
+  projectId: "adayofsingingbowl",
+  storageBucket: "adayofsingingbowl.firebasestorage.app",
+  messagingSenderId: "233780083777",
+  appId: "1:233780083777:web:5040b756a6877282c85ac0",
+  measurementId: "G-GQ9VXG0GH0"
+};
+
+// Initialize Firebase
+firebase.initializeApp(firebaseConfig);
+const database = firebase.database();
 let pushTimeout = null;
 
 function dbSet(key, data, syncToCloud = true) {
@@ -1386,46 +1399,42 @@ function runMockLineLogin() {
   }
 }
 
-// 從雲端資料庫 (npoint.io) 讀取最新狀態並同步 (強制作廢快取)
+// 從雲端資料庫 (Firebase) 讀取最新狀態並同步
 async function fetchCloudData() {
   try {
-    const response = await fetch(`${BLOB_URL}?t=${Date.now()}`, {
-      cache: "no-store"
-    });
-    if (response.status === 404) {
+    const snapshot = await database.ref("db_state").once("value");
+    const cloudData = snapshot.val();
+    
+    if (!cloudData) {
       console.log("雲端資料庫尚未初始化，正在寫入預設資料...");
       pushCloudData();
       return;
     }
-    if (!response.ok) throw new Error("讀取雲端資料庫失敗");
-    const cloudData = await response.json();
     
-    if (cloudData) {
-      if (cloudData.users) { users = cloudData.users; dbSet("users", users, false); }
-      if (cloudData.bookings) { bookings = cloudData.bookings; dbSet("bookings", bookings, false); }
-      if (cloudData.vouchers) { vouchers = cloudData.vouchers; dbSet("vouchers", vouchers, false); }
-      if (cloudData.groupSessions) { groupSessions = cloudData.groupSessions; dbSet("groupSessions", groupSessions, false); }
-      if (cloudData.transactions) { transactions = cloudData.transactions; dbSet("transactions", transactions, false); }
-      
-      console.log("雲端資料同步完成！");
-      
-      // 更新當前使用者狀態並重新渲染 UI
-      const savedUserId = localStorage.getItem("singbowl_current_user_id");
-      if (savedUserId) {
-        const updatedUser = users.find(u => u.id === parseInt(savedUserId));
-        if (updatedUser) {
-          currentUser = updatedUser;
-          if (currentUser.role === "admin") {
-            renderAdminDashboard(activeAdminPane);
-          } else {
-            renderDashboard();
-          }
+    if (cloudData.users) { users = cloudData.users; dbSet("users", users, false); }
+    if (cloudData.bookings) { bookings = cloudData.bookings; dbSet("bookings", bookings, false); }
+    if (cloudData.vouchers) { vouchers = cloudData.vouchers; dbSet("vouchers", vouchers, false); }
+    if (cloudData.groupSessions) { groupSessions = cloudData.groupSessions; dbSet("groupSessions", groupSessions, false); }
+    if (cloudData.transactions) { transactions = cloudData.transactions; dbSet("transactions", transactions, false); }
+    
+    console.log("雲端資料庫同步完成！");
+    
+    // 更新當前使用者狀態並重新渲染 UI
+    const savedUserId = localStorage.getItem("singbowl_current_user_id");
+    if (savedUserId) {
+      const updatedUser = users.find(u => u.id === parseInt(savedUserId));
+      if (updatedUser) {
+        currentUser = updatedUser;
+        if (currentUser.role === "admin") {
+          renderAdminDashboard(activeAdminPane);
         } else {
-          // 找不到此用戶（如資料庫重建），強制登出並清除無效的本地 Session
-          currentUser = null;
-          localStorage.removeItem("singbowl_current_user_id");
-          onUserLogoutSuccess();
+          renderDashboard();
         }
+      } else {
+        // 找不到此用戶（如資料庫重建），強制登出並清除無效的本地 Session
+        currentUser = null;
+        localStorage.removeItem("singbowl_current_user_id");
+        onUserLogoutSuccess();
       }
     }
   } catch (err) {
@@ -1445,14 +1454,7 @@ function pushCloudData() {
       transactions
     };
     try {
-      const response = await fetch(BLOB_URL, {
-        method: "POST", // npoint.io 使用 POST 更新資料
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify(payload)
-      });
-      if (!response.ok) throw new Error("寫入雲端資料庫失敗");
+      await database.ref("db_state").set(payload);
       console.log("雲端資料同步寫入成功！");
     } catch (err) {
       console.error("雲端寫入錯誤:", err);
