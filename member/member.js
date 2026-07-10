@@ -566,6 +566,7 @@ function renderAdminMemberList() {
         <td>
           <div class="action-btn-group">
             <button class="table-action-btn success" onclick="openAdjustPoints(${u.id})">調整點數</button>
+            <button class="table-action-btn danger" onclick="deleteMember(${u.id})">刪除會員</button>
           </div>
         </td>
       `;
@@ -573,6 +574,36 @@ function renderAdminMemberList() {
     });
   }
 }
+
+window.deleteMember = function(memberId) {
+  const member = users.find(u => u.id === memberId);
+  if (!member) return;
+  
+  if (confirm(`確定要刪除會員「${member.name}」嗎？此動作將會清除該會員的所有資料且無法復原。`)) {
+    // 1. 從 users 陣列中移除
+    users = users.filter(u => u.id !== memberId);
+    
+    // 2. 從 bookings 陣列中移除該會員的相關預約
+    bookings = bookings.filter(b => b.userId !== memberId);
+    
+    // 3. 從 vouchers 陣列中移除該會員的相關優惠券
+    vouchers = vouchers.filter(v => v.userId !== memberId);
+    
+    // 4. 從 transactions 陣列中移除該會員的相關交易紀錄
+    transactions = transactions.filter(t => t.userId !== memberId);
+    
+    // 5. 更新本地存儲與同步到雲端
+    dbSet("users", users);
+    dbSet("bookings", bookings);
+    dbSet("vouchers", vouchers);
+    dbSet("transactions", transactions);
+    
+    // 6. 重新渲染畫面
+    renderAdminMemberList();
+    
+    alert(`已成功刪除會員「${member.name}」及其相關資料！`);
+  }
+};
 
 // Adjust Points Modal
 window.openAdjustPoints = function(memberId) {
