@@ -44,8 +44,8 @@ function dbGet(key, defaultData) {
   return data ? JSON.parse(data) : defaultData;
 }
 
-// Cloud Database Config (JSONBlob)
-const BLOB_URL = "https://jsonblob.com/api/jsonBlob/019f4b2b-2006-71a5-aacf-8912c5b717c4";
+// Cloud Database Config (kvdb.io)
+const BLOB_URL = "https://kvdb.io/NdSgaATgf9EmqYBaKLQumM/db_state";
 let pushTimeout = null;
 
 function dbSet(key, data, syncToCloud = true) {
@@ -1294,10 +1294,15 @@ function runMockLineLogin() {
   }
 }
 
-// 從雲端資料庫 (JSONBlob) 讀取最新狀態並同步
+// 從雲端資料庫 (kvdb.io) 讀取最新狀態並同步
 async function fetchCloudData() {
   try {
     const response = await fetch(BLOB_URL);
+    if (response.status === 404) {
+      console.log("雲端資料庫尚未初始化，正在寫入預設資料...");
+      pushCloudData();
+      return;
+    }
     if (!response.ok) throw new Error("讀取雲端資料庫失敗");
     const cloudData = await response.json();
     
