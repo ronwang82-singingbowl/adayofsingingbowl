@@ -89,7 +89,7 @@ dbSet("transactions", transactions, false);
 
 const VIEWS = [
   "landing", "auth", "register", "member", "edit-profile", "book-1on1", "book-group", 
-  "admin", "admin-points", "admin-add-member"
+  "admin", "admin-points", "admin-add-member", "admin-edit-member"
 ];
 
 function navigateTo(viewId) {
