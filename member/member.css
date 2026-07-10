@@ -673,11 +673,16 @@ button {
 
 .detail-lbl {
   color: var(--mist);
+  flex-shrink: 0;
+  white-space: nowrap;
+  margin-right: 16px;
 }
 
 .detail-val {
   color: var(--paper);
   font-weight: 400;
+  word-break: break-all;
+  text-align: right;
 }
 
 /* Points & Vouchers Card */
