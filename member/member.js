@@ -566,6 +566,7 @@ function renderAdminMemberList() {
         <td>
           <div class="action-btn-group">
             <button class="table-action-btn success" onclick="openAdjustPoints(${u.id})">調整點數</button>
+            <button class="table-action-btn secondary" onclick="openEditMember(${u.id})">編輯資料</button>
             <button class="table-action-btn danger" onclick="deleteMember(${u.id})">刪除會員</button>
           </div>
         </td>
@@ -617,6 +618,23 @@ window.openAdjustPoints = function(memberId) {
   document.getElementById("adjustReason").value = "";
   
   navigateTo("admin-points");
+};
+
+window.openEditMember = function(memberId) {
+  const member = users.find(u => u.id === memberId);
+  if (!member) return;
+  
+  document.getElementById("editMemberId").value = member.id;
+  document.getElementById("editMemName").value = member.name;
+  document.getElementById("editMemEmail").value = member.email;
+  document.getElementById("editMemPhone").value = member.phone;
+  
+  const genderRadios = document.getElementsByName("editMemGender");
+  genderRadios.forEach(radio => {
+    radio.checked = (radio.value === member.gender);
+  });
+  
+  navigateTo("admin-edit-member");
 };
 
 // 4.3 Booking List rendering with filter state
@@ -998,6 +1016,7 @@ document.addEventListener("DOMContentLoaded", () => {
       // User doesn't exist, navigate to Registration to complete profile
       document.getElementById("regName").value = "";
       document.getElementById("regPhone").value = "";
+      document.getElementById("regEmail").value = email;
       document.getElementById("formRegisterProfile").dataset.tempEmail = email;
       navigateTo("register");
     }
@@ -1008,11 +1027,18 @@ document.addEventListener("DOMContentLoaded", () => {
     e.preventDefault();
     
     const regForm = document.getElementById("formRegisterProfile");
-    const email = regForm.dataset.tempEmail || "temp@user.com";
+    const email = document.getElementById("regEmail").value.trim().toLowerCase();
     const lineUserId = regForm.dataset.lineUserId || null;
     const name = document.getElementById("regName").value.trim();
     const phone = document.getElementById("regPhone").value.trim();
     const gender = document.querySelector('input[name="regGender"]:checked').value;
+    
+    // 驗證電子郵件是否已被註冊
+    const existing = users.find(u => u.email === email);
+    if (existing) {
+      alert("此電子郵件已被註冊，請使用其他電子郵件！");
+      return;
+    }
     
     // 1. Create User
     const nextUserId = users.length > 0 ? users[users.length - 1].id + 1 : 1;
@@ -1135,6 +1161,39 @@ document.addEventListener("DOMContentLoaded", () => {
     dbSet("transactions", transactions);
     
     alert(`成功更新會員「${member.name}」的點數！目前餘額：${member.points} 點。`);
+    renderAdminDashboard("members");
+  });
+
+  // Admin Form Edit Member submit & cancel
+  document.getElementById("btnCancelEditMember").addEventListener("click", () => navigateTo("admin"));
+  document.getElementById("formAdminEditMember").addEventListener("submit", (e) => {
+    e.preventDefault();
+    
+    const memberId = parseInt(document.getElementById("editMemberId").value);
+    const memberIndex = users.findIndex(u => u.id === memberId);
+    if (memberIndex === -1) return;
+    
+    const newName = document.getElementById("editMemName").value.trim();
+    const newEmail = document.getElementById("editMemEmail").value.trim().toLowerCase();
+    const newPhone = document.getElementById("editMemPhone").value.trim();
+    const newGender = document.querySelector('input[name="editMemGender"]:checked').value;
+    
+    // 檢查 Email 是否與其他會員衝突
+    const emailConflict = users.find(u => u.email === newEmail && u.id !== memberId);
+    if (emailConflict) {
+      alert("此電子郵件已被其他會員註冊，請換一個電子郵件！");
+      return;
+    }
+    
+    // 更新會員資料
+    users[memberIndex].name = newName;
+    users[memberIndex].email = newEmail;
+    users[memberIndex].phone = newPhone;
+    users[memberIndex].gender = newGender;
+    
+    dbSet("users", users);
+    
+    alert("會員資料已更新成功！");
     renderAdminDashboard("members");
   });
 
@@ -1288,6 +1347,7 @@ function handleLiffLogin() {
       // 帳號不存在，導向填寫個人資料頁面完成註冊
       document.getElementById("regName").value = lineName;
       document.getElementById("regPhone").value = "";
+      document.getElementById("regEmail").value = lineEmail;
       
       const regForm = document.getElementById("formRegisterProfile");
       regForm.dataset.tempEmail = lineEmail;
@@ -1316,6 +1376,7 @@ function runMockLineLogin() {
   } else {
     document.getElementById("regName").value = "LINE 用戶";
     document.getElementById("regPhone").value = "";
+    document.getElementById("regEmail").value = mockEmail;
     
     const regForm = document.getElementById("formRegisterProfile");
     regForm.dataset.tempEmail = mockEmail;

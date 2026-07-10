@@ -11,7 +11,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;500;600;700&family=Noto+Sans+TC:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   
   <!-- CSS -->
-  <link rel="stylesheet" href="member.css?v=4">
+  <link rel="stylesheet" href="member.css?v=5">
   
   <!-- Lucide Icons (CDN) -->
   <script src="https://unpkg.com/lucide@latest"></script>
@@ -132,6 +132,10 @@
             <div class="form-group">
               <label class="form-label">手機號碼 *</label>
               <input type="tel" class="form-input" id="regPhone" required placeholder="例：0912-345-678" pattern="09\d{2}-\d{3}-\d{3}|09\d{8}">
+            </div>
+            <div class="form-group">
+              <label class="form-label">電子郵件 *</label>
+              <input type="email" class="form-input" id="regEmail" required placeholder="例：user@example.com">
             </div>
             <div class="form-group">
               <label class="form-label">生理性別 *</label>
@@ -613,6 +617,52 @@
           </form>
         </div>
       </section>
+      
+      <!-- 7.2.3 Edit Member Dialog (Modal View) -->
+      <section id="view-admin-edit-member" class="view-section">
+        <div class="auth-card">
+          <h2>編輯會員資料</h2>
+          <p class="auth-subtitle">修改會員的基本聯絡與帳戶資訊</p>
+          
+          <form id="formAdminEditMember">
+            <input type="hidden" id="editMemberId">
+            <div class="form-group">
+              <label class="form-label" for="editMemName">會員大名 *</label>
+              <input type="text" class="form-input" id="editMemName" required placeholder="輸入姓名">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="editMemEmail">電子郵件 *</label>
+              <input type="email" class="form-input" id="editMemEmail" required placeholder="example@email.com">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="editMemPhone">手機號碼 *</label>
+              <input type="tel" class="form-input" id="editMemPhone" required placeholder="例：0912-345-678">
+            </div>
+            <div class="form-group">
+              <label class="form-label">生理性別 *</label>
+              <div class="gender-radio-group">
+                <label class="gender-label">
+                  <input type="radio" name="editMemGender" value="生理女">
+                  <span>生理女</span>
+                </label>
+                <label class="gender-label">
+                  <input type="radio" name="editMemGender" value="生理男">
+                  <span>生理男</span>
+                </label>
+                <label class="gender-label">
+                  <input type="radio" name="editMemGender" value="其他">
+                  <span>其他</span>
+                </label>
+              </div>
+            </div>
+            
+            <div class="btn-row">
+              <button type="button" class="cta-btn secondary-btn" id="btnCancelEditMember">取消</button>
+              <button type="submit" class="cta-btn primary-btn">確認儲存</button>
+            </div>
+          </form>
+        </div>
+      </section>
 
       <!-- 7.2.2 Add Member Dialog (Modal View) -->
       <section id="view-admin-add-member" class="view-section">
@@ -675,6 +725,6 @@
   </div>
 
   <!-- JavaScript -->
-  <script src="member.js?v=4"></script>
+  <script src="member.js?v=5"></script>
 </body>
 </html>
