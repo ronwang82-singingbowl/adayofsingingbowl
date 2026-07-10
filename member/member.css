@@ -147,7 +147,7 @@ button {
   font-weight: 700;
   font-size: 20px;
   letter-spacing: 0.05em;
-  color: var(--paper);
+  color: #FFFFFF;
 }
 
 .logo-sub {
@@ -155,7 +155,7 @@ button {
   font-size: 9px;
   letter-spacing: 0.22em;
   text-transform: uppercase;
-  color: var(--brass);
+  color: rgba(255, 255, 255, 0.7);
   margin-top: -2px;
 }
 
@@ -167,14 +167,14 @@ button {
 
 .nav-item {
   font-size: 14.5px;
-  color: var(--mist);
+  color: rgba(255, 255, 255, 0.7);
   transition: var(--transition-smooth);
   padding: 6px 4px;
   position: relative;
 }
 
 .nav-item:hover, .nav-item.active {
-  color: var(--paper);
+  color: #FFFFFF;
 }
 
 .nav-item.active::after {
@@ -184,7 +184,7 @@ button {
   left: 4px;
   right: 4px;
   height: 1px;
-  background: var(--brass);
+  background: #FFFFFF;
 }
 
 .user-menu {
@@ -226,15 +226,15 @@ button {
 }
 
 .nav-btn.secondary-small {
-  border: 1px solid var(--hairline);
-  color: var(--mist);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  color: rgba(255, 255, 255, 0.8);
   padding: 4px 12px;
   font-size: 12px;
 }
 
 .nav-btn.secondary-small:hover {
-  color: var(--paper);
-  border-color: var(--paper);
+  color: #FFFFFF;
+  border-color: #FFFFFF;
 }
 
 /* ============ View Sections ============ */
