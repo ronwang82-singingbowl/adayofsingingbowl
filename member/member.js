@@ -44,8 +44,15 @@ function dbGet(key, defaultData) {
   return data ? JSON.parse(data) : defaultData;
 }
 
-function dbSet(key, data) {
+// Cloud Database Config (JSONBlob)
+const BLOB_URL = "https://jsonblob.com/api/jsonBlob/019f4b2b-2006-71a5-aacf-8912c5b717c4";
+let pushTimeout = null;
+
+function dbSet(key, data, syncToCloud = true) {
   localStorage.setItem(`singbowl_${key}`, JSON.stringify(data));
+  if (syncToCloud) {
+    pushCloudData();
+  }
 }
 
 // Global state variables
@@ -56,12 +63,12 @@ let groupSessions = dbGet("groupSessions", DEFAULT_GROUP_SESSIONS);
 let transactions = dbGet("transactions", DEFAULT_TRANSACTIONS);
 let currentUser = null;
 
-// Save initial database state
-dbSet("users", users);
-dbSet("bookings", bookings);
-dbSet("vouchers", vouchers);
-dbSet("groupSessions", groupSessions);
-dbSet("transactions", transactions);
+// Save initial database state (local-only, do not write to cloud on load)
+dbSet("users", users, false);
+dbSet("bookings", bookings, false);
+dbSet("vouchers", vouchers, false);
+dbSet("groupSessions", groupSessions, false);
+dbSet("transactions", transactions, false);
 
 // ==========================================
 // 2. 視圖切換與路由 (Router)
@@ -107,15 +114,21 @@ function updateNavState(viewId) {
 
 // Restore user session on load
 function initSession() {
+  // 1. 先用本地快取快速加載畫面，提升 UX 體驗
   const savedUserId = localStorage.getItem("singbowl_current_user_id");
   if (savedUserId) {
     currentUser = users.find(u => u.id === parseInt(savedUserId));
     if (currentUser) {
       onUserLoginSuccess();
-      return;
+    } else {
+      onUserLogoutSuccess();
     }
+  } else {
+    onUserLogoutSuccess();
   }
-  onUserLogoutSuccess();
+  
+  // 2. 異步向雲端資料庫請求最新資料並進行同步
+  fetchCloudData();
 }
 
 function onUserLoginSuccess() {
@@ -1279,6 +1292,68 @@ function runMockLineLogin() {
     
     navigateTo("register");
   }
+}
+
+// 從雲端資料庫 (JSONBlob) 讀取最新狀態並同步
+async function fetchCloudData() {
+  try {
+    const response = await fetch(BLOB_URL);
+    if (!response.ok) throw new Error("讀取雲端資料庫失敗");
+    const cloudData = await response.json();
+    
+    if (cloudData) {
+      if (cloudData.users) { users = cloudData.users; dbSet("users", users, false); }
+      if (cloudData.bookings) { bookings = cloudData.bookings; dbSet("bookings", bookings, false); }
+      if (cloudData.vouchers) { vouchers = cloudData.vouchers; dbSet("vouchers", vouchers, false); }
+      if (cloudData.groupSessions) { groupSessions = cloudData.groupSessions; dbSet("groupSessions", groupSessions, false); }
+      if (cloudData.transactions) { transactions = cloudData.transactions; dbSet("transactions", transactions, false); }
+      
+      console.log("雲端資料同步完成！");
+      
+      // 更新當前使用者狀態並重新渲染 UI
+      const savedUserId = localStorage.getItem("singbowl_current_user_id");
+      if (savedUserId) {
+        const updatedUser = users.find(u => u.id === parseInt(savedUserId));
+        if (updatedUser) {
+          currentUser = updatedUser;
+          if (currentUser.role === "admin") {
+            renderAdminDashboard(activeAdminPane);
+          } else {
+            renderDashboard();
+          }
+        }
+      }
+    }
+  } catch (err) {
+    console.error("雲端讀取錯誤:", err);
+  }
+}
+
+// 異步將最新狀態寫入雲端資料庫 (帶有 300ms 防抖優化)
+function pushCloudData() {
+  if (pushTimeout) clearTimeout(pushTimeout);
+  pushTimeout = setTimeout(async () => {
+    const payload = {
+      users,
+      bookings,
+      vouchers,
+      groupSessions,
+      transactions
+    };
+    try {
+      const response = await fetch(BLOB_URL, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(payload)
+      });
+      if (!response.ok) throw new Error("寫入雲端資料庫失敗");
+      console.log("雲端資料同步寫入成功！");
+    } catch (err) {
+      console.error("雲端寫入錯誤:", err);
+    }
+  }, 300);
 }
 
 function getNowDateTimeString() {
