@@ -919,23 +919,22 @@ document.addEventListener("DOMContentLoaded", () => {
     navigateTo("member");
   });
 
-  // Mock Authentication: Line Quick Login
+  // Authentication: LINE Login (LIFF)
   document.getElementById("btnLineLogin").addEventListener("click", () => {
-    // 1. 開啟 LINE 官方帳號連結，引導使用者加好友
-    window.open("https://line.me/R/ti/p/%40197nfdme", "_blank");
-
-    // 2. 於原網頁進行登入/註冊模擬
-    const mockEmail = `line_user_${Math.floor(Math.random() * 90000 + 10000)}@line.com`;
-    const existing = users.find(u => u.email === mockEmail);
-    if (existing) {
-      currentUser = existing;
-      localStorage.setItem("singbowl_current_user_id", currentUser.id);
-      onUserLoginSuccess();
+    if (typeof liff !== "undefined" && liff.isInClient !== undefined) {
+      try {
+        if (!liff.isLoggedIn()) {
+          liff.login();
+        } else {
+          handleLiffLogin();
+        }
+      } catch (err) {
+        console.error("LIFF 登入失敗，降級使用模擬登入:", err);
+        runMockLineLogin();
+      }
     } else {
-      document.getElementById("regName").value = "LINE 用戶";
-      document.getElementById("regPhone").value = "";
-      document.getElementById("formRegisterProfile").dataset.tempEmail = mockEmail;
-      navigateTo("register");
+      // 離線或本地測試 Fallback
+      runMockLineLogin();
     }
   });
 
@@ -964,7 +963,9 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("formRegisterProfile").addEventListener("submit", (e) => {
     e.preventDefault();
     
-    const email = document.getElementById("formRegisterProfile").dataset.tempEmail || "temp@user.com";
+    const regForm = document.getElementById("formRegisterProfile");
+    const email = regForm.dataset.tempEmail || "temp@user.com";
+    const lineUserId = regForm.dataset.lineUserId || null;
     const name = document.getElementById("regName").value.trim();
     const phone = document.getElementById("regPhone").value.trim();
     const gender = document.querySelector('input[name="regGender"]:checked').value;
@@ -981,7 +982,8 @@ document.addEventListener("DOMContentLoaded", () => {
       gender: gender,
       role: "member",
       points: 50, // Default gift 50 points to new users
-      joinDate: dateStr
+      joinDate: dateStr,
+      lineUserId: lineUserId
     };
     
     users.push(newUser);
@@ -1187,13 +1189,97 @@ document.addEventListener("DOMContentLoaded", () => {
     renderAdminDashboard("coupons");
   });
 
-  // Initialize Session
-  initSession();
+  // Initialize Session (LINE LIFF 優先)
+  if (typeof liff !== "undefined") {
+    liff.init({ liffId: "2010665706-wxtkVO4B" })
+      .then(() => {
+        console.log("LINE LIFF 初始化成功");
+        if (liff.isLoggedIn()) {
+          handleLiffLogin();
+        } else {
+          initSession();
+        }
+      })
+      .catch(err => {
+        console.error("LINE LIFF 初始化失敗:", err);
+        initSession();
+      });
+  } else {
+    initSession();
+  }
 });
 
 // ==========================================
-// 6. 輔助函數 (Helper Functions)
+// 6. LINE LIFF 登入處理與輔助函數
 // ==========================================
+
+// LINE 官方授權登入處理
+function handleLiffLogin() {
+  if (typeof liff === "undefined") return;
+
+  Promise.all([
+    liff.getProfile(),
+    liff.getDecodedIDToken()
+  ]).then(([profile, idToken]) => {
+    const lineUserId = profile.userId;
+    const lineName = profile.displayName;
+    
+    // 優先取得 LINE 綁定的 Email，若無授權則使用專屬的虛擬 LINE 信箱
+    const lineEmail = (idToken && idToken.email) ? idToken.email : `line_${lineUserId}@line.com`;
+
+    // 在模擬資料庫中尋找是否已有此 LINE 帳號
+    let existing = users.find(u => u.lineUserId === lineUserId || u.email === lineEmail);
+
+    if (existing) {
+      // 帳號已存在，直接自動登入
+      if (!existing.lineUserId) {
+        existing.lineUserId = lineUserId;
+        dbSet("users", users);
+      }
+      currentUser = existing;
+      localStorage.setItem("singbowl_current_user_id", currentUser.id);
+      onUserLoginSuccess();
+      alert(`歡迎回來，${currentUser.name}！ (LINE 登入)`);
+    } else {
+      // 帳號不存在，導向填寫個人資料頁面完成註冊
+      document.getElementById("regName").value = lineName;
+      document.getElementById("regPhone").value = "";
+      
+      const regForm = document.getElementById("formRegisterProfile");
+      regForm.dataset.tempEmail = lineEmail;
+      regForm.dataset.lineUserId = lineUserId;
+      regForm.dataset.lineName = lineName;
+      
+      navigateTo("register");
+      alert("請填寫您的基本聯絡資料，即可完成 LINE 帳號綁定並領取 50 點會員禮！");
+    }
+  }).catch(err => {
+    console.error("取得 LINE 個人資料失敗", err);
+    initSession();
+  });
+}
+
+// 本地模擬登入的 Fallback 邏輯
+function runMockLineLogin() {
+  window.open("https://line.me/R/ti/p/%40197nfdme", "_blank");
+
+  const mockEmail = `line_user_${Math.floor(Math.random() * 90000 + 10000)}@line.com`;
+  const existing = users.find(u => u.email === mockEmail);
+  if (existing) {
+    currentUser = existing;
+    localStorage.setItem("singbowl_current_user_id", currentUser.id);
+    onUserLoginSuccess();
+  } else {
+    document.getElementById("regName").value = "LINE 用戶";
+    document.getElementById("regPhone").value = "";
+    
+    const regForm = document.getElementById("formRegisterProfile");
+    regForm.dataset.tempEmail = mockEmail;
+    regForm.dataset.lineUserId = "";
+    
+    navigateTo("register");
+  }
+}
 
 function getNowDateTimeString() {
   const now = new Date();
