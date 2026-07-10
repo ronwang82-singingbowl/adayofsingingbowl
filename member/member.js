@@ -44,8 +44,8 @@ function dbGet(key, defaultData) {
   return data ? JSON.parse(data) : defaultData;
 }
 
-// Cloud Database Config (kvdb.io)
-const BLOB_URL = "https://kvdb.io/NdSgaATgf9EmqYBaKLQumM/db_state";
+// Cloud Database Config (npoint.io)
+const BLOB_URL = "https://api.npoint.io/65b18d90ae677a592035";
 let pushTimeout = null;
 
 function dbSet(key, data, syncToCloud = true) {
@@ -1294,7 +1294,7 @@ function runMockLineLogin() {
   }
 }
 
-// 從雲端資料庫 (kvdb.io) 讀取最新狀態並同步
+// 從雲端資料庫 (npoint.io) 讀取最新狀態並同步
 async function fetchCloudData() {
   try {
     const response = await fetch(BLOB_URL);
@@ -1352,7 +1352,7 @@ function pushCloudData() {
     };
     try {
       const response = await fetch(BLOB_URL, {
-        method: "PUT",
+        method: "POST", // npoint.io 使用 POST 更新資料
         headers: {
           "Content-Type": "application/json"
         },
