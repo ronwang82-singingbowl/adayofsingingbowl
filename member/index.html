@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>缽日 - 傾缽療癒 身心平衡</title>
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;500;600;700&family=Noto+Sans+TC:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  
+  <!-- CSS -->
+  <link rel="stylesheet" href="member.css">
+  
+  <!-- Lucide Icons (CDN) -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+  
+  <!-- Ripple Background Animation -->
+  <div class="ripple-field" aria-hidden="true">
+    <svg viewBox="0 0 500 500">
+      <circle class="ripple-ring r1" cx="250" cy="250" r="20"></circle>
+      <circle class="ripple-ring r2" cx="250" cy="250" r="20"></circle>
+      <circle class="ripple-ring r3" cx="250" cy="250" r="20"></circle>
+      <circle class="ripple-ring r4" cx="250" cy="250" r="20"></circle>
+    </svg>
+  </div>
+
+  <div class="app-container">
+    <!-- Navigation Bar -->
+    <header class="main-header">
+      <div class="header-wrap">
+        <a href="#" class="logo" id="navLogo">
+          <span class="logo-text">缽日</span>
+          <span class="logo-sub">Singing Bowl</span>
+        </a>
+        <nav class="nav-links">
+          <a href="#landing" class="nav-item active" id="btnNavHome">首頁</a>
+          <a href="#member" class="nav-item" id="btnNavMember" style="display: none;">會員中心</a>
+          <a href="#admin" class="nav-item" id="btnNavAdmin" style="display: none;">管理後台</a>
+          <button class="nav-btn primary" id="btnHeaderLogin">登入 / 註冊</button>
+          <div class="user-menu" id="headerUserMenu" style="display: none;">
+            <span class="user-name-display" id="headerUserName">會員</span>
+            <button class="nav-btn secondary-small" id="btnHeaderLogout">登出</button>
+          </div>
+        </nav>
+      </div>
+    </header>
+
+    <!-- Main Content Views -->
+    <main class="main-content">
+      
+      <!-- 1. Landing View -->
+      <section id="view-landing" class="view-section active">
+        <div class="hero">
+          <div class="eyebrow">頌缽 · 對話 · 覺察</div>
+          <h1>缽日 會員中心</h1>
+          <p class="hero-sub">透過頌缽的共鳴，讓身心回歸平衡。</p>
+          <p class="hero-desc">一場聲音與對話交織的體驗，陪你穿越卡住的地方，重新看見自己的下一步。加入會員即可線上購買點數並預約專屬療癒。</p>
+          <div class="hero-actions">
+            <button class="cta-btn primary-btn" id="btnLandingCta">立即登入 / 加入會員</button>
+          </div>
+        </div>
+
+        <div class="features-grid">
+          <div class="feat-card">
+            <div class="feat-icon"><i data-lucide="sparkles"></i></div>
+            <h3>1 對 1 療癒</h3>
+            <p>享受專屬於您的個人療癒體驗，療癒師根據您的需求提供客製化服務。</p>
+          </div>
+          <div class="feat-card">
+            <div class="feat-icon"><i data-lucide="users"></i></div>
+            <h3>團體頌缽</h3>
+            <p>與志同道合的朋友一起參加團體課程，共同感受頌缽的療癒力量。</p>
+          </div>
+          <div class="feat-card">
+            <div class="feat-icon"><i data-lucide="coins"></i></div>
+            <h3>點數系統</h3>
+            <p>靈活的點數系統，購買點數即可快速預約療癒，享受優惠與特殊禮遇。</p>
+          </div>
+          <div class="feat-card">
+            <div class="feat-icon"><i data-lucide="calendar"></i></div>
+            <h3>預約管理</h3>
+            <p>線上輕鬆管理您的預約紀錄，隨時查看療癒時程與點數餘額。</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 2. Auth / Login View -->
+      <section id="view-auth" class="view-section">
+        <div class="auth-card">
+          <h2>登入 / 註冊</h2>
+          <p class="auth-subtitle">歡迎來到缽日，請選擇登入方式</p>
+          
+          <button class="auth-btn line-btn" id="btnLineLogin">
+            <span class="line-icon"><i data-lucide="message-square"></i></span>
+            <span>LINE 帳號快速登入 / 註冊</span>
+          </button>
+          
+          <div class="auth-divider">
+            <span>或使用 Email 登入</span>
+          </div>
+          
+          <form id="formEmailAuth">
+            <div class="form-group">
+              <label class="form-label" for="authEmail">電子郵件 *</label>
+              <input type="email" class="form-input" id="authEmail" required placeholder="example@email.com">
+            </div>
+            <button type="submit" class="cta-btn primary-btn w-100" id="btnEmailSubmit">下一步</button>
+          </form>
+          
+          <button class="back-link" id="btnAuthBack"><i data-lucide="arrow-left"></i> 返回首頁</button>
+        </div>
+      </section>
+
+      <!-- 3. Register / Complete Profile View -->
+      <section id="view-register" class="view-section">
+        <div class="auth-card">
+          <h2>完善會員資料</h2>
+          <p class="auth-subtitle">請填寫以下基本資訊以完成註冊流程</p>
+          
+          <form id="formRegisterProfile">
+            <div class="form-group">
+              <label class="form-label">會員大名 *</label>
+              <input type="text" class="form-input" id="regName" required placeholder="請輸入您的真實姓名">
+            </div>
+            <div class="form-group">
+              <label class="form-label">手機號碼 *</label>
+              <input type="tel" class="form-input" id="regPhone" required placeholder="例：0912-345-678" pattern="09\d{2}-\d{3}-\d{3}|09\d{8}">
+            </div>
+            <div class="form-group">
+              <label class="form-label">生理性別 *</label>
+              <div class="gender-radio-group">
+                <label class="gender-label">
+                  <input type="radio" name="regGender" value="生理女" checked>
+                  <span>生理女</span>
+                </label>
+                <label class="gender-label">
+                  <input type="radio" name="regGender" value="生理男">
+                  <span>生理男</span>
+                </label>
+                <label class="gender-label">
+                  <input type="radio" name="regGender" value="其他">
+                  <span>其他</span>
+                </label>
+              </div>
+            </div>
+            <button type="submit" class="cta-btn primary-btn w-100">完成註冊</button>
+          </form>
+        </div>
+      </section>
+
+      <!-- 4. Member Dashboard View -->
+      <section id="view-member" class="view-section">
+        <div class="dashboard-grid">
+          <!-- Profile Card -->
+          <div class="dash-card profile-summary">
+            <div class="profile-header">
+              <div class="avatar-circle" id="memberAvatar">M</div>
+              <div class="profile-meta">
+                <h2 id="lblMemberName">讀取中...</h2>
+                <span class="user-role-badge">一般會員</span>
+              </div>
+            </div>
+            <div class="profile-details">
+              <div class="detail-item">
+                <span class="detail-lbl">電子郵件：</span>
+                <span class="detail-val" id="lblMemberEmail">-</span>
+              </div>
+              <div class="detail-item">
+                <span class="detail-lbl">聯絡電話：</span>
+                <span class="detail-val" id="lblMemberPhone">-</span>
+              </div>
+              <div class="detail-item">
+                <span class="detail-lbl">生理性別：</span>
+                <span class="detail-val" id="lblMemberGender">-</span>
+              </div>
+              <div class="detail-item">
+                <span class="detail-lbl">加入日期：</span>
+                <span class="detail-val" id="lblMemberJoinDate">-</span>
+              </div>
+            </div>
+            <button class="cta-btn secondary-btn w-100" id="btnEditProfile"><i data-lucide="edit-3"></i> 編輯個人資料</button>
+          </div>
+
+          <!-- Points & Vouchers Card -->
+          <div class="dash-card points-vouchers">
+            <div class="points-section">
+              <span class="section-tag">POINTS</span>
+              <h3>可用點數</h3>
+              <div class="points-value">
+                <span class="num" id="lblMemberPoints">0</span>
+                <span class="unit">點</span>
+              </div>
+              <p class="points-tip">可用於預約 1 對 1 身心療癒與團體頌缽課。</p>
+            </div>
+            
+            <div class="vouchers-section">
+              <span class="section-tag">VOUCHERS</span>
+              <h3>可用票券 / 優惠</h3>
+              <div class="vouchers-list" id="memberVouchersList">
+                <!-- Vouchers will be injected here -->
+              </div>
+            </div>
+          </div>
+
+          <!-- Quick Actions & Transactions Card -->
+          <div class="dash-card quick-actions">
+            <h3>快速預約</h3>
+            <div class="booking-buttons">
+              <button class="booking-action-btn" id="btnBook1on1">
+                <div class="action-icon"><i data-lucide="user"></i></div>
+                <div class="action-text">
+                  <span class="action-title">1 對 1 療癒預約</span>
+                  <span class="action-desc">客製化個人靜心與對話</span>
+                </div>
+                <i data-lucide="chevron-right" class="arrow"></i>
+              </button>
+              <button class="booking-action-btn" id="btnBookGroup">
+                <div class="action-icon"><i data-lucide="users"></i></div>
+                <div class="action-text">
+                  <span class="action-title">團體頌缽課程</span>
+                  <span class="action-desc">多人共鳴與音頻放鬆</span>
+                </div>
+                <i data-lucide="chevron-right" class="arrow"></i>
+              </button>
+            </div>
+
+            <div class="transactions-section">
+              <h3>點數交易明細</h3>
+              <div class="transaction-table-wrap">
+                <table class="transaction-table">
+                  <thead>
+                    <tr>
+                      <th>日期</th>
+                      <th>類型</th>
+                      <th>變動</th>
+                      <th>說明/結餘</th>
+                    </tr>
+                  </thead>
+                  <tbody id="memberTxList">
+                    <!-- Transactions will be injected here -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Reservation History Card -->
+          <div class="dash-card reservation-history">
+            <h3>預約紀錄</h3>
+            <div class="history-list" id="memberReservationsList">
+              <!-- Bookings will be injected here -->
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 4.1 Edit Profile Dialog (Modal View inside Dashboard) -->
+      <section id="view-edit-profile" class="view-section">
+        <div class="auth-card">
+          <h2>修改個人資料</h2>
+          <p class="auth-subtitle">編輯您的會員基本資訊</p>
+          
+          <form id="formEditProfile">
+            <div class="form-group">
+              <label class="form-label">會員大名 *</label>
+              <input type="text" class="form-input" id="editName" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">手機號碼 *</label>
+              <input type="tel" class="form-input" id="editPhone" required pattern="09\d{2}-\d{3}-\d{3}|09\d{8}">
+            </div>
+            <div class="form-group">
+              <label class="form-label">生理性別 *</label>
+              <div class="gender-radio-group">
+                <label class="gender-label">
+                  <input type="radio" name="editGender" value="生理女">
+                  <span>生理女</span>
+                </label>
+                <label class="gender-label">
+                  <input type="radio" name="editGender" value="生理男">
+                  <span>生理男</span>
+                </label>
+                <label class="gender-label">
+                  <input type="radio" name="editGender" value="其他">
+                  <span>其他</span>
+                </label>
+              </div>
+            </div>
+            <div class="btn-row">
+              <button type="button" class="cta-btn secondary-btn" id="btnCancelEditProfile">取消</button>
+              <button type="submit" class="cta-btn primary-btn">保存變更</button>
+            </div>
+          </form>
+        </div>
+      </section>
+
+      <!-- 5. 1-on-1 Booking Form View -->
+      <section id="view-book-1on1" class="view-section">
+        <div class="booking-card">
+          <h2>1 對 1 療癒預約</h2>
+          <p class="booking-subtitle">預約專屬於您的個人療癒與深度對話</p>
+          
+          <div class="user-points-badge">
+            <span>您的可用點數：</span>
+            <strong id="lblBook1on1UserPoints">0</strong> 點
+          </div>
+
+          <form id="formBook1on1">
+            <div class="form-grid">
+              <div class="form-group">
+                <label class="form-label" for="book1on1Date">預約日期 *</label>
+                <input type="date" class="form-input" id="book1on1Date" required>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="book1on1Time">預約時間 *</label>
+                <input type="time" class="form-input" id="book1on1Time" required>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="book1on1Duration">療程時長 *</label>
+              <select class="form-input select-input" id="book1on1Duration" required>
+                <option value="30" data-points="3">30 分鐘 (消耗 3 點)</option>
+                <option value="60" data-points="6" selected>60 分鐘 (消耗 6 點)</option>
+                <option value="90" data-points="9">90 分鐘 (消耗 9 點)</option>
+                <option value="120" data-points="12">120 分鐘 (消耗 12 點)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="book1on1Notes">特殊需求 / 身體狀況 (選填)</label>
+              <textarea class="form-input textarea-input" id="book1on1Notes" placeholder="例如：對某些聲音敏感、特殊身體狀況或偏好的療癒方式..."></textarea>
+            </div>
+
+            <div class="booking-summary">
+              <div class="summary-row">
+                <span>所需點數：</span>
+                <span class="summary-points"><strong id="lblBook1on1Cost">6</strong> 點</span>
+              </div>
+              <div class="booking-warning" id="lblBook1on1Warning" style="display: none;">
+                <i data-lucide="alert-triangle"></i> ⚠️ 點數不足，請先聯絡療癒師購買點數。
+              </div>
+            </div>
+
+            <div class="btn-row">
+              <button type="button" class="cta-btn secondary-btn" id="btnCancel1on1">返回</button>
+              <button type="submit" class="cta-btn primary-btn" id="btnSubmit1on1">確認預約</button>
+            </div>
+          </form>
+        </div>
+      </section>
+
+      <!-- 6. Group Booking Form View -->
+      <section id="view-book-group" class="view-section">
+        <div class="booking-card">
+          <h2>團體頌缽課程預約</h2>
+          <p class="booking-subtitle">選擇您想參加的團體療癒課程</p>
+          
+          <div class="user-points-badge">
+            <span>您的可用點數：</span>
+            <strong id="lblBookGroupUserPoints">0</strong> 點
+          </div>
+
+          <form id="formBookGroup">
+            <div class="form-group">
+              <label class="form-label">選擇課程 *</label>
+              <div class="group-sessions-list" id="groupSessionsContainer">
+                <!-- Group sessions (cards) will be injected dynamically here -->
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="bookGroupNotes">特殊說明 (選填)</label>
+              <textarea class="form-input textarea-input" id="bookGroupNotes" placeholder="如有任何需要提前告知的事項請填寫於此..."></textarea>
+            </div>
+
+            <div class="booking-summary">
+              <div class="summary-row">
+                <span>所需點數：</span>
+                <span class="summary-points"><strong id="lblBookGroupCost">0</strong> 點</span>
+              </div>
+              <div class="booking-warning" id="lblBookGroupWarning" style="display: none;">
+                <i data-lucide="alert-triangle"></i> ⚠️ 點數不足，請選擇其他課程或先購買點數。
+              </div>
+            </div>
+
+            <div class="btn-row">
+              <button type="button" class="cta-btn secondary-btn" id="btnCancelGroup">返回</button>
+              <button type="submit" class="cta-btn primary-btn" id="btnSubmitGroup">確認報名</button>
+            </div>
+          </form>
+        </div>
+      </section>
+
+      <!-- 7. Admin Dashboard View -->
+      <section id="view-admin" class="view-section">
+        <div class="admin-grid">
+          <!-- Left Sidebar Menu -->
+          <div class="admin-sidebar">
+            <h2 class="sidebar-title">管理員後台</h2>
+            <div class="sidebar-menu">
+              <button class="sidebar-item active" id="btnAdminMenuOverview"><i data-lucide="layout-dashboard"></i> 數據總覽</button>
+              <button class="sidebar-item" id="btnAdminMenuMembers"><i data-lucide="users-2"></i> 會員管理</button>
+              <button class="sidebar-item" id="btnAdminMenuBookings"><i data-lucide="calendar-days"></i> 預約審核</button>
+              <button class="sidebar-item" id="btnAdminMenuCoupons"><i data-lucide="ticket"></i> 票券發放</button>
+            </div>
+            <button class="cta-btn secondary-btn w-100 mt-auto" id="btnAdminBackToMember"><i data-lucide="arrow-left"></i> 返回會員中心</button>
+          </div>
+
+          <!-- Right Content Area -->
+          <div class="admin-main-pane">
+            
+            <!-- 7.1 Overview Panel -->
+            <div class="admin-pane-section active" id="pane-admin-overview">
+              <div class="admin-stats-row">
+                <div class="stat-box">
+                  <span class="stat-lbl">總會員數</span>
+                  <span class="stat-num" id="lblAdminStatMembers">0</span>
+                </div>
+                <div class="stat-box">
+                  <span class="stat-lbl">待確認預約</span>
+                  <span class="stat-num text-brass" id="lblAdminStatPending">0</span>
+                </div>
+                <div class="stat-box">
+                  <span class="stat-lbl">本月總預約</span>
+                  <span class="stat-num" id="lblAdminStatTotalBookings">0</span>
+                </div>
+                <div class="stat-box">
+                  <span class="stat-lbl">已發放票券</span>
+                  <span class="stat-num" id="lblAdminStatCoupons">0</span>
+                </div>
+              </div>
+
+              <div class="overview-sections">
+                <div class="overview-box">
+                  <h3>最新待審核預約</h3>
+                  <div class="table-wrap">
+                    <table class="admin-table">
+                      <thead>
+                        <tr>
+                          <th>會員大名</th>
+                          <th>預約項目</th>
+                          <th>預約日期/時間</th>
+                          <th>狀態</th>
+                          <th>操作</th>
+                        </tr>
+                      </thead>
+                      <tbody id="adminOverviewPendingList">
+                        <!-- Pending bookings will be injected here -->
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 7.2 Member Management Panel -->
+            <div class="admin-pane-section" id="pane-admin-members">
+              <div class="pane-header-actions">
+                <h3>會員列表 (<span id="lblAdminMemberCount">0</span>)</h3>
+                <button class="cta-btn primary-btn small-btn" id="btnAdminAddMember"><i data-lucide="user-plus"></i> 手動新增會員</button>
+              </div>
+
+              <div class="search-bar">
+                <i data-lucide="search"></i>
+                <input type="text" class="search-input" id="txtSearchMembers" placeholder="搜尋會員姓名、Email 或手機號碼...">
+              </div>
+
+              <div class="table-wrap">
+                <table class="admin-table">
+                  <thead>
+                    <tr>
+                      <th>姓名</th>
+                      <th>電話 / Email</th>
+                      <th>性別</th>
+                      <th>加入日期</th>
+                      <th>剩餘點數</th>
+                      <th>操作</th>
+                    </tr>
+                  </thead>
+                  <tbody id="adminMemberList">
+                    <!-- Members will be injected here -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- 7.3 Booking Management Panel -->
+            <div class="admin-pane-section" id="pane-admin-bookings">
+              <h3>預約審核與列表</h3>
+              
+              <div class="booking-filter-tabs">
+                <button class="filter-tab active" data-filter="all">所有預約</button>
+                <button class="filter-tab" data-filter="待確認">待確認</button>
+                <button class="filter-tab" data-filter="已確認">已確認</button>
+                <button class="filter-tab" data-filter="已取消">已取消 / 拒絕</button>
+              </div>
+
+              <div class="table-wrap">
+                <table class="admin-table">
+                  <thead>
+                    <tr>
+                      <th>預約 ID</th>
+                      <th>會員大名</th>
+                      <th>預約項目</th>
+                      <th>預約時間 / 課程</th>
+                      <th>所需點數</th>
+                      <th>狀態</th>
+                      <th>操作</th>
+                    </tr>
+                  </thead>
+                  <tbody id="adminBookingList">
+                    <!-- Bookings will be injected here -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- 7.4 Coupon Issuing Panel -->
+            <div class="admin-pane-section" id="pane-admin-coupons">
+              <div class="coupon-management-grid">
+                <!-- Issue Coupon Form -->
+                <div class="coupon-form-card">
+                  <h3>發放優惠票券</h3>
+                  <form id="formAdminIssueCoupon">
+                    <div class="form-group">
+                      <label class="form-label" for="selCouponTarget">選擇會員 *</label>
+                      <select class="form-input select-input" id="selCouponTarget" required>
+                        <!-- Member options will be injected here -->
+                      </select>
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label" for="selCouponTemplate">票券類型 *</label>
+                      <select class="form-input select-input" id="selCouponTemplate" required>
+                        <option value="新會員優惠" data-points="50">新會員優惠 (50 點)</option>
+                        <option value="月度優惠" data-points="30">月度優惠 (30 點)</option>
+                        <option value="推薦優惠" data-points="100">推薦優惠 (100 點)</option>
+                        <option value="生日優惠" data-points="60">生日優惠 (60 點)</option>
+                      </select>
+                    </div>
+                    <button type="submit" class="cta-btn primary-btn w-100">發放票券</button>
+                  </form>
+                </div>
+
+                <!-- Active Vouchers Log -->
+                <div class="coupon-log-card">
+                  <h3>已發放票券明細</h3>
+                  <div class="table-wrap">
+                    <table class="admin-table">
+                      <thead>
+                        <tr>
+                          <th>會員</th>
+                          <th>票券名稱</th>
+                          <th>贈點</th>
+                          <th>狀態</th>
+                        </tr>
+                      </thead>
+                      <tbody id="adminCouponList">
+                        <!-- Issued coupon entries will be injected here -->
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </section>
+
+      <!-- 7.2.1 Adjust Points Dialog (Modal View) -->
+      <section id="view-admin-points" class="view-section">
+        <div class="auth-card">
+          <h2>調整會員點數</h2>
+          <p class="auth-subtitle">手動增加或扣除會員的預約點數</p>
+          <div class="member-current-points-badge">
+            <span id="lblAdjustTargetName">會員大名</span> 剩餘點數：<strong id="lblAdjustTargetPoints">0</strong> 點
+          </div>
+
+          <form id="formAdminAdjustPoints">
+            <input type="hidden" id="adjustMemberId">
+            <div class="form-group">
+              <label class="form-label">調整方式 *</label>
+              <div class="adjust-radio-group">
+                <label class="gender-label">
+                  <input type="radio" name="adjustType" value="add" checked>
+                  <span>增加點數</span>
+                </label>
+                <label class="gender-label">
+                  <input type="radio" name="adjustType" value="deduct">
+                  <span>扣除點數</span>
+                </label>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="adjustAmount">點數數量 *</label>
+              <input type="number" class="form-input" id="adjustAmount" required min="1" placeholder="請輸入欲變動點數數量">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="adjustReason">調整原因 *</label>
+              <input type="text" class="form-input" id="adjustReason" required placeholder="例如：購買課程方案、體驗課程贈送、手動更正">
+            </div>
+            
+            <div class="btn-row">
+              <button type="button" class="cta-btn secondary-btn" id="btnCancelAdjustPoints">取消</button>
+              <button type="submit" class="cta-btn primary-btn">確認調整</button>
+            </div>
+          </form>
+        </div>
+      </section>
+
+      <!-- 7.2.2 Add Member Dialog (Modal View) -->
+      <section id="view-admin-add-member" class="view-section">
+        <div class="auth-card">
+          <h2>手動新增會員</h2>
+          <p class="auth-subtitle">輸入基本資料建立新的會員帳戶</p>
+          
+          <form id="formAdminAddMember">
+            <div class="form-group">
+              <label class="form-label" for="addMemName">會員大名 *</label>
+              <input type="text" class="form-input" id="addMemName" required placeholder="輸入姓名">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="addMemEmail">電子郵件 *</label>
+              <input type="email" class="form-input" id="addMemEmail" required placeholder="example@email.com">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="addMemPhone">手機號碼 *</label>
+              <input type="tel" class="form-input" id="addMemPhone" required placeholder="例：0912-345-678" pattern="09\d{2}-\d{3}-\d{3}|09\d{8}">
+            </div>
+            <div class="form-group">
+              <label class="form-label">生理性別 *</label>
+              <div class="gender-radio-group">
+                <label class="gender-label">
+                  <input type="radio" name="addMemGender" value="生理女" checked>
+                  <span>生理女</span>
+                </label>
+                <label class="gender-label">
+                  <input type="radio" name="addMemGender" value="生理男">
+                  <span>生理男</span>
+                </label>
+                <label class="gender-label">
+                  <input type="radio" name="addMemGender" value="其他">
+                  <span>其他</span>
+                </label>
+              </div>
+            </div>
+            
+            <div class="btn-row">
+              <button type="button" class="cta-btn secondary-btn" id="btnCancelAddMem">取消</button>
+              <button type="submit" class="cta-btn primary-btn">新增會員</button>
+            </div>
+          </form>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Global Footer -->
+    <footer class="main-footer">
+      <div class="footer-wrap">
+        <div class="foot-links">
+          <a href="#">聯絡我們</a>
+          <span>·</span>
+          <a href="#">預約須知</a>
+        </div>
+        <p class="copyright">© 2026 缽日 (Singing Bowl Healing). All rights reserved.</p>
+      </div>
+    </footer>
+  </div>
+
+  <!-- JavaScript -->
+  <script src="member.js"></script>
+</body>
+</html>
