@@ -1325,10 +1325,12 @@ function runMockLineLogin() {
   }
 }
 
-// 從雲端資料庫 (npoint.io) 讀取最新狀態並同步
+// 從雲端資料庫 (npoint.io) 讀取最新狀態並同步 (強制作廢快取)
 async function fetchCloudData() {
   try {
-    const response = await fetch(BLOB_URL);
+    const response = await fetch(`${BLOB_URL}?t=${Date.now()}`, {
+      cache: "no-store"
+    });
     if (response.status === 404) {
       console.log("雲端資料庫尚未初始化，正在寫入預設資料...");
       pushCloudData();
