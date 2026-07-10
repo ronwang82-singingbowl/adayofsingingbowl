@@ -921,19 +921,19 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Mock Authentication: Line Quick Login
   document.getElementById("btnLineLogin").addEventListener("click", () => {
-    // Generate mock Line user
+    // 1. 開啟 LINE 官方帳號連結，引導使用者加好友
+    window.open("https://line.me/R/ti/p/%40197nfdme", "_blank");
+
+    // 2. 於原網頁進行登入/註冊模擬
     const mockEmail = `line_user_${Math.floor(Math.random() * 90000 + 10000)}@line.com`;
-    // Check if user already exists (just mock, otherwise register new)
     const existing = users.find(u => u.email === mockEmail);
     if (existing) {
       currentUser = existing;
       localStorage.setItem("singbowl_current_user_id", currentUser.id);
       onUserLoginSuccess();
     } else {
-      // Step to Registration profile completion
       document.getElementById("regName").value = "LINE 用戶";
       document.getElementById("regPhone").value = "";
-      // Save temporary email to form element
       document.getElementById("formRegisterProfile").dataset.tempEmail = mockEmail;
       navigateTo("register");
     }
