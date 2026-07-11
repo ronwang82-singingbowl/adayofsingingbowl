@@ -48,8 +48,15 @@ const DEFAULT_TRANSACTIONS = [
 
 // Helper functions for LocalStorage persistence
 function dbGet(key, defaultData) {
-  const data = localStorage.getItem(`singbowl_${key}`);
-  return data ? JSON.parse(data) : defaultData;
+  try {
+    const data = localStorage.getItem(`singbowl_${key}`);
+    if (!data || data === "undefined" || data === "null") return defaultData;
+    const parsed = JSON.parse(data);
+    return parsed !== null ? parsed : defaultData;
+  } catch (e) {
+    console.error(`dbGet error for key ${key}:`, e);
+    return defaultData;
+  }
 }
 
 // Firebase Realtime Database Config

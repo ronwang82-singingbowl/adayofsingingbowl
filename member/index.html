@@ -20,6 +20,25 @@
   <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 </head>
 <body>
+  <script>
+    window.onerror = function(msg, url, line, col, error) {
+      var div = document.createElement('div');
+      div.style.position = 'fixed';
+      div.style.top = '0';
+      div.style.left = '0';
+      div.style.width = '100%';
+      div.style.background = '#c94040';
+      div.style.color = '#fff';
+      div.style.padding = '15px';
+      div.style.zIndex = '999999';
+      div.style.fontSize = '14px';
+      div.style.fontFamily = 'monospace';
+      div.style.boxShadow = '0 2px 10px rgba(0,0,0,0.3)';
+      div.innerHTML = '<strong>系統執行錯誤：</strong><br>' + msg + '<br>檔案：' + (url ? url.split('/').pop() : 'unknown') + '<br>行號：' + line + ':' + col;
+      document.body.appendChild(div);
+      return false;
+    };
+  </script>
   
   <!-- Ripple Background Animation -->
   <div class="ripple-field" aria-hidden="true">
