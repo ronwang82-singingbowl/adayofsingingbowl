@@ -760,6 +760,21 @@ function buildFullSiteHTML(){
     .replace(/:root\{[^}]*--ui-bg[\s\S]*?\}\s*/,"") // strip editor-only tokens if present in same block (safety no-op if not matched)
   ;
   const bodyMarkup = document.getElementById("stage").innerHTML;
+  
+  // Strip the ripple-field markup from the bodyMarkup
+  const cleanBody = bodyMarkup.replace(/<div class="ripple-field"[\s\S]*?<\/div>/i, "");
+  
+  const rings = `
+  <!-- Ripple Background Animation -->
+  <div class="ripple-field" aria-hidden="true">
+    <svg viewBox="0 0 500 500">
+      <circle class="ripple-ring r1" cx="250" cy="250" r="20"></circle>
+      <circle class="ripple-ring r2" cx="250" cy="250" r="20"></circle>
+      <circle class="ripple-ring r3" cx="250" cy="250" r="20"></circle>
+      <circle class="ripple-ring r4" cx="250" cy="250" r="20"></circle>
+    </svg>
+  </div>`;
+
   return `<!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
@@ -784,15 +799,16 @@ function buildFullSiteHTML(){
 <meta name="twitter:title" content="缽日｜用聲音陪你找回流動的力量">
 <meta name="twitter:description" content="一場聲音與對話交織的體驗，陪你穿越卡住的地方，重新看見自己的下一步。">
 
-<title>${esc(state.pageTitle)}</title>
+<title>\${esc(state.pageTitle)}</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;500;600;700&family=Noto+Sans+TC:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
   body{ margin:0; }
   .stage{ min-height:100vh; }
-  ${document.getElementById("stage") ? "" : ""}
-  ${stageOnlyCSS()}
+  \${document.getElementById("stage") ? "" : ""}
+  \${stageOnlyCSS()}
+  .ripple-field { position: fixed !important; }
   @keyframes ripple{
     0%   { r: 20; opacity: 0; stroke-width: 2.4; }
     8%   { opacity: 0.55; }
@@ -824,9 +840,19 @@ function buildFullSiteHTML(){
 <\/script>
 </head>
 <body>
+\${rings}
 <div class="stage">
-${bodyMarkup}
+\${cleanBody}
 </div>
+<script>
+  window.addEventListener('scroll', () => {
+    const scrolled = window.pageYOffset;
+    const ripple = document.querySelector('.ripple-field');
+    if (ripple) {
+      ripple.style.transform = \`translate3d(0, \${scrolled * 0.3}px, 0)\`;
+    }
+  });
+<\/script>
 </body>
 </html>`;
 }
