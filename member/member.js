@@ -13,10 +13,10 @@ const DEFAULT_SLOTS = [
 ];
 
 const DEFAULT_USERS = [
-  { id: 1, email: "admin@singbowl.com", name: "管理員", phone: "0900-000-000", gender: "其他", role: "admin", points: 0, joinDate: "2026-07-01" },
-  { id: 2, email: "test@singbowl.com", name: "王小明", phone: "0912-345-678", gender: "生理男", role: "member", points: 2.5, joinDate: "2026-07-05" },
-  { id: 3, email: "beauty@singbowl.com", name: "李美麗", phone: "0928-888-888", gender: "生理女", role: "member", points: 5, joinDate: "2026-07-06" },
-  { id: 4, email: "david@singbowl.com", name: "陳大衛", phone: "0933-111-222", gender: "生理男", role: "member", points: 1, joinDate: "2026-07-07" }
+  { id: 1, email: "admin@singbowl.com", name: "管理員", phone: "0900-000-000", gender: "其他", role: "admin", points: 0, groupPoints: 0, joinDate: "2026-07-01" },
+  { id: 2, email: "test@singbowl.com", name: "王小明", phone: "0912-345-678", gender: "生理男", role: "member", points: 7, groupPoints: 3, joinDate: "2026-07-05" },
+  { id: 3, email: "beauty@singbowl.com", name: "李美麗", phone: "0928-888-888", gender: "生理女", role: "member", points: 5, groupPoints: 2, joinDate: "2026-07-06" },
+  { id: 4, email: "david@singbowl.com", name: "陳大衛", phone: "0933-111-222", gender: "生理男", role: "member", points: 1, groupPoints: 0, joinDate: "2026-07-07" }
 ];
 
 const DEFAULT_VOUCHERS = [
@@ -201,6 +201,7 @@ function renderDashboard() {
   
   // Points Display
   document.getElementById("lblMemberPoints").textContent = currentUser.points;
+  document.getElementById("lblMemberGroupPoints").textContent = currentUser.groupPoints || 0;
   
   // Vouchers List
   const vouchersContainer = document.getElementById("memberVouchersList");
@@ -333,20 +334,28 @@ window.cancelBooking = function(bookingId) {
     // 2. Refund points to user
     const member = users.find(u => u.id === booking.userId);
     if (member) {
-      member.points += booking.cost;
+      let currentBal = 0;
+      if (booking.type === "1on1") {
+        member.points += booking.cost;
+        currentBal = member.points;
+      } else {
+        member.groupPoints = (member.groupPoints || 0) + booking.cost;
+        currentBal = member.groupPoints;
+      }
       dbSet("users", users);
       
       // 3. Log point transaction
       const newTxId = transactions.length > 0 ? transactions[transactions.length - 1].id + 1 : 5001;
       const nowStr = getNowDateTimeString();
+      const typeNameStr = booking.type === "1on1" ? "1對1" : "團體";
       transactions.push({
         id: newTxId,
         userId: member.id,
         amount: booking.cost,
         type: "add",
-        reason: `取消預約退還：ID ${booking.id}`,
+        reason: `取消預約退還(${typeNameStr})：ID ${booking.id}`,
         date: nowStr,
-        balance: member.points
+        balance: currentBal
       });
       dbSet("transactions", transactions);
     }
@@ -513,7 +522,7 @@ let selectedGroupId = null;
 
 function renderGroupForm() {
   if (!currentUser) return;
-  document.getElementById("lblBookGroupUserPoints").textContent = currentUser.points;
+  document.getElementById("lblBookGroupUserPoints").textContent = currentUser.groupPoints || 0;
   
   const container = document.getElementById("groupSessionsContainer");
   container.innerHTML = "";
@@ -578,7 +587,7 @@ function updateGroupCost(session) {
   const warning = document.getElementById("lblBookGroupWarning");
   const submitBtn = document.getElementById("btnSubmitGroup");
   
-  if (currentUser.points < session.pointCost) {
+  if ((currentUser.groupPoints || 0) < session.pointCost) {
     warning.style.display = "flex";
     submitBtn.disabled = true;
     submitBtn.classList.add("disabled");
@@ -715,7 +724,7 @@ function renderAdminMemberList() {
         <td>${u.phone}<br><span style="font-size:11px;color:var(--mist);">${u.email}</span></td>
         <td>${u.gender}</td>
         <td>${u.joinDate}</td>
-        <td><strong class="text-brass">${u.points}</strong> 次</td>
+        <td>1對1: <strong class="text-brass">${u.points}</strong> 次<br>團體: <strong class="text-brass">${u.groupPoints || 0}</strong> 次</td>
         <td>
           <div class="action-btn-group">
             <button class="table-action-btn success" onclick="openAdjustPoints(${u.id})">調整次數</button>
@@ -767,6 +776,7 @@ window.openAdjustPoints = function(memberId) {
   document.getElementById("adjustMemberId").value = member.id;
   document.getElementById("lblAdjustTargetName").textContent = member.name;
   document.getElementById("lblAdjustTargetPoints").textContent = member.points;
+  document.getElementById("lblAdjustTargetGroupPoints").textContent = member.groupPoints || 0;
   document.getElementById("adjustAmount").value = "";
   document.getElementById("adjustReason").value = "";
   
@@ -890,20 +900,28 @@ window.adminRejectBooking = function(bookingId) {
     // 2. Refund user points
     const member = users.find(u => u.id === booking.userId);
     if (member) {
-      member.points += booking.cost;
+      let currentBal = 0;
+      if (booking.type === "1on1") {
+        member.points += booking.cost;
+        currentBal = member.points;
+      } else {
+        member.groupPoints = (member.groupPoints || 0) + booking.cost;
+        currentBal = member.groupPoints;
+      }
       dbSet("users", users);
       
       // 3. Log points
       const newTxId = transactions.length > 0 ? transactions[transactions.length - 1].id + 1 : 5001;
       const nowStr = getNowDateTimeString();
+      const typeNameStr = booking.type === "1on1" ? "1對1" : "團體";
       transactions.push({
         id: newTxId,
         userId: member.id,
         amount: booking.cost,
         type: "add",
-        reason: `${booking.status === "已確認" ? "管理員取消退還" : "預約被拒退還"}：ID ${booking.id}`,
+        reason: `${booking.status === "已確認" ? "管理員取消退還" : "預約被拒退還"}(${typeNameStr})：ID ${booking.id}`,
         date: nowStr,
-        balance: member.points
+        balance: currentBal
       });
       dbSet("transactions", transactions);
     }
@@ -1207,7 +1225,7 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
     
-    if (currentUser.points < session.pointCost) {
+    if ((currentUser.groupPoints || 0) < session.pointCost) {
       alert("可約次數不足，請加購次數後再進行報名。");
       return;
     }
@@ -1241,7 +1259,7 @@ document.addEventListener("DOMContentLoaded", () => {
     dbSet("bookings", bookings);
     
     // Deduct user points
-    currentUser.points -= session.pointCost;
+    currentUser.groupPoints = (currentUser.groupPoints || 0) - session.pointCost;
     dbSet("users", users);
     
     // Increment session booking count
@@ -1257,7 +1275,7 @@ document.addEventListener("DOMContentLoaded", () => {
       type: "deduct",
       reason: `報名團體頌缽課：${session.title}`,
       date: timestamp,
-      balance: currentUser.points
+      balance: currentUser.groupPoints
     });
     dbSet("transactions", transactions);
     
@@ -1420,45 +1438,64 @@ document.addEventListener("DOMContentLoaded", () => {
     e.preventDefault();
     
     const targetUserId = parseInt(document.getElementById("adjustMemberId").value);
+    const targetType = document.getElementById("adjustPointTargetType").value;
     const adjustType = document.querySelector('input[name="adjustType"]:checked').value;
     const amount = parseInt(document.getElementById("adjustAmount").value);
-    const reason = document.getElementById("adjustReason").value.trim();
+    const rawReason = document.getElementById("adjustReason").value.trim();
+    const reason = rawReason ? rawReason : "手動調整";
     
     const member = users.find(u => u.id === targetUserId);
     if (!member) return;
     
+    if (member.groupPoints === undefined) member.groupPoints = 0;
+    
     const timestamp = getNowDateTimeString();
     const newTxId = transactions.length > 0 ? transactions[transactions.length - 1].id + 1 : 5001;
     
+    const targetNameStr = targetType === "1on1" ? "1對1" : "團體";
+    
     if (adjustType === "add") {
-      member.points += amount;
+      let currentBal = 0;
+      if (targetType === "1on1") {
+        member.points += amount;
+        currentBal = member.points;
+      } else {
+        member.groupPoints += amount;
+        currentBal = member.groupPoints;
+      }
       transactions.push({
         id: newTxId,
         userId: member.id,
         amount: amount,
         type: "add",
-        reason: `管理員調整：${reason}`,
+        reason: `管理員調整(${targetNameStr})：${reason}`,
         date: timestamp,
-        balance: member.points
+        balance: currentBal
       });
     } else {
-      // prevent negative points
-      member.points = Math.max(0, member.points - amount);
+      let currentBal = 0;
+      if (targetType === "1on1") {
+        member.points = Math.max(0, member.points - amount);
+        currentBal = member.points;
+      } else {
+        member.groupPoints = Math.max(0, member.groupPoints - amount);
+        currentBal = member.groupPoints;
+      }
       transactions.push({
         id: newTxId,
         userId: member.id,
         amount: amount,
         type: "deduct",
-        reason: `管理員扣除：${reason}`,
+        reason: `管理員扣除(${targetNameStr})：${reason}`,
         date: timestamp,
-        balance: member.points
+        balance: currentBal
       });
     }
     
     dbSet("users", users);
     dbSet("transactions", transactions);
     
-    alert(`成功更新會員「${member.name}」的可約次數！目前餘額：${member.points} 次。`);
+    alert(`成功更新會員「${member.name}」的可約次數！目前餘額：1對1 ${member.points} 次 / 團體 ${member.groupPoints} 次。`);
     renderAdminDashboard("members");
   });
 
@@ -1570,20 +1607,31 @@ document.addEventListener("DOMContentLoaded", () => {
     dbSet("vouchers", vouchers);
     
     // Apply points to member directly (simplification for coupons)
-    member.points += bonus;
+    if (member.groupPoints === undefined) member.groupPoints = 0;
+    
+    let currentBal = 0;
+    const is1on1 = couponName === "生日優惠贈送次數";
+    if (is1on1) {
+      member.points += bonus;
+      currentBal = member.points;
+    } else {
+      member.groupPoints += bonus;
+      currentBal = member.groupPoints;
+    }
     dbSet("users", users);
     
     // Log points transaction
     const timestamp = getNowDateTimeString();
     const newTxId = transactions.length > 0 ? transactions[transactions.length - 1].id + 1 : 5001;
+    const targetNameStr = is1on1 ? "1對1" : "團體";
     transactions.push({
       id: newTxId,
       userId: member.id,
       amount: bonus,
       type: "add",
-      reason: `獲贈票券優惠次數 (${couponName})`,
+      reason: `獲贈票券優惠次數(${targetNameStr})：${couponName}`,
       date: timestamp,
-      balance: member.points
+      balance: currentBal
     });
     dbSet("transactions", transactions);
     
@@ -1646,15 +1694,15 @@ function handleLiffLogin() {
       // 帳號不存在，導向填寫個人資料頁面完成註冊
       document.getElementById("regName").value = lineName;
       document.getElementById("regPhone").value = "";
-      document.getElementById("regEmail").value = lineEmail;
+      document.getElementById("regEmail").value = "";
       
       const regForm = document.getElementById("formRegisterProfile");
-      regForm.dataset.tempEmail = lineEmail;
+      regForm.dataset.tempEmail = "";
       regForm.dataset.lineUserId = lineUserId;
       regForm.dataset.lineName = lineName;
       
       navigateTo("register");
-      alert("請填寫您的基本聯絡資料，即可完成 LINE 帳號綁定並領取 8 次會員禮！");
+      alert("請填寫您的基本聯絡資料，即可完成 LINE 帳號綁定！");
     }
   }).catch(err => {
     console.error("取得 LINE 個人資料失敗", err);
@@ -1675,10 +1723,10 @@ function runMockLineLogin() {
   } else {
     document.getElementById("regName").value = "LINE 用戶";
     document.getElementById("regPhone").value = "";
-    document.getElementById("regEmail").value = mockEmail;
+    document.getElementById("regEmail").value = "";
     
     const regForm = document.getElementById("formRegisterProfile");
-    regForm.dataset.tempEmail = mockEmail;
+    regForm.dataset.tempEmail = "";
     regForm.dataset.lineUserId = "";
     
     navigateTo("register");

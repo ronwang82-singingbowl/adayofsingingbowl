@@ -11,7 +11,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;500;600;700&family=Noto+Sans+TC:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   
   <!-- CSS -->
-  <link rel="stylesheet" href="member.css?v=9">
+  <link rel="stylesheet" href="member.css?v=10">
   
   <!-- Lucide Icons (CDN) -->
   <script src="https://unpkg.com/lucide@latest"></script>
@@ -196,12 +196,26 @@
           <div class="dash-card points-vouchers">
             <div class="points-section">
               <span class="section-tag">SESSIONS</span>
-              <h3>可約 1對1 頌缽次數</h3>
-              <div class="points-value">
-                <span class="num" id="lblMemberPoints">0</span>
-                <span class="unit">次</span>
+              <h3>剩餘可約次數</h3>
+              
+              <div class="balance-display-block" style="display: flex; gap: 24px; margin-top: 12px; margin-bottom: 12px;">
+                <div class="balance-item-sub">
+                  <span style="font-size:12px; color:var(--mist); display:block; margin-bottom:4px;">1對1 頌缽</span>
+                  <div class="points-value" style="margin: 0;">
+                    <span class="num" id="lblMemberPoints" style="font-size:32px;">0</span>
+                    <span class="unit" style="font-size:14px; margin-left:2px;">次</span>
+                  </div>
+                </div>
+                <div class="balance-item-sub" style="border-left: 1px solid var(--hairline); padding-left: 24px;">
+                  <span style="font-size:12px; color:var(--mist); display:block; margin-bottom:4px;">團體頌缽</span>
+                  <div class="points-value" style="margin: 0;">
+                    <span class="num" id="lblMemberGroupPoints" style="font-size:32px; color: var(--brass-soft);">0</span>
+                    <span class="unit" style="font-size:14px; margin-left:2px;">次</span>
+                  </div>
+                </div>
               </div>
-              <p class="points-tip">可用於預約 1 對 1 身心療癒與團體頌缽課。如需加購次數，請聯絡療癒師：<a href="https://line.me/R/ti/p/%40197nfdme" target="_blank" style="color:var(--brass);text-decoration:underline;">線上加購次數</a>。</p>
+              
+              <p class="points-tip" style="margin-top: 8px;">1對1預約每次扣除 1次 1對1額度。如需加購次數，請聯絡療癒師：<a href="https://line.me/R/ti/p/%40197nfdme" target="_blank" style="color:var(--brass);text-decoration:underline;">線上加購次數</a>。</p>
             </div>
             
             <div class="vouchers-section">
@@ -632,11 +646,18 @@
           <h2>調整可約次數</h2>
           <p class="auth-subtitle">手動增加或扣除會員的預約次數</p>
           <div class="member-current-points-badge">
-            <span id="lblAdjustTargetName">會員大名</span> 剩餘次數：<strong id="lblAdjustTargetPoints">0</strong> 次
+            <span id="lblAdjustTargetName">會員大名</span> 餘額：1對1 <strong id="lblAdjustTargetPoints">0</strong> 次 / 團體 <strong id="lblAdjustTargetGroupPoints">0</strong> 次
           </div>
 
           <form id="formAdminAdjustPoints">
             <input type="hidden" id="adjustMemberId">
+            <div class="form-group">
+              <label class="form-label" for="adjustPointTargetType">調整次數項目 *</label>
+              <select class="form-input select-input" id="adjustPointTargetType" required>
+                <option value="1on1">1對1 頌缽次數</option>
+                <option value="group">團體頌缽次數</option>
+              </select>
+            </div>
             <div class="form-group">
               <label class="form-label">調整方式 *</label>
               <div class="adjust-radio-group">
@@ -652,11 +673,11 @@
             </div>
             <div class="form-group">
               <label class="form-label" for="adjustAmount">次數數量 *</label>
-              <input type="number" class="form-input" id="adjustAmount" required min="0.5" step="0.5" placeholder="請輸入欲變動次數數量">
+              <input type="number" class="form-input" id="adjustAmount" required min="1" step="1" placeholder="請輸入欲變動次數數量">
             </div>
             <div class="form-group">
-              <label class="form-label" for="adjustReason">調整原因 *</label>
-              <input type="text" class="form-input" id="adjustReason" required placeholder="例如：購買課程方案、體驗課程贈送、手動更正">
+              <label class="form-label" for="adjustReason">調整原因 (選填)</label>
+              <input type="text" class="form-input" id="adjustReason" placeholder="例如：生日贈送、購課儲值等（留空預設為「手動調整」）">
             </div>
             
             <div class="btn-row">
@@ -778,6 +799,6 @@
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
 
   <!-- JavaScript -->
-  <script src="member.js?v=9"></script>
+  <script src="member.js?v=10"></script>
 </body>
 </html>
