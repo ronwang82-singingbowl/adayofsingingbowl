@@ -166,7 +166,8 @@ function onUserLoginSuccess() {
   
   // Show nav links based on role
   document.getElementById("btnNavMember").style.display = "block";
-  document.getElementById("btnNavBuyPoints").style.display = "block";
+  const navBuyPoints = document.getElementById("btnNavBuyPoints");
+  if (navBuyPoints) navBuyPoints.style.display = "block";
   if (currentUser.role === "admin") {
     document.getElementById("btnNavAdmin").style.display = "block";
     navigateTo("admin");
@@ -184,7 +185,8 @@ function onUserLogoutSuccess() {
   document.getElementById("btnHeaderLogin").style.display = "block";
   document.getElementById("headerUserMenu").style.display = "none";
   document.getElementById("btnNavMember").style.display = "none";
-  document.getElementById("btnNavBuyPoints").style.display = "none";
+  const navBuyPoints = document.getElementById("btnNavBuyPoints");
+  if (navBuyPoints) navBuyPoints.style.display = "none";
   document.getElementById("btnNavAdmin").style.display = "none";
   
   navigateTo("landing");
