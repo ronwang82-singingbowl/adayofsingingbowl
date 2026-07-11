@@ -859,9 +859,194 @@ function loadDraftFile(e){
   reader.readAsText(file);
 }
 
+function parseStateFromHTML(htmlText) {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(htmlText, "text/html");
+  if (!doc) return;
+
+  const getCleanText = (selector) => doc.querySelector(selector)?.textContent?.trim() || "";
+  const getCleanAttr = (selector, attr) => doc.querySelector(selector)?.getAttribute(attr)?.trim() || "";
+
+  // 1. Page Title
+  state.pageTitle = doc.title || state.pageTitle;
+
+  // 2. Hero
+  state.hero.eyebrow = getCleanText(".hero .eyebrow") || state.hero.eyebrow;
+  state.hero.title = getCleanText(".hero h1") || state.hero.title;
+  state.hero.subtitle = getCleanText(".hero .hero-sub") || state.hero.subtitle;
+  state.hero.desc = getCleanText(".hero .hero-desc") || state.hero.desc;
+  state.hero.ctaText = getCleanText(".hero .cta-btn") || state.hero.ctaText;
+  state.hero.ctaUrl = getCleanAttr(".hero .cta-btn", "href") || state.hero.ctaUrl;
+  state.hero.reassure = getCleanText(".hero .hero-reassure") || state.hero.reassure;
+
+  // 3. Diff
+  const diffSec = doc.querySelector("section.tight:nth-of-type(1)");
+  if (diffSec) {
+    state.diff.eyebrow = diffSec.querySelector(".eyebrow")?.textContent?.trim() || state.diff.eyebrow;
+    state.diff.lede = diffSec.querySelector(".lede")?.textContent?.trim() || state.diff.lede;
+    const diffItems = Array.from(diffSec.querySelectorAll(".diff-item"));
+    if (diffItems.length > 0) {
+      state.diff.items = diffItems.map(item => ({
+        not: item.querySelector(".not")?.textContent?.trim() || "",
+        is: item.querySelector(".is")?.textContent?.trim() || ""
+      }));
+    }
+  }
+
+  // 4. Empathy
+  const empathySec = Array.from(doc.querySelectorAll(".stage > section")).find(sec => sec.querySelector(".body-text") && !sec.querySelector(".card-grid") && !sec.querySelector(".line-card"));
+  if (empathySec) {
+    state.empathy.eyebrow = empathySec.querySelector(".eyebrow")?.textContent?.trim() || state.empathy.eyebrow;
+    state.empathy.lede = empathySec.querySelector(".lede")?.textContent?.trim() || state.empathy.lede;
+    state.empathy.body = empathySec.querySelector(".body-text")?.textContent?.trim() || state.empathy.body;
+  }
+
+  // 5. Cards
+  const cardsSec = doc.querySelector(".card-grid")?.closest("section");
+  if (cardsSec) {
+    state.cardsEyebrow = cardsSec.querySelector(".eyebrow")?.textContent?.trim() || state.cardsEyebrow;
+    state.cardsTitle = cardsSec.querySelector("h2")?.textContent?.trim() || state.cardsTitle;
+    const cards = Array.from(cardsSec.querySelectorAll(".card"));
+    if (cards.length > 0) {
+      state.cards = cards.map(c => ({
+        tag: c.querySelector(".tag")?.textContent?.trim() || "",
+        title: c.querySelector("h3")?.textContent?.trim() || "",
+        body: c.querySelector("p")?.textContent?.trim() || ""
+      }));
+    }
+  }
+
+  // 6. Testimonials
+  const testiSec = doc.querySelector(".testi-grid")?.closest("section");
+  if (testiSec) {
+    state.testiEyebrow = testiSec.querySelector(".eyebrow")?.textContent?.trim() || state.testiEyebrow;
+    state.testiTitle = testiSec.querySelector("h2")?.textContent?.trim() || state.testiTitle;
+    const testiItems = Array.from(testiSec.querySelectorAll(".testi-photo, .testi-card"));
+    if (testiItems.length > 0) {
+      state.testimonials = testiItems.map(item => {
+        if (item.classList.contains("testi-photo")) {
+          return {
+            type: "image",
+            src: item.querySelector("img")?.getAttribute("src") || "",
+            caption: item.querySelector(".cap")?.textContent?.trim() || ""
+          };
+        } else {
+          return {
+            type: "card",
+            text: item.querySelector("p")?.textContent?.trim() || "",
+            by: item.querySelector(".by")?.textContent?.trim() || ""
+          };
+        }
+      });
+    }
+  }
+
+  // 7. Who
+  const whoSec = doc.querySelector(".who-list")?.closest("section");
+  if (whoSec) {
+    state.whoEyebrow = whoSec.querySelector(".eyebrow")?.textContent?.trim() || state.whoEyebrow;
+    state.whoTitle = whoSec.querySelector("h2")?.textContent?.trim() || state.whoTitle;
+    state.whoLede = whoSec.querySelector(".lede")?.textContent?.trim() || state.whoLede;
+    const items = Array.from(whoSec.querySelectorAll(".who-item p"));
+    if (items.length > 0) {
+      state.whoItems = items.map(p => p.textContent?.trim() || "");
+    }
+  }
+
+  // 8. Process
+  const procSec = doc.querySelector(".process")?.closest("section");
+  if (procSec) {
+    state.processEyebrow = procSec.querySelector(".eyebrow")?.textContent?.trim() || state.processEyebrow;
+    state.processTitle = procSec.querySelector("h2")?.textContent?.trim() || state.processTitle;
+    const steps = Array.from(procSec.querySelectorAll(".step"));
+    if (steps.length > 0) {
+      state.steps = steps.map(s => ({
+        num: s.querySelector(".num")?.textContent?.trim() || "",
+        title: s.querySelector("h3")?.textContent?.trim() || "",
+        desc: s.querySelector("p")?.textContent?.trim() || ""
+      }));
+    }
+  }
+
+  // 9. About
+  const aboutSec = doc.querySelector(".about-grid")?.closest("section");
+  if (aboutSec) {
+    state.aboutEyebrow = aboutSec.querySelector(".eyebrow")?.textContent?.trim() || state.aboutEyebrow;
+    state.aboutTitle = aboutSec.querySelector("h2")?.textContent?.trim() || state.aboutTitle;
+    state.aboutBadge = aboutSec.querySelector(".about-badge")?.textContent?.trim() || state.aboutBadge;
+    state.aboutName = aboutSec.querySelector(".about-name")?.textContent?.trim() || state.aboutName;
+    state.aboutRole = aboutSec.querySelector(".about-role")?.textContent?.trim() || state.aboutRole;
+    state.aboutBio = aboutSec.querySelector(".about-bio")?.textContent?.trim() || state.aboutBio;
+    state.aboutMeta = aboutSec.querySelector(".about-meta")?.textContent?.trim() || state.aboutMeta;
+  }
+
+  // 10. Quote
+  const quoteSec = doc.querySelector(".quote-section");
+  if (quoteSec) {
+    state.quoteText = quoteSec.querySelector("blockquote")?.textContent?.trim() || state.quoteText;
+    state.quoteBy = quoteSec.querySelector(".quote-by")?.textContent?.trim() || state.quoteBy;
+  }
+
+  // 11. FAQ
+  const faqSec = doc.querySelector(".faq-item")?.closest("section");
+  if (faqSec) {
+    state.faqEyebrow = faqSec.querySelector(".eyebrow")?.textContent?.trim() || state.faqEyebrow;
+    state.faqTitle = faqSec.querySelector("h2")?.textContent?.trim() || state.faqTitle;
+    const faqs = Array.from(faqSec.querySelectorAll(".faq-item"));
+    if (faqs.length > 0) {
+      state.faqs = faqs.map(f => {
+        let q = f.querySelector(".faq-q")?.textContent?.trim() || "";
+        if (q.endsWith("+")) q = q.slice(0, -1).trim();
+        return {
+          q: q,
+          a: f.querySelector(".faq-a")?.textContent?.trim() || ""
+        };
+      });
+    }
+  }
+
+  // 12. Final
+  const finalSec = doc.querySelector(".final");
+  if (finalSec) {
+    state.final.eyebrow = finalSec.querySelector(".eyebrow")?.textContent?.trim() || state.final.eyebrow;
+    state.final.heading = finalSec.querySelector("h2")?.textContent?.trim() || state.final.heading;
+    state.final.sub = finalSec.querySelector(".body-text")?.textContent?.trim() || state.final.sub;
+    state.final.lineName = finalSec.querySelector(".line-name")?.textContent?.trim() || state.final.lineName;
+    state.final.lineId = finalSec.querySelector(".line-id")?.textContent?.trim() || state.final.lineId;
+    state.final.lineUrl = finalSec.querySelector(".line-card .cta-btn")?.getAttribute("href") || state.final.lineUrl;
+    state.final.qrSrc = finalSec.querySelector(".qr-wrap img")?.getAttribute("src") || state.final.qrSrc;
+    state.final.instagramUrl = doc.querySelector(".foot-links a[href*='instagram.com']")?.getAttribute("href") || state.final.instagramUrl;
+  }
+
+  // Footer / Footnote
+  const footer = doc.querySelector(".stage footer");
+  if (footer) {
+    const footLinks = footer.querySelector(".foot-links");
+    let footnoteText = footer.textContent;
+    if (footLinks) {
+      footnoteText = footnoteText.replace(footLinks.textContent, "");
+    }
+    state.final.footNote = footnoteText.trim() || state.final.footNote;
+  }
+}
+
 /* ================= INIT ================= */
-buildForm();
-renderPreview();
+async function initEditor() {
+  try {
+    const res = await fetch("./index.html?t=" + Date.now());
+    if (res.ok) {
+      const htmlText = await res.text();
+      if (htmlText) {
+        parseStateFromHTML(htmlText);
+      }
+    }
+  } catch (e) {
+    console.log("無法自動讀取首頁內容，使用預設範本進行編輯", e);
+  }
+  buildForm();
+  renderPreview();
+}
+initEditor();
 </script>
 </body>
 </html>
