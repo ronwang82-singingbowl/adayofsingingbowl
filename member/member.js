@@ -1299,7 +1299,7 @@ document.addEventListener("DOMContentLoaded", () => {
     e.preventDefault();
     navigateTo("member");
   });
-  document.getElementById("btnNavBuyPoints").addEventListener("click", (e) => {
+  document.getElementById("btnNavBuyPoints")?.addEventListener("click", (e) => {
     e.preventDefault();
     navigateTo("buy-points");
   });
@@ -1321,8 +1321,12 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("editName").value = currentUser.name;
     document.getElementById("editPhone").value = currentUser.phone;
     document.querySelector(`input[name="editGender"][value="${currentUser.gender}"]`).checked = true;
-    document.getElementById("editBankName").value = currentUser.paymentBankName || "";
-    document.getElementById("editBankLast5").value = currentUser.paymentBankLast5 || "";
+    
+    const bankInput = document.getElementById("editBankName");
+    if (bankInput) bankInput.value = currentUser.paymentBankName || "";
+    const last5Input = document.getElementById("editBankLast5");
+    if (last5Input) last5Input.value = currentUser.paymentBankLast5 || "";
+    
     navigateTo("edit-profile");
   });
   
@@ -1335,8 +1339,11 @@ document.addEventListener("DOMContentLoaded", () => {
     currentUser.name = document.getElementById("editName").value;
     currentUser.phone = document.getElementById("editPhone").value;
     currentUser.gender = document.querySelector('input[name="editGender"]:checked').value;
-    currentUser.paymentBankName = document.getElementById("editBankName").value.trim();
-    currentUser.paymentBankLast5 = document.getElementById("editBankLast5").value.trim();
+    
+    const bankInput = document.getElementById("editBankName");
+    if (bankInput) currentUser.paymentBankName = bankInput.value.trim();
+    const last5Input = document.getElementById("editBankLast5");
+    if (last5Input) currentUser.paymentBankLast5 = last5Input.value.trim();
     
     // Save users list
     dbSet("users", users);
@@ -1368,7 +1375,7 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   // Remittance Slip Submit Listener
-  document.getElementById("formSubmitRemittance").addEventListener("submit", (e) => {
+  document.getElementById("formSubmitRemittance")?.addEventListener("submit", (e) => {
     e.preventDefault();
     if (!currentUser) return;
     
@@ -1665,11 +1672,11 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("btnAdminMenuBookings").addEventListener("click", () => renderAdminDashboard("bookings"));
   document.getElementById("btnAdminMenuCoupons").addEventListener("click", () => renderAdminDashboard("coupons"));
   document.getElementById("btnAdminMenuSlots").addEventListener("click", () => renderAdminDashboard("slots"));
-  document.getElementById("btnAdminMenuRemittances").addEventListener("click", () => renderAdminDashboard("remittances"));
+  document.getElementById("btnAdminMenuRemittances")?.addEventListener("click", () => renderAdminDashboard("remittances"));
   document.getElementById("btnAdminBackToMember").addEventListener("click", () => navigateTo("member"));
 
   // Submit: Admin reject remittance slip
-  document.getElementById("formAdminRejectRemittance").addEventListener("submit", (e) => {
+  document.getElementById("formAdminRejectRemittance")?.addEventListener("submit", (e) => {
     e.preventDefault();
     const remitId = parseInt(document.getElementById("rejectRemittanceId").value);
     const reason = document.getElementById("txtRejectReason").value.trim();
@@ -1687,7 +1694,7 @@ document.addEventListener("DOMContentLoaded", () => {
     renderAdminDashboard("remittances");
   });
   
-  document.getElementById("btnCancelRejectRemittance").addEventListener("click", () => {
+  document.getElementById("btnCancelRejectRemittance")?.addEventListener("click", () => {
     navigateTo("admin");
     renderAdminDashboard("remittances");
   });
