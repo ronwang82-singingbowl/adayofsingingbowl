@@ -74,6 +74,29 @@ input.f:focus, textarea.f:focus{ outline:2px solid var(--ui-accent-soft); border
 }
 .imgtype-toggle button.active{ background:var(--ui-accent); color:#fff; border-color:var(--ui-accent); }
 
+/* ============ Drag and Drop Styles ============ */
+.drag-handle {
+  display: inline-flex;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ui-accent);
+  background: var(--ui-accent-soft);
+  border-radius: 4px;
+  padding: 3px 8px;
+  margin-bottom: 8px;
+  cursor: grab;
+  user-select: none;
+}
+.drag-handle:active {
+  cursor: grabbing;
+}
+.item-block.dragging {
+  opacity: 0.5;
+  border: 1px dashed var(--ui-accent);
+  background: #FFFBF5;
+}
+
 .howto{ font-size:12px; color:var(--ui-mute); line-height:1.9; background:#FBF8F1; border:1px solid var(--ui-line); border-radius:8px; padding:12px 14px; margin-bottom:16px; }
 .howto b{ color:var(--ui-text); }
 .howto ol{ margin:6px 0 0; padding-left:18px; }
@@ -347,22 +370,73 @@ function buildSection(title, bodyBuilder){
 function buildRepeatSection(title, arr, itemBuilder, newItemFactory, addLabel){
   return buildSection(title, (body)=>{
     const list = document.createElement("div");
+    let draggedIdx = null;
+
     function rebuild(){
       list.innerHTML="";
       arr.forEach((item, idx)=>{
-        const block = document.createElement("div"); block.className="item-block";
-        const rm = document.createElement("button"); rm.className="rm"; rm.textContent="移除 ✕";
-        rm.onclick = ()=>{ arr.splice(idx,1); rebuild(); renderPreview(); };
+        const block = document.createElement("div");
+        block.className="item-block";
+        block.setAttribute("draggable", "true");
+
+        // Drag Handle
+        const handle = document.createElement("div");
+        handle.className = "drag-handle";
+        handle.innerHTML = "⋮⋮ 拖曳排序";
+        block.appendChild(handle);
+
+        const rm = document.createElement("button");
+        rm.className="rm";
+        rm.textContent="移除 ✕";
+        rm.onclick = (e)=>{
+          e.stopPropagation();
+          arr.splice(idx,1);
+          rebuild();
+          renderPreview();
+        };
         block.appendChild(rm);
+
         itemBuilder(block, item, idx, rebuild);
+
+        // Drag & Drop event listeners
+        block.ondragstart = (e) => {
+          draggedIdx = idx;
+          block.classList.add("dragging");
+          e.dataTransfer.effectAllowed = "move";
+        };
+        block.ondragend = () => {
+          block.classList.remove("dragging");
+          draggedIdx = null;
+        };
+        block.ondragover = (e) => {
+          e.preventDefault();
+          return false;
+        };
+        block.ondrop = (e) => {
+          e.preventDefault();
+          if (draggedIdx !== null && draggedIdx !== idx) {
+            const temp = arr[draggedIdx];
+            arr.splice(draggedIdx, 1);
+            arr.splice(idx, 0, temp);
+            rebuild();
+            renderPreview();
+          }
+        };
+
         list.appendChild(block);
       });
     }
     rebuild();
     body.appendChild(list);
-    const addBtn = document.createElement("button"); addBtn.className="add-btn"; addBtn.type="button";
+    const addBtn = document.createElement("button");
+    addBtn.className="add-btn";
+    addBtn.type="button";
     addBtn.textContent = addLabel || "+ 新增一則";
-    addBtn.onclick = ()=>{ arr.push(newItemFactory()); rebuild(); renderPreview(); };
+    addBtn.onclick = ()=>{
+      arr.push(newItemFactory());
+      rebuild();
+      renderPreview();
+    };
     body.appendChild(addBtn);
   });
 }
