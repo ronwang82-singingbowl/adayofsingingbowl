@@ -804,7 +804,8 @@ function buildFullSiteHTML(){
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;500;600;700&family=Noto+Sans+TC:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
-  body{ margin:0; }
+  :root { --ink: #F8F5EE; --ink-2: #FFFFFF; --ink-3: #F1EDE4; --brass: #73846B; --brass-soft: #E4C778; --brass-dim: #8A6A49; --jade: #DCC6A4; --paper: #4E5E48; --mist: #5F6F5A; --hairline: #D8D4CC; --maxw: 760px; }
+  body{ margin:0; background: var(--ink); }
   .stage{ min-height:100vh; }
   \${document.getElementById("stage") ? "" : ""}
   \${stageOnlyCSS()}
