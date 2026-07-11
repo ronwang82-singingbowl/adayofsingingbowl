@@ -611,6 +611,8 @@ function updateGroupCost(session) {
     submitBtn.disabled = false;
     submitBtn.classList.remove("disabled");
   }
+}
+
 // ==========================================
 // 3.5 購買點數與對帳渲染 (Buy Points Page Rendering)
 // ==========================================
