@@ -11,7 +11,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;500;600;700&family=Noto+Sans+TC:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   
   <!-- CSS -->
-  <link rel="stylesheet" href="member.css?v=6">
+  <link rel="stylesheet" href="member.css?v=7">
   
   <!-- Lucide Icons (CDN) -->
   <script src="https://unpkg.com/lucide@latest"></script>
@@ -61,7 +61,7 @@
           <div class="eyebrow">頌缽 · 對話 · 覺察</div>
           <h1>缽日 會員中心</h1>
           <p class="hero-sub">透過頌缽的共鳴，讓身心回歸平衡。</p>
-          <p class="hero-desc">一場聲音與對話交織的體驗，陪你穿越卡住的地方，重新看見自己的下一步。加入會員即可線上購買點數並預約專屬療癒。</p>
+          <p class="hero-desc">一場聲音與對話交織的體驗，陪你穿越卡住的地方，重新看見自己的下一步。加入會員即可線上購買次數並預約專屬療癒。</p>
           <div class="hero-actions">
             <button class="cta-btn primary-btn" id="btnLandingCta">立即登入 / 加入會員</button>
           </div>
@@ -80,13 +80,13 @@
           </div>
           <div class="feat-card">
             <div class="feat-icon"><i data-lucide="coins"></i></div>
-            <h3>點數系統</h3>
-            <p>靈活的點數系統，購買點數即可快速預約療癒，享受優惠與特殊禮遇。</p>
+            <h3>額度系統</h3>
+            <p>靈活的次數系統，購買次數即可快速預約療癒，享受優惠與特殊禮遇。</p>
           </div>
           <div class="feat-card">
             <div class="feat-icon"><i data-lucide="calendar"></i></div>
             <h3>預約管理</h3>
-            <p>線上輕鬆管理您的預約紀錄，隨時查看療癒時程與點數餘額。</p>
+            <p>線上輕鬆管理您的預約紀錄，隨時查看療癒時程與剩餘次數。</p>
           </div>
         </div>
       </section>
@@ -195,13 +195,13 @@
           <!-- Points & Vouchers Card -->
           <div class="dash-card points-vouchers">
             <div class="points-section">
-              <span class="section-tag">POINTS</span>
-              <h3>可用點數</h3>
+              <span class="section-tag">SESSIONS</span>
+              <h3>可約 1對1 頌缽次數</h3>
               <div class="points-value">
                 <span class="num" id="lblMemberPoints">0</span>
-                <span class="unit">點</span>
+                <span class="unit">次</span>
               </div>
-              <p class="points-tip">可用於預約 1 對 1 身心療癒與團體頌缽課。如需加購點數，請聯絡療癒師：<a href="https://line.me/R/ti/p/%40197nfdme" target="_blank" style="color:var(--brass);text-decoration:underline;">線上加購點數</a>。</p>
+              <p class="points-tip">可用於預約 1 對 1 身心療癒與團體頌缽課。如需加購次數，請聯絡療癒師：<a href="https://line.me/R/ti/p/%40197nfdme" target="_blank" style="color:var(--brass);text-decoration:underline;">線上加購次數</a>。</p>
             </div>
             
             <div class="vouchers-section">
@@ -236,7 +236,7 @@
             </div>
 
             <div class="transactions-section">
-              <h3>點數交易明細</h3>
+              <h3>預約次數增減紀錄</h3>
               <div class="transaction-table-wrap">
                 <table class="transaction-table">
                   <thead>
@@ -312,8 +312,8 @@
           <p class="booking-subtitle">預約專屬於您的個人療癒與深度對話</p>
           
           <div class="user-points-badge">
-            <span>您的可用點數：</span>
-            <strong id="lblBook1on1UserPoints">0</strong> 點
+            <span>您的可用次數：</span>
+            <strong id="lblBook1on1UserPoints">0</strong> 次
           </div>
 
           <form id="formBook1on1">
@@ -330,10 +330,10 @@
             <div class="form-group">
               <label class="form-label" for="book1on1Duration">療程時長 *</label>
               <select class="form-input select-input" id="book1on1Duration" required>
-                <option value="30" data-points="3">30 分鐘 (消耗 3 點)</option>
-                <option value="60" data-points="6" selected>60 分鐘 (消耗 6 點)</option>
-                <option value="90" data-points="9">90 分鐘 (消耗 9 點)</option>
-                <option value="120" data-points="12">120 分鐘 (消耗 12 點)</option>
+                <option value="30" data-points="0.5">30 分鐘 (消耗 0.5 次)</option>
+                <option value="60" data-points="1" selected>60 分鐘 (消耗 1 次)</option>
+                <option value="90" data-points="1.5">90 分鐘 (消耗 1.5 次)</option>
+                <option value="120" data-points="2">120 分鐘 (消耗 2 次)</option>
               </select>
             </div>
             <div class="form-group">
@@ -343,11 +343,11 @@
 
             <div class="booking-summary">
               <div class="summary-row">
-                <span>所需點數：</span>
-                <span class="summary-points"><strong id="lblBook1on1Cost">6</strong> 點</span>
+                <span>所需次數：</span>
+                <span class="summary-points"><strong id="lblBook1on1Cost">1</strong> 次</span>
               </div>
               <div class="booking-warning" id="lblBook1on1Warning" style="display: none;">
-                <i data-lucide="alert-triangle"></i> ⚠️ 點數不足，請先<a href="https://line.me/R/ti/p/%40197nfdme" target="_blank" style="color:var(--brass-soft);text-decoration:underline;">聯絡療癒師購買點數</a>。
+                <i data-lucide="alert-triangle"></i> ⚠️ 次數不足，請先<a href="https://line.me/R/ti/p/%40197nfdme" target="_blank" style="color:var(--brass-soft);text-decoration:underline;">聯絡療癒師加購次數</a>。
               </div>
             </div>
 
@@ -366,8 +366,8 @@
           <p class="booking-subtitle">選擇您想參加的團體療癒課程</p>
           
           <div class="user-points-badge">
-            <span>您的可用點數：</span>
-            <strong id="lblBookGroupUserPoints">0</strong> 點
+            <span>您的可用次數：</span>
+            <strong id="lblBookGroupUserPoints">0</strong> 次
           </div>
 
           <form id="formBookGroup">
@@ -385,11 +385,11 @@
 
             <div class="booking-summary">
               <div class="summary-row">
-                <span>所需點數：</span>
-                <span class="summary-points"><strong id="lblBookGroupCost">0</strong> 點</span>
+                <span>所需次數：</span>
+                <span class="summary-points"><strong id="lblBookGroupCost">0</strong> 次</span>
               </div>
               <div class="booking-warning" id="lblBookGroupWarning" style="display: none;">
-                <i data-lucide="alert-triangle"></i> ⚠️ 點數不足，請選擇其他課程或先<a href="https://line.me/R/ti/p/%40197nfdme" target="_blank" style="color:var(--brass-soft);text-decoration:underline;">聯絡療癒師購買點數</a>。
+                <i data-lucide="alert-triangle"></i> ⚠️ 次數不足，請選擇其他課程或先<a href="https://line.me/R/ti/p/%40197nfdme" target="_blank" style="color:var(--brass-soft);text-decoration:underline;">聯絡療癒師加購次數</a>。
               </div>
             </div>
 
@@ -483,7 +483,7 @@
                       <th>電話 / Email</th>
                       <th>性別</th>
                       <th>加入日期</th>
-                      <th>剩餘點數</th>
+                      <th>剩餘次數</th>
                       <th>操作</th>
                     </tr>
                   </thead>
@@ -513,7 +513,7 @@
                       <th>會員大名</th>
                       <th>預約項目</th>
                       <th>預約時間 / 課程</th>
-                      <th>所需點數</th>
+                      <th>所需次數</th>
                       <th>狀態</th>
                       <th>操作</th>
                     </tr>
@@ -541,10 +541,10 @@
                     <div class="form-group">
                       <label class="form-label" for="selCouponTemplate">票券類型 *</label>
                       <select class="form-input select-input" id="selCouponTemplate" required>
-                        <option value="新會員優惠" data-points="50">新會員優惠 (50 點)</option>
-                        <option value="月度優惠" data-points="30">月度優惠 (30 點)</option>
-                        <option value="推薦優惠" data-points="100">推薦優惠 (100 點)</option>
-                        <option value="生日優惠" data-points="60">生日優惠 (60 點)</option>
+                        <option value="新會員優惠" data-points="8">新會員優惠 (8 次)</option>
+                        <option value="月度優惠" data-points="5">月度優惠 (5 次)</option>
+                        <option value="推薦優惠" data-points="15">推薦優惠 (15 次)</option>
+                        <option value="生日優惠" data-points="10">生日優惠 (10 次)</option>
                       </select>
                     </div>
                     <button type="submit" class="cta-btn primary-btn w-100">發放票券</button>
@@ -560,7 +560,7 @@
                         <tr>
                           <th>會員</th>
                           <th>票券名稱</th>
-                          <th>贈點</th>
+                          <th>贈送次數</th>
                           <th>狀態</th>
                         </tr>
                       </thead>
@@ -580,10 +580,10 @@
       <!-- 7.2.1 Adjust Points Dialog (Modal View) -->
       <section id="view-admin-points" class="view-section">
         <div class="auth-card">
-          <h2>調整會員點數</h2>
-          <p class="auth-subtitle">手動增加或扣除會員的預約點數</p>
+          <h2>調整可約次數</h2>
+          <p class="auth-subtitle">手動增加或扣除會員的預約次數</p>
           <div class="member-current-points-badge">
-            <span id="lblAdjustTargetName">會員大名</span> 剩餘點數：<strong id="lblAdjustTargetPoints">0</strong> 點
+            <span id="lblAdjustTargetName">會員大名</span> 剩餘次數：<strong id="lblAdjustTargetPoints">0</strong> 次
           </div>
 
           <form id="formAdminAdjustPoints">
@@ -593,17 +593,17 @@
               <div class="adjust-radio-group">
                 <label class="gender-label">
                   <input type="radio" name="adjustType" value="add" checked>
-                  <span>增加點數</span>
+                  <span>增加次數</span>
                 </label>
                 <label class="gender-label">
                   <input type="radio" name="adjustType" value="deduct">
-                  <span>扣除點數</span>
+                  <span>扣除次數</span>
                 </label>
               </div>
             </div>
             <div class="form-group">
-              <label class="form-label" for="adjustAmount">點數數量 *</label>
-              <input type="number" class="form-input" id="adjustAmount" required min="1" placeholder="請輸入欲變動點數數量">
+              <label class="form-label" for="adjustAmount">次數數量 *</label>
+              <input type="number" class="form-input" id="adjustAmount" required min="0.5" step="0.5" placeholder="請輸入欲變動次數數量">
             </div>
             <div class="form-group">
               <label class="form-label" for="adjustReason">調整原因 *</label>
@@ -729,6 +729,6 @@
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
 
   <!-- JavaScript -->
-  <script src="member.js?v=6"></script>
+  <script src="member.js?v=7"></script>
 </body>
 </html>

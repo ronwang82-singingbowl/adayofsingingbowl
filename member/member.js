@@ -6,36 +6,36 @@
 
 const DEFAULT_USERS = [
   { id: 1, email: "admin@singbowl.com", name: "管理員", phone: "0900-000-000", gender: "其他", role: "admin", points: 0, joinDate: "2026-07-01" },
-  { id: 2, email: "test@singbowl.com", name: "王小明", phone: "0912-345-678", gender: "生理男", role: "member", points: 15, joinDate: "2026-07-05" },
-  { id: 3, email: "beauty@singbowl.com", name: "李美麗", phone: "0928-888-888", gender: "生理女", role: "member", points: 30, joinDate: "2026-07-06" },
-  { id: 4, email: "david@singbowl.com", name: "陳大衛", phone: "0933-111-222", gender: "生理男", role: "member", points: 5, joinDate: "2026-07-07" }
+  { id: 2, email: "test@singbowl.com", name: "王小明", phone: "0912-345-678", gender: "生理男", role: "member", points: 2.5, joinDate: "2026-07-05" },
+  { id: 3, email: "beauty@singbowl.com", name: "李美麗", phone: "0928-888-888", gender: "生理女", role: "member", points: 5, joinDate: "2026-07-06" },
+  { id: 4, email: "david@singbowl.com", name: "陳大衛", phone: "0933-111-222", gender: "生理男", role: "member", points: 1, joinDate: "2026-07-07" }
 ];
 
 const DEFAULT_VOUCHERS = [
-  { id: 1, userId: 2, name: "新會員優惠", bonusPoints: 50, status: "used", code: "NEW50" },
-  { id: 2, userId: 2, name: "月度優惠", bonusPoints: 30, status: "available", code: "MON30" },
-  { id: 3, userId: 3, name: "推薦優惠", bonusPoints: 100, status: "available", code: "REF100" },
-  { id: 4, userId: 4, name: "生日優惠", bonusPoints: 60, status: "available", code: "BDAY60" }
+  { id: 1, userId: 2, name: "新會員優惠", bonusPoints: 8, status: "used", code: "NEW8" },
+  { id: 2, userId: 2, name: "月度優惠", bonusPoints: 5, status: "available", code: "MON5" },
+  { id: 3, userId: 3, name: "推薦優惠", bonusPoints: 15, status: "available", code: "REF15" },
+  { id: 4, userId: 4, name: "生日優惠", bonusPoints: 10, status: "available", code: "BDAY10" }
 ];
 
 const DEFAULT_GROUP_SESSIONS = [
-  { id: 1, title: "週一晚間頌缽冥想", time: "每週一 19:30 - 20:30", maxCapacity: 10, currentCapacity: 8, pointCost: 3 },
-  { id: 2, title: "週三午間放鬆療癒", time: "每週三 12:30 - 13:30", maxCapacity: 10, currentCapacity: 10, pointCost: 3 }, // 預設已額滿
-  { id: 3, title: "週五晚間身心平衡", time: "每週五 19:00 - 20:00", maxCapacity: 10, currentCapacity: 5, pointCost: 3 },
-  { id: 4, title: "週六早晨能量提升", time: "每週六 10:00 - 11:00", maxCapacity: 10, currentCapacity: 2, pointCost: 3 }
+  { id: 1, title: "週一晚間頌缽冥想", time: "每週一 19:30 - 20:30", maxCapacity: 10, currentCapacity: 8, pointCost: 0.5 },
+  { id: 2, title: "週三午間放鬆療癒", time: "每週開課 12:30 - 13:30", maxCapacity: 10, currentCapacity: 10, pointCost: 0.5 }, // 預設已額滿
+  { id: 3, title: "週五晚間身心平衡", time: "每週五 19:00 - 20:00", maxCapacity: 10, currentCapacity: 5, pointCost: 0.5 },
+  { id: 4, title: "週六早晨能量提升", time: "每週六 10:00 - 11:00", maxCapacity: 10, currentCapacity: 2, pointCost: 0.5 }
 ];
 
 const DEFAULT_BOOKINGS = [
-  { id: 1001, userId: 2, type: "1on1", date: "2026-07-12", time: "14:00", duration: 60, cost: 6, notes: "最近睡眠品質不佳，希望能加強頭部釋壓。", status: "已確認", timestamp: "2026-07-08 14:32" },
-  { id: 1002, userId: 3, type: "group", sessionId: 1, title: "週一晚間頌缽冥想", date: "2026-07-13", time: "19:30 - 20:30", cost: 3, notes: "", status: "已確認", timestamp: "2026-07-08 16:15" },
-  { id: 1003, userId: 4, type: "1on1", date: "2026-07-15", time: "10:30", duration: 30, cost: 3, notes: "", status: "待確認", timestamp: "2026-07-09 11:20" }
+  { id: 1001, userId: 2, type: "1on1", date: "2026-07-12", time: "14:00", duration: 60, cost: 1, notes: "最近睡眠品質不佳，希望能加強頭部釋壓。", status: "已確認", timestamp: "2026-07-08 14:32" },
+  { id: 1002, userId: 3, type: "group", sessionId: 1, title: "週一晚間頌缽冥想", date: "2026-07-13", time: "19:30 - 20:30", cost: 0.5, notes: "", status: "已確認", timestamp: "2026-07-08 16:15" },
+  { id: 1003, userId: 4, type: "1on1", date: "2026-07-15", time: "10:30", duration: 30, cost: 0.5, notes: "", status: "待確認", timestamp: "2026-07-09 11:20" }
 ];
 
 const DEFAULT_TRANSACTIONS = [
-  { id: 5001, userId: 2, amount: 50, type: "add", reason: "註冊送新會員優惠券點數", date: "2026-07-05 10:00", balance: 50 },
-  { id: 5002, userId: 2, amount: 35, type: "deduct", reason: "預約 1 對 1 療癒 (新制前)", date: "2026-07-06 14:00", balance: 15 },
-  { id: 5003, userId: 3, amount: 30, type: "add", reason: "後台調整點數", date: "2026-07-06 12:00", balance: 30 },
-  { id: 5004, userId: 4, amount: 5, type: "add", reason: "手動充值", date: "2026-07-07 15:30", balance: 5 }
+  { id: 5001, userId: 2, amount: 8, type: "add", reason: "註冊送新會員優惠券次數", date: "2026-07-05 10:00", balance: 8 },
+  { id: 5002, userId: 2, amount: 5.5, type: "deduct", reason: "預約 1 對 1 療癒", date: "2026-07-06 14:00", balance: 2.5 },
+  { id: 5003, userId: 3, amount: 5, type: "add", reason: "後台調整可約次數", date: "2026-07-06 12:00", balance: 5 },
+  { id: 5004, userId: 4, amount: 1, type: "add", reason: "手動充值次數", date: "2026-07-07 15:30", balance: 1 }
 ];
 
 // Helper functions for LocalStorage persistence
@@ -208,7 +208,7 @@ function renderDashboard() {
           <h4>${v.name}</h4>
           <p>代碼：${v.code} (${v.status === "used" ? "已使用" : "未使用"})</p>
         </div>
-        <div class="voucher-bonus ${v.status === "used" ? "used" : ""}">+${v.bonusPoints} 點</div>
+        <div class="voucher-bonus ${v.status === "used" ? "used" : ""}">+${v.bonusPoints} 次</div>
       `;
       vouchersContainer.appendChild(item);
     });
@@ -220,7 +220,7 @@ function renderDashboard() {
   txContainer.innerHTML = "";
   
   if (userTxs.length === 0) {
-    txContainer.innerHTML = `<tr><td colspan="4" class="tx-empty">尚無任何交易明細</td></tr>`;
+    txContainer.innerHTML = `<tr><td colspan="4" class="tx-empty">尚無任何增減明細</td></tr>`;
   } else {
     userTxs.forEach(t => {
       const row = document.createElement("tr");
@@ -230,9 +230,9 @@ function renderDashboard() {
       
       row.innerHTML = `
         <td>${t.date.split(" ")[0]}</td>
-        <td>${isAdd ? "調整增加" : "預約扣點"}</td>
+        <td>${isAdd ? "額度增加" : "預約扣除"}</td>
         <td class="${changeClass}">${sign}${t.amount}</td>
-        <td>${t.reason} (結餘: ${t.balance}點)</td>
+        <td>${t.reason} (結餘: ${t.balance}次)</td>
       `;
       txContainer.appendChild(row);
     });
@@ -287,7 +287,7 @@ function renderDashboard() {
         </div>
         <div class="res-details">
           ${detailRow}
-          <div class="res-detail-row"><i data-lucide="coins"></i> <span>消耗點數：${b.cost} 點</span></div>
+          <div class="res-detail-row"><i data-lucide="coins"></i> <span>消耗次數：${b.cost} 次</span></div>
           ${b.notes ? `<div class="res-detail-row"><i data-lucide="message-square"></i> <span>備註需求：${b.notes}</span></div>` : ""}
         </div>
         ${actionHtml}
@@ -306,7 +306,7 @@ window.cancelBooking = function(bookingId) {
   const booking = bookings.find(b => b.id === bookingId);
   if (!booking) return;
   
-  if (confirm("確定要取消此預約嗎？\n您的預約點數將自動全額退款。")) {
+  if (confirm("確定要取消此預約嗎？\n您的預約額度將自動全額退還。")) {
     // 1. Update booking status
     booking.status = "已取消";
     dbSet("bookings", bookings);
@@ -325,14 +325,14 @@ window.cancelBooking = function(bookingId) {
         userId: member.id,
         amount: booking.cost,
         type: "add",
-        reason: `取消預約退款：ID ${booking.id}`,
+        reason: `取消預約退還：ID ${booking.id}`,
         date: nowStr,
         balance: member.points
       });
       dbSet("transactions", transactions);
     }
     
-    alert("預約已取消，點數已全額退款！");
+    alert("預約已取消，額度已全額退還！");
     renderDashboard();
   }
 };
@@ -406,7 +406,7 @@ function renderGroupForm() {
       </div>
       <div class="group-item-meta">
         <span class="group-item-cap ${capClass}">${capText}</span>
-        <span class="group-item-points">${session.pointCost} 點</span>
+        <span class="group-item-points">${session.pointCost} 次</span>
       </div>
     `;
     
@@ -575,10 +575,10 @@ function renderAdminMemberList() {
         <td>${u.phone}<br><span style="font-size:11px;color:var(--mist);">${u.email}</span></td>
         <td>${u.gender}</td>
         <td>${u.joinDate}</td>
-        <td><strong class="text-brass">${u.points}</strong> 點</td>
+        <td><strong class="text-brass">${u.points}</strong> 次</td>
         <td>
           <div class="action-btn-group">
-            <button class="table-action-btn success" onclick="openAdjustPoints(${u.id})">調整點數</button>
+            <button class="table-action-btn success" onclick="openAdjustPoints(${u.id})">調整次數</button>
             <button class="table-action-btn secondary" onclick="openEditMember(${u.id})">編輯資料</button>
             <button class="table-action-btn danger" onclick="deleteMember(${u.id})">刪除會員</button>
           </div>
@@ -686,7 +686,7 @@ function renderAdminBookingList() {
       } else if (b.status === "已確認") {
         actions = `
           <div class="action-btn-group">
-            <button class="table-action-btn danger" onclick="adminRejectBooking(${b.id})">取消並退點</button>
+            <button class="table-action-btn danger" onclick="adminRejectBooking(${b.id})">取消並退次數</button>
           </div>
         `;
       }
@@ -697,7 +697,7 @@ function renderAdminBookingList() {
         <td><strong>${memberName}</strong></td>
         <td>${label}</td>
         <td>${timeDetail}</td>
-        <td>${b.cost} 點</td>
+        <td>${b.cost} 次</td>
         <td><span class="status-badge ${statusClass}">${b.status}</span></td>
         <td>${actions}</td>
       `;
@@ -722,7 +722,7 @@ window.adminRejectBooking = function(bookingId) {
   if (!booking) return;
   
   const actionText = booking.status === "已確認" ? "取消該預約" : "拒絕該預約申請";
-  if (confirm(`確認要${actionText}嗎？\n會員的預約點數將自動全額退還。`)) {
+  if (confirm(`確認要${actionText}嗎？\n會員的預約次數將自動全額退還。`)) {
     // 1. Update Booking
     booking.status = "已取消";
     dbSet("bookings", bookings);
@@ -741,14 +741,14 @@ window.adminRejectBooking = function(bookingId) {
         userId: member.id,
         amount: booking.cost,
         type: "add",
-        reason: `${booking.status === "已確認" ? "管理員取消退款" : "預約被拒退款"}：ID ${booking.id}`,
+        reason: `${booking.status === "已確認" ? "管理員取消退還" : "預約被拒退還"}：ID ${booking.id}`,
         date: nowStr,
         balance: member.points
       });
       dbSet("transactions", transactions);
     }
     
-    alert("已成功處理，點數已全額退還給會員。");
+    alert("已成功處理，次數已全額退還給會員。");
     renderAdminDashboard(activeAdminPane);
   }
 };
@@ -762,7 +762,7 @@ function renderAdminCouponsPanel() {
   users.filter(u => u.role !== "admin").forEach(u => {
     const opt = document.createElement("option");
     opt.value = u.id;
-    opt.textContent = `${u.name} (剩餘: ${u.points}點)`;
+    opt.textContent = `${u.name} (剩餘: ${u.points}次)`;
     memberSelect.appendChild(opt);
   });
   
@@ -862,11 +862,11 @@ document.addEventListener("DOMContentLoaded", () => {
     e.preventDefault();
     
     const duration = parseInt(document.getElementById("book1on1Duration").value);
-    const costMap = { "30": 3, "60": 6, "90": 9, "120": 12 };
-    const cost = costMap[duration] || 6;
+    const costMap = { "30": 0.5, "60": 1, "90": 1.5, "120": 2 };
+    const cost = costMap[duration] || 1;
     
     if (currentUser.points < cost) {
-      alert("點數不足，請購買點數後再進行預約。");
+      alert("可約次數不足，請加購次數後再進行預約。");
       return;
     }
     
@@ -911,7 +911,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
     dbSet("transactions", transactions);
     
-    alert("預約申請已提交，點數已暫扣，請等待管理員確認。");
+    alert("預約申請已提交，預約額度已暫扣，請等待管理員確認。");
     navigateTo("member");
   });
 
@@ -935,7 +935,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     
     if (currentUser.points < session.pointCost) {
-      alert("點數不足，請購買點數後再進行報名。");
+      alert("可約次數不足，請加購次數後再進行報名。");
       return;
     }
     
@@ -988,7 +988,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
     dbSet("transactions", transactions);
     
-    alert(`報名成功！已扣除 ${session.pointCost} 點。\n期待與您共同體驗頌缽的頻率。`);
+    alert(`報名成功！已扣除 ${session.pointCost} 次預約額度。\n期待與您共同體驗頌缽的頻率。`);
     // Clear selection
     selectedGroupId = null;
     navigateTo("member");
@@ -1064,7 +1064,7 @@ document.addEventListener("DOMContentLoaded", () => {
       phone: phone,
       gender: gender,
       role: "member",
-      points: 50, // Default gift 50 points to new users
+      points: 8, // 預設註冊贈送 8 次預約額度
       joinDate: dateStr,
       lineUserId: lineUserId
     };
@@ -1078,11 +1078,11 @@ document.addEventListener("DOMContentLoaded", () => {
     transactions.push({
       id: newTxId,
       userId: newUser.id,
-      amount: 50,
+      amount: 8,
       type: "add",
       reason: "註冊成為缽日會員贈禮",
       date: timestamp,
-      balance: 50
+      balance: 8
     });
     dbSet("transactions", transactions);
     
@@ -1092,9 +1092,9 @@ document.addEventListener("DOMContentLoaded", () => {
       id: nextCpnId,
       userId: newUser.id,
       name: "新會員優惠",
-      bonusPoints: 50,
+      bonusPoints: 8,
       status: "used", // points already processed above
-      code: "NEW50"
+      code: "NEW8"
     });
     dbSet("vouchers", vouchers);
     
@@ -1103,7 +1103,7 @@ document.addEventListener("DOMContentLoaded", () => {
     localStorage.setItem("singbowl_current_user_id", currentUser.id);
     onUserLoginSuccess();
     
-    alert(`恭喜您註冊成功！我們已發放新會員禮 50 點預約點數給您 🎵`);
+    alert(`恭喜您註冊成功！我們已發放新會員禮 8 次預約次數給您 🎵`);
   });
 
   // Admin Sidebar Nav bindings
@@ -1173,7 +1173,7 @@ document.addEventListener("DOMContentLoaded", () => {
     dbSet("users", users);
     dbSet("transactions", transactions);
     
-    alert(`成功更新會員「${member.name}」的點數！目前餘額：${member.points} 點。`);
+    alert(`成功更新會員「${member.name}」的可約次數！目前餘額：${member.points} 次。`);
     renderAdminDashboard("members");
   });
 
@@ -1208,6 +1208,7 @@ document.addEventListener("DOMContentLoaded", () => {
     
     alert("會員資料已更新成功！");
     renderAdminDashboard("members");
+    navigateTo("admin");
   });
 
   // Admin Manual Add Member modal toggle
@@ -1295,13 +1296,13 @@ document.addEventListener("DOMContentLoaded", () => {
       userId: member.id,
       amount: bonus,
       type: "add",
-      reason: `獲贈票券優惠點數 (${couponName})`,
+      reason: `獲贈票券優惠次數 (${couponName})`,
       date: timestamp,
       balance: member.points
     });
     dbSet("transactions", transactions);
     
-    alert(`已成功發放「${couponName}」票券並贈送 ${bonus} 點給會員「${member.name}」！`);
+    alert(`已成功發放「${couponName}」票券並贈送 ${bonus} 次給會員「${member.name}」！`);
     renderAdminDashboard("coupons");
   });
 
@@ -1368,7 +1369,7 @@ function handleLiffLogin() {
       regForm.dataset.lineName = lineName;
       
       navigateTo("register");
-      alert("請填寫您的基本聯絡資料，即可完成 LINE 帳號綁定並領取 50 點會員禮！");
+      alert("請填寫您的基本聯絡資料，即可完成 LINE 帳號綁定並領取 8 次會員禮！");
     }
   }).catch(err => {
     console.error("取得 LINE 個人資料失敗", err);
