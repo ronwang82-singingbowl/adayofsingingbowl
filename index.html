@@ -8,11 +8,12 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;500;600;700&family=Noto+Sans+TC:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
-  body{ margin:0; }
+  *, *::before, *::after { box-sizing: border-box; }
+  body{ margin:0; background: #F8F5EE; }
   .stage{ min-height:100vh; }
   
   .preview-pane .stage { transform-origin: center top; }
-.stage { --ink: #F8F5EE; --ink-2: #FFFFFF; --ink-3: #F1EDE4; --brass: #73846B; --brass-soft: #E4C778; --brass-dim: #8A6A49; --jade: #DCC6A4; --paper: #4E5E48; --mist: #5F6F5A; --hairline: #D8D4CC; --maxw: 760px; background: var(--ink); color: var(--paper); font-family: "Noto Sans TC", sans-serif; font-weight: 300; line-height: 1.9; }
+.stage { --ink: #F8F5EE; --ink-2: #FFFFFF; --ink-3: #F1EDE4; --brass: #73846B; --brass-soft: #E4C778; --brass-dim: #8A6A49; --jade: #DCC6A4; --paper: #4E5E48; --mist: #5F6F5A; --hairline: #D8D4CC; --maxw: 760px; background: transparent; position: relative; z-index: 1; color: var(--paper); font-family: "Noto Sans TC", sans-serif; font-weight: 300; line-height: 1.9; }
 .stage .wrap { max-width: var(--maxw); margin: 0px auto; padding: 0px 28px; }
 .stage a { color: inherit; }
 .stage .eyebrow { font-family: "JetBrains Mono", monospace; font-size: 12px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--brass); display: inline-flex; align-items: center; gap: 10px; margin-bottom: 22px; }
@@ -70,9 +71,9 @@
 .stage .faq-item:last-child { border-bottom: 1px solid var(--hairline); }
 .stage .faq-q { font-size: 15.5px; font-weight: 500; display: flex; justify-content: space-between; }
 .stage .faq-a { color: var(--mist); font-size: 14px; margin-top: 10px; line-height: 1.8; }
-.stage .final { text-align: center; background: var(--ink-2); border-top: 1px solid var(--hairline); padding: 100px 0px 80px; }
+.stage .final { text-align: center; background: transparent; border-top: 1px solid var(--hairline); padding: 100px 0px 80px; }
 .stage .final h2 { font-size: clamp(26px, 5vw, 38px); line-height: 1.4; white-space: pre-line; }
-.stage .line-card { margin: 40px auto 0px; max-width: 360px; background: var(--ink-3); border: 1px solid var(--hairline); border-radius: 18px; padding: 32px 26px 28px; }
+.stage .line-card { margin: 40px auto 0px; max-width: 360px; background: var(--ink-3); border: 1px solid var(--hairline); border-radius: 18px; padding: 32px 26px 28px; display: flex; flex-direction: column; align-items: center; text-align: center; }
 .stage .line-name { font-family: "Noto Serif TC", serif; font-size: 16px; color: var(--brass-soft); line-height: 1.6; }
 .stage .line-id { font-family: "JetBrains Mono", monospace; font-size: 12.5px; color: var(--mist); margin-top: 6px; }
 .stage .qr-wrap { margin: 22px auto 0px; width: 156px; height: 156px; background: var(--paper); border-radius: 12px; padding: 10px; display: flex; align-items: center; justify-content: center; }
@@ -81,9 +82,67 @@
 .stage footer { text-align: center; padding: 34px 28px 44px; color: var(--mist); font-size: 12px; }
 .stage .foot-links { margin-bottom: 12px; display: flex; gap: 16px; justify-content: center; font-size: 12.5px; }
 
+/* ============ Background Ripple Animation ============ */
+.ripple-field {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 0;
+  pointer-events: none;
+}
+.ripple-field svg {
+  width: min(900px, 140vw);
+  height: min(900px, 140vw);
+}
+.ripple-ring {
+  fill: none;
+  stroke: var(--brass-dim);
+  stroke-width: 1;
+  opacity: 0;
+  transform-origin: center;
+  animation: ripple 7s cubic-bezier(.2, .6, .35, 1) infinite;
+}
+.ripple-ring.r2 {
+  animation-delay: 1.75s;
+}
+.ripple-ring.r3 {
+  animation-delay: 3.5s;
+}
+.ripple-ring.r4 {
+  animation-delay: 5.25s;
+}
+@keyframes ripple {
+  0% {
+    r: 20px;
+    opacity: 0;
+    stroke-width: 2.4;
+  }
+  8% {
+    opacity: 0.55;
+  }
+  100% {
+    r: 420px;
+    opacity: 0;
+    stroke-width: 0.4;
+  }
+}
+
 </style>
 </head>
 <body>
+
+  <!-- Ripple Background Animation -->
+  <div class="ripple-field" aria-hidden="true">
+    <svg viewBox="0 0 500 500">
+      <circle class="ripple-ring r1" cx="250" cy="250" r="20"></circle>
+      <circle class="ripple-ring r2" cx="250" cy="250" r="20"></circle>
+      <circle class="ripple-ring r3" cx="250" cy="250" r="20"></circle>
+      <circle class="ripple-ring r4" cx="250" cy="250" r="20"></circle>
+    </svg>
+  </div>
+
 <div class="stage">
 
     <section class="hero">
