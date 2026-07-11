@@ -761,20 +761,6 @@ function buildFullSiteHTML(){
   ;
   const bodyMarkup = document.getElementById("stage").innerHTML;
   
-  // Strip the ripple-field markup from the bodyMarkup
-  const cleanBody = bodyMarkup.replace(/<div class="ripple-field"[\s\S]*?<\/div>/i, "");
-  
-  const rings = `
-  <!-- Ripple Background Animation -->
-  <div class="ripple-field" aria-hidden="true">
-    <svg viewBox="0 0 500 500">
-      <circle class="ripple-ring r1" cx="250" cy="250" r="20"></circle>
-      <circle class="ripple-ring r2" cx="250" cy="250" r="20"></circle>
-      <circle class="ripple-ring r3" cx="250" cy="250" r="20"></circle>
-      <circle class="ripple-ring r4" cx="250" cy="250" r="20"></circle>
-    </svg>
-  </div>`;
-
   return `<!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
@@ -809,7 +795,6 @@ function buildFullSiteHTML(){
   .stage{ min-height:100vh; }
   \${document.getElementById("stage") ? "" : ""}
   \${stageOnlyCSS()}
-  .ripple-field { position: fixed !important; }
   @keyframes ripple{
     0%   { r: 20; opacity: 0; stroke-width: 2.4; }
     8%   { opacity: 0.55; }
@@ -841,19 +826,9 @@ function buildFullSiteHTML(){
 <\/script>
 </head>
 <body>
-\${rings}
 <div class="stage">
-\${cleanBody}
+\${bodyMarkup}
 </div>
-<script>
-  window.addEventListener('scroll', () => {
-    const scrolled = window.pageYOffset;
-    const ripple = document.querySelector('.ripple-field');
-    if (ripple) {
-      ripple.style.transform = \`translate3d(0, \${-scrolled * 0.3}px, 0)\`;
-    }
-  });
-<\/script>
 </body>
 </html>`;
 }
