@@ -12,10 +12,10 @@ const DEFAULT_USERS = [
 ];
 
 const DEFAULT_VOUCHERS = [
-  { id: 1, userId: 2, name: "新會員優惠", bonusPoints: 8, status: "used", code: "NEW8" },
-  { id: 2, userId: 2, name: "月度優惠", bonusPoints: 5, status: "available", code: "MON5" },
-  { id: 3, userId: 3, name: "推薦優惠", bonusPoints: 15, status: "available", code: "REF15" },
-  { id: 4, userId: 4, name: "生日優惠", bonusPoints: 10, status: "available", code: "BDAY10" }
+  { id: 1, userId: 2, name: "生日優惠贈送次數", bonusPoints: 1, status: "used", code: "BDAY1" },
+  { id: 2, userId: 2, name: "團體頌缽1次", bonusPoints: 0.5, status: "available", code: "GRP05" },
+  { id: 3, userId: 3, name: "生日優惠贈送次數", bonusPoints: 1, status: "available", code: "BDAY1" },
+  { id: 4, userId: 4, name: "團體頌缽1次", bonusPoints: 0.5, status: "available", code: "GRP05" }
 ];
 
 const DEFAULT_GROUP_SESSIONS = [
@@ -255,12 +255,11 @@ function renderDashboard() {
       const resItem = document.createElement("div");
       resItem.className = "res-item";
       
-      const typeLabel = b.type === "1on1" ? `1 對 1 頌缽療癒 (${b.duration} 分鐘)` : `團體課程 - ${b.title}`;
+      const typeLabel = b.type === "1on1" ? "1 對 1 頌缽療癒" : `團體課程 - ${b.title}`;
       let detailRow = "";
       if (b.type === "1on1") {
         detailRow = `
           <div class="res-detail-row"><i data-lucide="calendar"></i> <span>預約時間：${b.date} ${b.time}</span></div>
-          <div class="res-detail-row"><i data-lucide="clock"></i> <span>療程長度：${b.duration} 分鐘</span></div>
         `;
       } else {
         detailRow = `
@@ -353,10 +352,7 @@ function render1on1Form() {
 }
 
 function update1on1Cost() {
-  const duration = parseInt(document.getElementById("book1on1Duration").value);
-  const costMap = { "30": 3, "60": 6, "90": 9, "120": 12 };
-  const cost = costMap[duration] || 6;
-  
+  const cost = 1;
   document.getElementById("lblBook1on1Cost").textContent = cost;
   
   // Warning display
@@ -668,7 +664,7 @@ function renderAdminBookingList() {
     filteredBookings.forEach(b => {
       const member = users.find(u => u.id === b.userId);
       const memberName = member ? member.name : "未知";
-      const label = b.type === "1on1" ? `1對1 (${b.duration}分鐘)` : "團體頌缽";
+      const label = b.type === "1on1" ? "1對1 頌缽" : "團體頌缽";
       const timeDetail = b.type === "1on1" ? `${b.date} ${b.time}` : `${b.date} ${b.title}`;
       
       const statusClass = b.status === "待確認" ? "status-pending" : 
@@ -853,17 +849,14 @@ document.addEventListener("DOMContentLoaded", () => {
   
   document.getElementById("btnCancelEditProfile").addEventListener("click", () => navigateTo("member"));
 
-  // Form: 1-on-1 Duration change
-  document.getElementById("book1on1Duration").addEventListener("change", update1on1Cost);
   document.getElementById("btnCancel1on1").addEventListener("click", () => navigateTo("member"));
   
   // Submit: 1-on-1 reservation
   document.getElementById("formBook1on1").addEventListener("submit", (e) => {
     e.preventDefault();
     
-    const duration = parseInt(document.getElementById("book1on1Duration").value);
-    const costMap = { "30": 0.5, "60": 1, "90": 1.5, "120": 2 };
-    const cost = costMap[duration] || 1;
+    const duration = 60; // 預設單次頌缽時長為 60 分鐘
+    const cost = 1;      // 固定扣除 1 次額度
     
     if (currentUser.points < cost) {
       alert("可約次數不足，請加購次數後再進行預約。");
@@ -1064,7 +1057,7 @@ document.addEventListener("DOMContentLoaded", () => {
       phone: phone,
       gender: gender,
       role: "member",
-      points: 8, // 預設註冊贈送 8 次預約額度
+      points: 0, // 預設新註冊會員起步次數為 0
       joinDate: dateStr,
       lineUserId: lineUserId
     };
@@ -1072,38 +1065,12 @@ document.addEventListener("DOMContentLoaded", () => {
     users.push(newUser);
     dbSet("users", users);
     
-    // Log registration points gift
-    const timestamp = getNowDateTimeString();
-    const newTxId = transactions.length > 0 ? transactions[transactions.length - 1].id + 1 : 5001;
-    transactions.push({
-      id: newTxId,
-      userId: newUser.id,
-      amount: 8,
-      type: "add",
-      reason: "註冊成為缽日會員贈禮",
-      date: timestamp,
-      balance: 8
-    });
-    dbSet("transactions", transactions);
-    
-    // Automatically issue a coupon
-    const nextCpnId = vouchers.length > 0 ? vouchers[vouchers.length - 1].id + 1 : 1;
-    vouchers.push({
-      id: nextCpnId,
-      userId: newUser.id,
-      name: "新會員優惠",
-      bonusPoints: 8,
-      status: "used", // points already processed above
-      code: "NEW8"
-    });
-    dbSet("vouchers", vouchers);
-    
     // Set Login state
     currentUser = newUser;
     localStorage.setItem("singbowl_current_user_id", currentUser.id);
     onUserLoginSuccess();
     
-    alert(`恭喜您註冊成功！我們已發放新會員禮 8 次預約次數給您 🎵`);
+    alert(`恭喜您註冊成功！🎵`);
   });
 
   // Admin Sidebar Nav bindings
