@@ -42,6 +42,7 @@
         <nav class="nav-links">
           <a href="#landing" class="nav-item active" id="btnNavHome">首頁</a>
           <a href="#member" class="nav-item" id="btnNavMember" style="display: none;">會員中心</a>
+          <a href="#buy-points" class="nav-item" id="btnNavBuyPoints" style="display: none;">購買點數</a>
           <a href="#admin" class="nav-item" id="btnNavAdmin" style="display: none;">管理後台</a>
           <button class="nav-btn primary" id="btnHeaderLogin">登入 / 註冊</button>
           <div class="user-menu" id="headerUserMenu" style="display: none;">
@@ -311,11 +312,148 @@
                 </label>
               </div>
             </div>
+            <div class="form-group">
+              <label class="form-label">常用匯款銀行名稱 (防詐綁定必填)</label>
+              <input type="text" class="form-input" id="editBankName" placeholder="例如：國泰世華銀行">
+            </div>
+            <div class="form-group">
+              <label class="form-label">常用匯款帳號後五碼 (防詐對帳必填)</label>
+              <input type="text" class="form-input" id="editBankLast5" placeholder="例如：12345" maxlength="5" pattern="\d{5}">
+            </div>
             <div class="btn-row">
               <button type="button" class="cta-btn secondary-btn" id="btnCancelEditProfile">取消</button>
               <button type="submit" class="cta-btn primary-btn">保存變更</button>
             </div>
           </form>
+        </div>
+      </section>
+
+      <!-- 4.5 Buy Points View -->
+      <section id="view-buy-points" class="view-section">
+        <div class="buy-points-container">
+          <h2>加購服務點數</h2>
+          <p class="auth-subtitle">選擇適合您的點數套票，完成匯款後填寫回條對帳</p>
+
+          <!-- Anti-Fraud Banner -->
+          <div class="anti-fraud-banner">
+            <div class="banner-title"><i data-lucide="shield-alert"></i> 防範三方詐騙與帳戶交易安全聲明</div>
+            <div class="banner-body">
+              <ul>
+                <li>為防範詐騙洗錢，<strong>本平台限制僅能使用您登記的本人帳戶進行匯款</strong>。</li>
+                <li>禁止使用他人帳戶、ATM現金存款、無摺存款，若查有非本人帳號之匯款將無法審核，原款項將退回。</li>
+                <li>若您尚未綁定常用匯款帳號，請先至「會員資料」完成綁定再進行購買。</li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- Points Packages -->
+          <div class="packages-grid">
+            <div class="package-card" data-package-id="1" data-points="1" data-amount="1200">
+              <div class="package-tag">體驗單堂</div>
+              <div class="package-points">1 點</div>
+              <div class="package-price">$1,200</div>
+              <div class="package-desc">適合單次身心頌缽或對話諮商</div>
+            </div>
+            <div class="package-card featured" data-package-id="5" data-points="5" data-amount="5500">
+              <div class="package-tag hot">超值套票 (省$500)</div>
+              <div class="package-points">5 點</div>
+              <div class="package-price">$5,500</div>
+              <div class="package-desc">深層身體清理與連續陪伴療癒</div>
+            </div>
+            <div class="package-card" data-package-id="10" data-points="10" data-amount="10000">
+              <div class="package-tag">全心蛻變 (省$2000)</div>
+              <div class="package-points">10 點</div>
+              <div class="package-price">$10,000</div>
+              <div class="package-desc">中長期身心調和與蛻變諮商</div>
+            </div>
+          </div>
+
+          <!-- Bank Account Details -->
+          <div class="bank-info-card">
+            <div class="card-title"><i data-lucide="landmark"></i> 缽日收款銀行帳戶資訊</div>
+            <div class="bank-details">
+              <div class="bank-detail-item"><strong>收款銀行：</strong> 國泰世華銀行 (代碼 013)</div>
+              <div class="bank-detail-item"><strong>帳戶名稱：</strong> 王品軒</div>
+              <div class="bank-detail-item"><strong>銀行帳號：</strong> 123-45-678901-2</div>
+              <div class="bank-detail-item text-muted">※ 僅供示範，匯款後請保留電子憑證或收據。</div>
+            </div>
+          </div>
+
+          <!-- Remittance Form -->
+          <form id="formSubmitRemittance" class="remittance-form">
+            <input type="hidden" id="buyPackageId" value="">
+            <input type="hidden" id="buyPointsCount" value="">
+            <input type="hidden" id="buyPointsAmount" value="">
+
+            <h3>填寫匯款對帳回條</h3>
+            
+            <div class="form-row-2">
+              <div class="form-group">
+                <label class="form-label">您登記的匯出銀行名稱</label>
+                <input type="text" class="form-input" id="buyUserBankName" readonly>
+              </div>
+              <div class="form-group">
+                <label class="form-label">您登記的帳號後五碼</label>
+                <input type="text" class="form-input" id="buyUserBankLast5" readonly>
+              </div>
+            </div>
+
+            <div class="form-row-2">
+              <div class="form-group">
+                <label class="form-label">實際匯款金額 *</label>
+                <input type="number" class="form-input" id="buyActualAmount" placeholder="請輸入您實際匯款的總額" required readonly>
+              </div>
+              <div class="form-group">
+                <label class="form-label">匯款日期與時間 *</label>
+                <input type="datetime-local" class="form-input" id="buyRemitTime" required>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">備註說明 (選填)</label>
+              <textarea class="form-input" id="buyRemitNote" rows="2" placeholder="如有其他需要說明事項請在此填寫"></textarea>
+            </div>
+
+            <!-- Consumer Agreement Section -->
+            <div class="consumer-terms-box">
+              <h4>【消費者點數購買與服務契約】</h4>
+              <div class="terms-content">
+                1. 本平台提供之頌缽療癒與身心對話預約點數，均無使用期限限制。<br>
+                2. 7天鑑賞退費政策：自購買日起 7 天內，若點數完全未使用，可申請全額退款。超過 7 天申請退款者，將扣除 10% 專案行政與金流手續費後，退還其餘額款項。已扣除使用之點數不予退還。<br>
+                3. 對帳審核流程：匯款後請確實填寫此回條，管理員將於 24 小時內核對銀行帳款，核對無誤後系統將自動發放點數至您的會員帳戶。<br>
+                4. 安全防詐防線：為防止三方詐騙，本平台只接受會員本人登記帳戶之匯款。若有冒用他人帳戶或涉及洗錢者，本平台有權凍結帳戶並報警處理。
+              </div>
+              <label class="terms-checkbox-label">
+                <input type="checkbox" id="chkAgreeTerms" required>
+                <span>我已詳細閱讀並同意上述「消費者點數購買與服務契約」，並保證使用我本人登記的常用帳戶匯款。</span>
+              </label>
+            </div>
+
+            <button type="submit" class="cta-btn primary-btn w-100" id="btnSubmitRemittance">送出匯款對帳申請</button>
+          </form>
+
+          <!-- History List -->
+          <div class="history-section mt-5">
+            <h3>歷史儲值審核紀錄</h3>
+            <div class="table-container">
+              <table class="history-table">
+                <thead>
+                  <tr>
+                    <th>申請時間</th>
+                    <th>方案/點數</th>
+                    <th>匯款金額</th>
+                    <th>後五碼</th>
+                    <th>審核狀態</th>
+                  </tr>
+                </thead>
+                <tbody id="buyPointsHistoryList">
+                  <tr>
+                    <td colspan="5" class="text-center text-muted">目前尚無儲值紀錄。</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -435,6 +573,7 @@
               <button class="sidebar-item" id="btnAdminMenuBookings"><i data-lucide="calendar-days"></i> 預約審核</button>
               <button class="sidebar-item" id="btnAdminMenuCoupons"><i data-lucide="ticket"></i> 票券發放</button>
               <button class="sidebar-item" id="btnAdminMenuSlots"><i data-lucide="clock"></i> 時段開放設定</button>
+              <button class="sidebar-item" id="btnAdminMenuRemittances"><i data-lucide="wallet"></i> 匯款對帳審核</button>
             </div>
             <button class="cta-btn secondary-btn w-100 mt-auto" id="btnAdminBackToMember"><i data-lucide="arrow-left"></i> 返回會員中心</button>
           </div>
@@ -636,7 +775,83 @@
               </div>
             </div>
 
+            <!-- Remittance Verification Dashboard Pane -->
+            <div class="admin-pane-section" id="pane-admin-remittances">
+              <h3>匯款對帳審核</h3>
+              <p class="section-subtitle">審核會員申報的加購點數與匯款對帳回條</p>
+
+              <!-- Pending list -->
+              <div class="admin-section-card mt-3">
+                <h4>待審核申請 (<span id="lblAdminPendingRemittanceCount">0</span>)</h4>
+                <div class="table-wrap">
+                  <table class="admin-table">
+                    <thead>
+                      <tr>
+                        <th>申請時間</th>
+                        <th>會員姓名</th>
+                        <th>購買方案</th>
+                        <th>匯款金額</th>
+                        <th>匯出銀行</th>
+                        <th>後五碼</th>
+                        <th>匯款時間</th>
+                        <th>操作</th>
+                      </tr>
+                    </thead>
+                    <tbody id="adminPendingRemittanceList">
+                      <tr>
+                        <td colspan="8" class="text-center text-muted">目前沒有待審核的匯款申請。</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <!-- History list -->
+              <div class="admin-section-card mt-4">
+                <h4>歷史審核紀錄</h4>
+                <div class="table-wrap">
+                  <table class="admin-table">
+                    <thead>
+                      <tr>
+                        <th>申請時間</th>
+                        <th>會員姓名</th>
+                        <th>購買方案</th>
+                        <th>匯款金額</th>
+                        <th>帳號資訊</th>
+                        <th>審核狀態</th>
+                        <th>說明/原因</th>
+                      </tr>
+                    </thead>
+                    <tbody id="adminHistoryRemittanceList">
+                      <tr>
+                        <td colspan="7" class="text-center text-muted">尚無歷史審核紀錄。</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
           </div>
+        </div>
+      </section>
+
+      <!-- Reject Remittance Modal Dialog -->
+      <section id="view-admin-reject-remittance" class="view-section">
+        <div class="auth-card">
+          <h2>駁回匯款申請</h2>
+          <p class="auth-subtitle">請說明駁回此筆對帳申請的原因</p>
+          <form id="formAdminRejectRemittance">
+            <input type="hidden" id="rejectRemittanceId" value="">
+            <div class="form-group">
+              <label class="form-label" for="txtRejectReason">駁回原因 *</label>
+              <textarea class="form-input" id="txtRejectReason" placeholder="例如：查無此帳款、金額不符、非登記之本人帳號匯出..." required rows="3"></textarea>
+            </div>
+            <div class="btn-row">
+              <button type="button" class="cta-btn secondary-btn" id="btnCancelRejectRemittance">取消</button>
+              <button type="submit" class="cta-btn primary-btn">確定駁回</button>
+            </div>
+          </form>
         </div>
       </section>
 

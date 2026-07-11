@@ -1718,3 +1718,209 @@ button {
   text-decoration: line-through;
   background: rgba(0,0,0,0.2);
 }
+
+/* ============ 8. Buy Points & Remittances ============ */
+.buy-points-container {
+  max-width: var(--max-width-content);
+  margin: 0 auto;
+  padding: 24px 0 60px;
+}
+
+.anti-fraud-banner {
+  background: rgba(220, 95, 95, 0.08);
+  border: 1px solid rgba(220, 95, 95, 0.3);
+  border-radius: var(--border-radius-md);
+  padding: 18px;
+  margin-bottom: 24px;
+  color: var(--paper);
+}
+.anti-fraud-banner .banner-title {
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  color: #c94040;
+}
+.anti-fraud-banner .banner-body ul {
+  margin: 0;
+  padding-left: 20px;
+  font-size: 14px;
+  line-height: 1.6;
+}
+.anti-fraud-banner .banner-body li {
+  margin-bottom: 6px;
+}
+
+.packages-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 20px;
+  margin-bottom: 30px;
+}
+.package-card {
+  background: var(--ink-3);
+  border: 1px solid var(--hairline);
+  border-radius: var(--border-radius-md);
+  padding: 24px 20px;
+  text-align: center;
+  position: relative;
+  cursor: pointer;
+  transition: all var(--transition-smooth);
+}
+.package-card:hover {
+  border-color: var(--brass-soft);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+.package-card.selected {
+  border-color: var(--brass) !important;
+  background: rgba(115, 132, 107, 0.06);
+  box-shadow: 0 0 0 1px var(--brass);
+}
+.package-tag {
+  font-size: 11px;
+  color: var(--mist);
+  background: rgba(0, 0, 0, 0.05);
+  padding: 3px 10px;
+  border-radius: 99px;
+  display: inline-block;
+  margin-bottom: 12px;
+}
+.package-tag.hot {
+  background: var(--brass);
+  color: var(--ink-1);
+}
+.package-points {
+  font-family: "Noto Serif TC", serif;
+  font-size: 28px;
+  font-weight: 600;
+  color: var(--paper);
+  margin-bottom: 8px;
+}
+.package-price {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--brass-dim);
+  margin-bottom: 12px;
+}
+.package-desc {
+  font-size: 13px;
+  color: var(--mist);
+  line-height: 1.5;
+}
+
+.bank-info-card {
+  background: var(--ink-2);
+  border: 1px solid var(--hairline);
+  border-radius: var(--border-radius-md);
+  padding: 20px;
+  margin-bottom: 30px;
+}
+.bank-info-card .card-title {
+  font-weight: 600;
+  color: var(--paper);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.bank-details {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 12px;
+  font-size: 14px;
+}
+.bank-detail-item {
+  color: var(--paper);
+}
+.bank-detail-item.text-muted {
+  grid-column: 1 / -1;
+  color: var(--mist);
+  font-size: 12px;
+}
+
+.remittance-form {
+  background: var(--ink-3);
+  border: 1px solid var(--hairline);
+  border-radius: var(--border-radius-md);
+  padding: 30px;
+  margin-bottom: 40px;
+}
+.remittance-form h3 {
+  font-family: "Noto Serif TC", serif;
+  font-size: 16px;
+  color: var(--paper);
+  margin-top: 0;
+  margin-bottom: 20px;
+  border-bottom: 1px solid var(--hairline);
+  padding-bottom: 10px;
+}
+
+.consumer-terms-box {
+  background: var(--ink-2);
+  border: 1px solid var(--hairline);
+  border-radius: var(--border-radius-sm);
+  padding: 16px;
+  margin-top: 24px;
+  margin-bottom: 24px;
+}
+.consumer-terms-box h4 {
+  margin: 0 0 10px;
+  font-size: 14px;
+  color: var(--paper);
+}
+.terms-content {
+  height: 120px;
+  overflow-y: scroll;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--mist);
+  padding-right: 8px;
+  margin-bottom: 14px;
+  border-bottom: 1px solid var(--hairline);
+  padding-bottom: 10px;
+}
+.terms-checkbox-label {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--paper);
+  cursor: pointer;
+}
+.terms-checkbox-label input {
+  margin-top: 3px;
+}
+
+.history-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 16px;
+  font-size: 14px;
+}
+.history-table th, .history-table td {
+  padding: 12px 16px;
+  text-align: left;
+  border-bottom: 1px solid var(--hairline);
+}
+.history-table th {
+  background: var(--ink-3);
+  color: var(--mist);
+  font-weight: 500;
+}
+.history-table td {
+  color: var(--paper);
+}
+.mt-5 {
+  margin-top: 40px;
+}
+.danger-btn {
+  background: #c94040 !important;
+  color: white !important;
+}
+.danger-btn:hover {
+  background: #b23535 !important;
+}

@@ -83,6 +83,7 @@ let vouchers = dbGet("vouchers", DEFAULT_VOUCHERS);
 let groupSessions = dbGet("groupSessions", DEFAULT_GROUP_SESSIONS);
 let transactions = dbGet("transactions", DEFAULT_TRANSACTIONS);
 let slots = dbGet("slots", DEFAULT_SLOTS);
+let remittances = dbGet("remittances", []);
 let currentUser = null;
 
 // Save initial database state (local-only, do not write to cloud on load)
@@ -92,6 +93,7 @@ dbSet("vouchers", vouchers, false);
 dbSet("groupSessions", groupSessions, false);
 dbSet("transactions", transactions, false);
 dbSet("slots", slots, false);
+dbSet("remittances", remittances, false);
 
 // ==========================================
 // 2. 視圖切換與路由 (Router)
@@ -99,7 +101,7 @@ dbSet("slots", slots, false);
 
 const VIEWS = [
   "landing", "auth", "register", "member", "edit-profile", "book-1on1", "book-group", 
-  "admin", "admin-points", "admin-add-member", "admin-edit-member"
+  "admin", "admin-points", "admin-add-member", "admin-edit-member", "buy-points", "admin-reject-remittance"
 ];
 
 function navigateTo(viewId) {
@@ -124,6 +126,7 @@ function navigateTo(viewId) {
   if (viewId === "member") renderDashboard();
   if (viewId === "book-1on1") render1on1Form();
   if (viewId === "book-group") renderGroupForm();
+  if (viewId === "buy-points") renderBuyPointsPage();
   if (viewId === "admin") renderAdminDashboard("overview");
 }
 
@@ -132,6 +135,7 @@ function updateNavState(viewId) {
   document.querySelectorAll(".nav-item").forEach(item => item.classList.remove("active"));
   if (viewId === "landing") document.getElementById("btnNavHome")?.classList.add("active");
   if (viewId === "member") document.getElementById("btnNavMember")?.classList.add("active");
+  if (viewId === "buy-points") document.getElementById("btnNavBuyPoints")?.classList.add("active");
   if (viewId === "admin") document.getElementById("btnNavAdmin")?.classList.add("active");
 }
 
@@ -162,6 +166,7 @@ function onUserLoginSuccess() {
   
   // Show nav links based on role
   document.getElementById("btnNavMember").style.display = "block";
+  document.getElementById("btnNavBuyPoints").style.display = "block";
   if (currentUser.role === "admin") {
     document.getElementById("btnNavAdmin").style.display = "block";
     navigateTo("admin");
@@ -179,6 +184,7 @@ function onUserLogoutSuccess() {
   document.getElementById("btnHeaderLogin").style.display = "block";
   document.getElementById("headerUserMenu").style.display = "none";
   document.getElementById("btnNavMember").style.display = "none";
+  document.getElementById("btnNavBuyPoints").style.display = "none";
   document.getElementById("btnNavAdmin").style.display = "none";
   
   navigateTo("landing");
@@ -596,6 +602,80 @@ function updateGroupCost(session) {
     submitBtn.disabled = false;
     submitBtn.classList.remove("disabled");
   }
+// ==========================================
+// 3.5 購買點數與對帳渲染 (Buy Points Page Rendering)
+// ==========================================
+
+function renderBuyPointsPage() {
+  if (!currentUser) return;
+  
+  // Update user bank info display
+  const bankName = currentUser.paymentBankName || "";
+  const bankLast5 = currentUser.paymentBankLast5 || "";
+  
+  document.getElementById("buyUserBankName").value = bankName || "尚未設定 (請先至個人資料填寫並綁定)";
+  document.getElementById("buyUserBankLast5").value = bankLast5 || "尚未設定 (請先至個人資料填寫並綁定)";
+  
+  // Reset selected package
+  document.querySelectorAll(".package-card").forEach(c => c.classList.remove("selected"));
+  document.getElementById("buyPackageId").value = "";
+  document.getElementById("buyPointsCount").value = "";
+  document.getElementById("buyPointsAmount").value = "";
+  document.getElementById("buyActualAmount").value = "";
+  
+  // Render user remittance history
+  renderRemittanceHistory();
+}
+
+function renderRemittanceHistory() {
+  const userRemits = remittances.filter(r => r.userId === currentUser.id);
+  const listEl = document.getElementById("buyPointsHistoryList");
+  if (!listEl) return;
+  
+  if (userRemits.length === 0) {
+    listEl.innerHTML = `<tr><td colspan="5" class="text-center text-muted">目前尚無儲值紀錄。</td></tr>`;
+    return;
+  }
+  
+  // Sort by date descending
+  userRemits.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  
+  listEl.innerHTML = userRemits.map(r => {
+    let statusClass = "status-badge status-pending";
+    let statusText = "待對帳";
+    let extraInfo = "";
+    
+    if (r.status === "approved") {
+      statusClass = "status-badge status-confirmed";
+      statusText = "已核准";
+    } else if (r.status === "rejected") {
+      statusClass = "status-badge status-cancelled";
+      statusText = "已駁回";
+      extraInfo = `<div class="text-muted mt-1" style="font-size: 11px;">原因: ${esc(r.rejectReason || "款項未核對屬實")}</div>`;
+    }
+    
+    const packageName = getPackageName(r.packageId);
+    
+    return `
+      <tr>
+        <td>${r.createdAt}</td>
+        <td><strong>${packageName}</strong> (${r.points} 點)</td>
+        <td>$${r.amount}</td>
+        <td>${r.last5} (${r.bankName})</td>
+        <td>
+          <span class="${statusClass}">${statusText}</span>
+          ${extraInfo}
+        </td>
+      </tr>
+    `;
+  }).join("");
+}
+
+function getPackageName(packageId) {
+  if (packageId === 1 || packageId === "1") return "體驗單堂";
+  if (packageId === 5 || packageId === "5") return "超值套票";
+  if (packageId === 10 || packageId === "10") return "全心蛻變";
+  return "未知方案";
 }
 
 // ==========================================
@@ -617,7 +697,8 @@ function renderAdminDashboard(paneId) {
     "members": "btnAdminMenuMembers",
     "bookings": "btnAdminMenuBookings",
     "coupons": "btnAdminMenuCoupons",
-    "slots": "btnAdminMenuSlots"
+    "slots": "btnAdminMenuSlots",
+    "remittances": "btnAdminMenuRemittances"
   };
   document.getElementById(paneToMenuMap[paneId])?.classList.add("active");
   
@@ -689,6 +770,11 @@ function renderAdminDashboard(paneId) {
   // 6. Slots management lists
   if (paneId === "slots") {
     renderAdminSlotsPanel();
+  }
+  
+  // 7. Remittance management lists
+  if (paneId === "remittances") {
+    renderAdminRemittancesPanel();
   }
   
   // Refresh icons
@@ -1056,6 +1142,127 @@ window.deleteSlot = function(slotId) {
 };
 
 
+// 4.6 Remittance Verification Panel
+function renderAdminRemittancesPanel() {
+  const pendingContainer = document.getElementById("adminPendingRemittanceList");
+  const historyContainer = document.getElementById("adminHistoryRemittanceList");
+  if (!pendingContainer || !historyContainer) return;
+  
+  pendingContainer.innerHTML = "";
+  historyContainer.innerHTML = "";
+  
+  const pendings = remittances.filter(r => r.status === "pending");
+  const histories = remittances.filter(r => r.status !== "pending");
+  
+  document.getElementById("lblAdminPendingRemittanceCount").textContent = pendings.length;
+  
+  // Render Pending List
+  if (pendings.length === 0) {
+    pendingContainer.innerHTML = `<tr><td colspan="8" class="text-center text-muted" style="text-align:center;">目前沒有待審核的匯款申請。</td></tr>`;
+  } else {
+    // Sort oldest first for pending so admin processes in order
+    const sortedPendings = [...pendings].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+    sortedPendings.forEach(r => {
+      const row = document.createElement("tr");
+      const packageName = getPackageName(r.packageId);
+      
+      row.innerHTML = `
+        <td>${r.createdAt}</td>
+        <td><strong>${esc(r.userName)}</strong><br><span style="font-size:11px;color:var(--mist);">${esc(r.userPhone)}</span></td>
+        <td><strong>${packageName}</strong> (${r.points} 點)</td>
+        <td>$${r.amount}</td>
+        <td>${esc(r.bankName)}</td>
+        <td><strong class="text-brass" style="font-family:'JetBrains Mono';font-size:14px;">${r.last5}</strong></td>
+        <td>${r.remittedAt}</td>
+        <td>
+          <div class="action-btn-group">
+            <button class="table-action-btn success" onclick="adminApproveRemittance(${r.id})">確認</button>
+            <button class="table-action-btn danger" onclick="openAdminRejectRemittance(${r.id})">駁回</button>
+          </div>
+        </td>
+      `;
+      pendingContainer.appendChild(row);
+    });
+  }
+  
+  // Render History List
+  if (histories.length === 0) {
+    historyContainer.innerHTML = `<tr><td colspan="7" class="text-center text-muted" style="text-align:center;">尚無歷史審核紀錄。</td></tr>`;
+  } else {
+    // Sort newest first for histories
+    const sortedHistories = [...histories].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    sortedHistories.forEach(r => {
+      const row = document.createElement("tr");
+      const packageName = getPackageName(r.packageId);
+      
+      let statusBadge = "";
+      let detailCell = "";
+      if (r.status === "approved") {
+        statusBadge = `<span class="status-badge status-confirmed">已核准</span>`;
+        detailCell = `<span style="font-size:11px;color:var(--mist);">核准完成</span>`;
+      } else if (r.status === "rejected") {
+        statusBadge = `<span class="status-badge status-cancelled">已駁回</span>`;
+        detailCell = `<span style="font-size:11px;color:var(--mist);">原因: ${esc(r.rejectReason || "資料不符")}</span>`;
+      }
+      
+      row.innerHTML = `
+        <td>${r.createdAt}</td>
+        <td><strong>${esc(r.userName)}</strong></td>
+        <td>${packageName} (${r.points} 點)</td>
+        <td>$${r.amount}</td>
+        <td>${r.last5} (${esc(r.bankName)})</td>
+        <td>${statusBadge}</td>
+        <td>${detailCell}</td>
+      `;
+      historyContainer.appendChild(row);
+    });
+  }
+}
+
+window.adminApproveRemittance = function(remittanceId) {
+  const remit = remittances.find(r => r.id === remittanceId);
+  if (!remit) return;
+  
+  const member = users.find(u => u.id === remit.userId);
+  if (!member) {
+    alert("找不到對應的會員，核准失敗。");
+    return;
+  }
+  
+  if (confirm(`確定已收到會員 ${member.name} 的匯款，並發放 ${remit.points} 點數嗎？`)) {
+    // Grant points (1on1 points)
+    member.points = (member.points || 0) + remit.points;
+    
+    // Write point transaction log
+    const newTx = {
+      id: transactions.length + 1,
+      userId: member.id,
+      type: "points_add",
+      amount: remit.points,
+      reason: `加購點數審核通過 (方案: ${getPackageName(remit.packageId)})`,
+      date: getNowDateTimeString()
+    };
+    transactions.push(newTx);
+    
+    // Update remittance status
+    remit.status = "approved";
+    
+    // Save to database
+    dbSet("transactions", transactions, false);
+    dbSet("users", users, false);
+    dbSet("remittances", remittances, true); // Trigger cloud sync here
+    
+    alert(`成功核准！已將 ${remit.points} 點數加至 ${member.name} 的帳戶中。`);
+    renderAdminDashboard("remittances");
+  }
+};
+
+window.openAdminRejectRemittance = function(remittanceId) {
+  document.getElementById("rejectRemittanceId").value = remittanceId;
+  document.getElementById("txtRejectReason").value = "";
+  navigateTo("admin-reject-remittance");
+};
+
 // ==========================================
 // 5. 事件監聽設定 (Event Listeners & Form Submissions)
 // ==========================================
@@ -1092,6 +1299,10 @@ document.addEventListener("DOMContentLoaded", () => {
     e.preventDefault();
     navigateTo("member");
   });
+  document.getElementById("btnNavBuyPoints").addEventListener("click", (e) => {
+    e.preventDefault();
+    navigateTo("buy-points");
+  });
   document.getElementById("btnNavAdmin").addEventListener("click", (e) => {
     e.preventDefault();
     navigateTo("admin");
@@ -1110,6 +1321,8 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("editName").value = currentUser.name;
     document.getElementById("editPhone").value = currentUser.phone;
     document.querySelector(`input[name="editGender"][value="${currentUser.gender}"]`).checked = true;
+    document.getElementById("editBankName").value = currentUser.paymentBankName || "";
+    document.getElementById("editBankLast5").value = currentUser.paymentBankLast5 || "";
     navigateTo("edit-profile");
   });
   
@@ -1122,6 +1335,8 @@ document.addEventListener("DOMContentLoaded", () => {
     currentUser.name = document.getElementById("editName").value;
     currentUser.phone = document.getElementById("editPhone").value;
     currentUser.gender = document.querySelector('input[name="editGender"]:checked').value;
+    currentUser.paymentBankName = document.getElementById("editBankName").value.trim();
+    currentUser.paymentBankLast5 = document.getElementById("editBankLast5").value.trim();
     
     // Save users list
     dbSet("users", users);
@@ -1134,6 +1349,79 @@ document.addEventListener("DOMContentLoaded", () => {
   });
   
   document.getElementById("btnCancelEditProfile").addEventListener("click", () => navigateTo("member"));
+
+  // Package Card Selection Listeners
+  document.querySelectorAll(".package-card").forEach(card => {
+    card.addEventListener("click", () => {
+      document.querySelectorAll(".package-card").forEach(c => c.classList.remove("selected"));
+      card.classList.add("selected");
+      
+      const packageId = card.getAttribute("data-package-id");
+      const points = card.getAttribute("data-points");
+      const amount = card.getAttribute("data-amount");
+      
+      document.getElementById("buyPackageId").value = packageId;
+      document.getElementById("buyPointsCount").value = points;
+      document.getElementById("buyPointsAmount").value = amount;
+      document.getElementById("buyActualAmount").value = amount;
+    });
+  });
+
+  // Remittance Slip Submit Listener
+  document.getElementById("formSubmitRemittance").addEventListener("submit", (e) => {
+    e.preventDefault();
+    if (!currentUser) return;
+    
+    // Check bank binding first
+    if (!currentUser.paymentBankName || !currentUser.paymentBankLast5) {
+      alert("儲值前請先至「個人資料」填寫常用匯款銀行名稱與帳號後五碼以進行防詐綁定。");
+      return;
+    }
+    
+    const packageId = document.getElementById("buyPackageId").value;
+    if (!packageId) {
+      alert("請先選擇您欲加購的點數套票方案。");
+      return;
+    }
+    
+    const chkAgree = document.getElementById("chkAgreeTerms").checked;
+    if (!chkAgree) {
+      alert("您必須同意消費者購買與服務契約以進行交易。");
+      return;
+    }
+    
+    const amount = parseInt(document.getElementById("buyActualAmount").value);
+    const remitTime = document.getElementById("buyRemitTime").value.replace("T", " ");
+    const note = document.getElementById("buyRemitNote").value.trim();
+    
+    const newRemit = {
+      id: remittances.length + 1,
+      userId: currentUser.id,
+      userName: currentUser.name,
+      userPhone: currentUser.phone,
+      packageId: parseInt(packageId),
+      points: parseInt(document.getElementById("buyPointsCount").value),
+      amount: amount,
+      bankName: currentUser.paymentBankName,
+      last5: currentUser.paymentBankLast5,
+      remittedAt: remitTime,
+      status: "pending",
+      rejectReason: "",
+      createdAt: getNowDateTimeString()
+    };
+    
+    remittances.push(newRemit);
+    dbSet("remittances", remittances);
+    
+    alert("匯款對帳回條已提交，管理員將儘速進行審核，感謝您的耐心等待。");
+    
+    // Clear form inputs
+    document.getElementById("buyRemitTime").value = "";
+    document.getElementById("buyRemitNote").value = "";
+    document.getElementById("chkAgreeTerms").checked = false;
+    
+    renderBuyPointsPage();
+  });
 
   document.getElementById("btnCancel1on1").addEventListener("click", () => navigateTo("member"));
   
@@ -1377,7 +1665,32 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("btnAdminMenuBookings").addEventListener("click", () => renderAdminDashboard("bookings"));
   document.getElementById("btnAdminMenuCoupons").addEventListener("click", () => renderAdminDashboard("coupons"));
   document.getElementById("btnAdminMenuSlots").addEventListener("click", () => renderAdminDashboard("slots"));
+  document.getElementById("btnAdminMenuRemittances").addEventListener("click", () => renderAdminDashboard("remittances"));
   document.getElementById("btnAdminBackToMember").addEventListener("click", () => navigateTo("member"));
+
+  // Submit: Admin reject remittance slip
+  document.getElementById("formAdminRejectRemittance").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const remitId = parseInt(document.getElementById("rejectRemittanceId").value);
+    const reason = document.getElementById("txtRejectReason").value.trim();
+    
+    const remit = remittances.find(r => r.id === remitId);
+    if (!remit) return;
+    
+    remit.status = "rejected";
+    remit.rejectReason = reason;
+    
+    dbSet("remittances", remittances, true); // Trigger cloud sync
+    
+    alert("已成功駁回該筆申請。");
+    navigateTo("admin");
+    renderAdminDashboard("remittances");
+  });
+  
+  document.getElementById("btnCancelRejectRemittance").addEventListener("click", () => {
+    navigateTo("admin");
+    renderAdminDashboard("remittances");
+  });
   
   // Submit: Admin open a new slot
   document.getElementById("formAdminCreateSlot").addEventListener("submit", (e) => {
@@ -1751,6 +2064,7 @@ async function fetchCloudData() {
     if (cloudData.groupSessions) { groupSessions = cloudData.groupSessions; dbSet("groupSessions", groupSessions, false); }
     if (cloudData.transactions) { transactions = cloudData.transactions; dbSet("transactions", transactions, false); }
     if (cloudData.slots) { slots = cloudData.slots; dbSet("slots", slots, false); }
+    if (cloudData.remittances) { remittances = cloudData.remittances; dbSet("remittances", remittances, false); }
     
     console.log("雲端資料庫同步完成！");
     
@@ -1787,7 +2101,8 @@ function pushCloudData() {
       vouchers,
       groupSessions,
       transactions,
-      slots
+      slots,
+      remittances
     };
     try {
       await database.ref("db_state").set(payload);
