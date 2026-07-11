@@ -126,6 +126,16 @@ function navigateTo(viewId) {
   // Scroll to top of view
   window.scrollTo({ top: 0, behavior: 'smooth' });
 
+  // Hide ripple soundwave animation on buy-points view to avoid performance lag
+  const rippleField = document.querySelector(".ripple-field");
+  if (rippleField) {
+    if (viewId === "buy-points") {
+      rippleField.style.display = "none";
+    } else {
+      rippleField.style.display = "block";
+    }
+  }
+
   // Update navigation items state
   updateNavState(viewId);
 
@@ -683,9 +693,9 @@ function renderRemittanceHistory() {
 }
 
 function getPackageName(packageId) {
-  if (packageId === 1 || packageId === "1") return "體驗單堂";
-  if (packageId === 5 || packageId === "5") return "超值套票";
-  if (packageId === 10 || packageId === "10") return "全心蛻變";
+  if (packageId === 1 || packageId === "1") return "加購 1 點";
+  if (packageId === 8 || packageId === "8") return "加購 8 點 (加贈1次團體)";
+  if (packageId === 15 || packageId === "15") return "加購 15 點 (加贈2次團體)";
   return "未知方案";
 }
 
@@ -1248,12 +1258,54 @@ window.adminApproveRemittance = function(remittanceId) {
     const newTx = {
       id: transactions.length + 1,
       userId: member.id,
-      type: "points_add",
+      type: "add",
       amount: remit.points,
       reason: `加購點數審核通過 (方案: ${getPackageName(remit.packageId)})`,
-      date: getNowDateTimeString()
+      date: getNowDateTimeString(),
+      balance: member.points
     };
     transactions.push(newTx);
+
+    // Add group session vouchers if applicable
+    let bonusGroupVouchers = 0;
+    if (remit.packageId === 8 || remit.packageId === "8") {
+      bonusGroupVouchers = 1;
+    } else if (remit.packageId === 15 || remit.packageId === "15") {
+      bonusGroupVouchers = 2;
+    }
+
+    if (bonusGroupVouchers > 0) {
+      if (member.groupPoints === undefined) member.groupPoints = 0;
+      member.groupPoints = (member.groupPoints || 0) + bonusGroupVouchers;
+      
+      // Push bonus group session voucher(s)
+      for (let i = 0; i < bonusGroupVouchers; i++) {
+        const nextVoucherId = vouchers.length > 0 ? Math.max(...vouchers.map(v => v.id)) + 1 : 1;
+        const randomCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+        vouchers.push({
+          id: nextVoucherId,
+          userId: member.id,
+          name: "團體頌缽1次",
+          bonusPoints: 1,
+          status: "available",
+          code: randomCode
+        });
+      }
+      
+      // Log group transaction
+      const nextTxId = transactions.length + 1;
+      transactions.push({
+        id: nextTxId,
+        userId: member.id,
+        type: "add",
+        amount: bonusGroupVouchers,
+        reason: `加購套票加贈 - 團體頌缽次數`,
+        date: getNowDateTimeString(),
+        balance: member.groupPoints
+      });
+      
+      dbSet("vouchers", vouchers, false);
+    }
     
     // Update remittance status
     remit.status = "approved";
@@ -1263,7 +1315,8 @@ window.adminApproveRemittance = function(remittanceId) {
     dbSet("users", users, false);
     dbSet("remittances", remittances, true); // Trigger cloud sync here
     
-    alert(`成功核准！已將 ${remit.points} 點數加至 ${member.name} 的帳戶中。`);
+    let bonusMsg = bonusGroupVouchers > 0 ? `，並加贈 ${bonusGroupVouchers} 次團體頌缽次數` : "";
+    alert(`成功核准！已將 ${remit.points} 點數加至 ${member.name} 的帳戶中${bonusMsg}。`);
     renderAdminDashboard("remittances");
   }
 };
