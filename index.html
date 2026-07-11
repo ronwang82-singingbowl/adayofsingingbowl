@@ -330,7 +330,7 @@
     const scrolled = window.pageYOffset;
     const ripple = document.querySelector('.ripple-field');
     if (ripple) {
-      ripple.style.transform = `translate3d(0, ${scrolled * 0.3}px, 0)`;
+      ripple.style.transform = `translate3d(0, ${-scrolled * 0.3}px, 0)`;
     }
   });
 </script>
