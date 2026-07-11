@@ -1588,3 +1588,133 @@ button {
     grid-template-columns: 1fr;
   }
 }
+
+/* ============ Calendar Widget & Time Slots ============ */
+.calendar-widget {
+  background: var(--ink-3);
+  border: 1px solid var(--hairline);
+  border-radius: var(--border-radius-md);
+  padding: 16px;
+  margin-top: 8px;
+}
+.calendar-header-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+.cal-nav-btn {
+  background: var(--ink-2);
+  border: 1px solid var(--hairline);
+  border-radius: 50%;
+  color: var(--paper);
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: var(--transition-smooth);
+}
+.cal-nav-btn:hover {
+  background: var(--brass-soft);
+  color: var(--dark-bg);
+  border-color: var(--brass-soft);
+}
+.cal-month-year {
+  font-family: 'Noto Serif TC', serif;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--paper);
+}
+.calendar-weekdays-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  text-align: center;
+  font-size: 13px;
+  color: var(--mist);
+  margin-bottom: 8px;
+  font-weight: 500;
+}
+.calendar-days-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 8px;
+}
+.calendar-day-cell {
+  aspect-ratio: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  font-size: 14px;
+  color: var(--paper);
+  cursor: pointer;
+  position: relative;
+  transition: var(--transition-smooth);
+  border: 1px solid transparent;
+}
+.calendar-day-cell:hover:not(.empty-cell):not(.past-cell) {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: var(--hairline);
+}
+.calendar-day-cell.active-selected {
+  background: var(--brass) !important;
+  color: var(--ink-1) !important;
+  font-weight: bold;
+}
+.calendar-day-cell.empty-cell {
+  cursor: default;
+}
+.calendar-day-cell.past-cell {
+  opacity: 0.25;
+  cursor: not-allowed;
+}
+.calendar-day-cell .dot-indicator {
+  width: 5px;
+  height: 5px;
+  background: var(--brass);
+  border-radius: 50%;
+  position: absolute;
+  bottom: 4px;
+}
+.calendar-day-cell.active-selected .dot-indicator {
+  background: var(--ink-1);
+}
+
+/* Time Slots Grid */
+.slots-buttons-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+  gap: 10px;
+  margin-top: 8px;
+}
+.slot-btn {
+  background: var(--ink-3);
+  border: 1px solid var(--hairline);
+  border-radius: var(--border-radius-sm);
+  color: var(--paper);
+  padding: 10px 0;
+  font-size: 14px;
+  font-family: 'JetBrains Mono', monospace;
+  text-align: center;
+  cursor: pointer;
+  transition: var(--transition-smooth);
+}
+.slot-btn:hover:not(.disabled-slot) {
+  background: rgba(201, 160, 99, 0.1);
+  border-color: var(--brass);
+}
+.slot-btn.selected {
+  background: var(--brass) !important;
+  color: var(--ink-1) !important;
+  border-color: var(--brass) !important;
+  font-weight: bold;
+}
+.slot-btn.disabled-slot {
+  opacity: 0.3;
+  cursor: not-allowed;
+  text-decoration: line-through;
+  background: rgba(0,0,0,0.2);
+}

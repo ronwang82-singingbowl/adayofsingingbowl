@@ -4,6 +4,14 @@
 // 1. 初始化本地模擬資料庫 (LocalStorage)
 // ==========================================
 
+const DEFAULT_SLOTS = [
+  { id: 1, date: "2026-07-12", time: "10:00", status: "open", bookingId: null },
+  { id: 2, date: "2026-07-12", time: "14:00", status: "booked", bookingId: 1001 },
+  { id: 3, date: "2026-07-13", time: "15:00", status: "open", bookingId: null },
+  { id: 4, date: "2026-07-15", time: "10:30", status: "pending", bookingId: 1003 },
+  { id: 5, date: "2026-07-16", time: "16:00", status: "closed", bookingId: null }
+];
+
 const DEFAULT_USERS = [
   { id: 1, email: "admin@singbowl.com", name: "管理員", phone: "0900-000-000", gender: "其他", role: "admin", points: 0, joinDate: "2026-07-01" },
   { id: 2, email: "test@singbowl.com", name: "王小明", phone: "0912-345-678", gender: "生理男", role: "member", points: 2.5, joinDate: "2026-07-05" },
@@ -13,27 +21,27 @@ const DEFAULT_USERS = [
 
 const DEFAULT_VOUCHERS = [
   { id: 1, userId: 2, name: "生日優惠贈送次數", bonusPoints: 1, status: "used", code: "BDAY1" },
-  { id: 2, userId: 2, name: "團體頌缽1次", bonusPoints: 0.5, status: "available", code: "GRP05" },
+  { id: 2, userId: 2, name: "團體頌缽1次", bonusPoints: 1, status: "available", code: "GRP05" },
   { id: 3, userId: 3, name: "生日優惠贈送次數", bonusPoints: 1, status: "available", code: "BDAY1" },
-  { id: 4, userId: 4, name: "團體頌缽1次", bonusPoints: 0.5, status: "available", code: "GRP05" }
+  { id: 4, userId: 4, name: "團體頌缽1次", bonusPoints: 1, status: "available", code: "GRP05" }
 ];
 
 const DEFAULT_GROUP_SESSIONS = [
-  { id: 1, title: "週一晚間頌缽冥想", time: "每週一 19:30 - 20:30", maxCapacity: 10, currentCapacity: 8, pointCost: 0.5 },
-  { id: 2, title: "週三午間放鬆療癒", time: "每週開課 12:30 - 13:30", maxCapacity: 10, currentCapacity: 10, pointCost: 0.5 }, // 預設已額滿
-  { id: 3, title: "週五晚間身心平衡", time: "每週五 19:00 - 20:00", maxCapacity: 10, currentCapacity: 5, pointCost: 0.5 },
-  { id: 4, title: "週六早晨能量提升", time: "每週六 10:00 - 11:00", maxCapacity: 10, currentCapacity: 2, pointCost: 0.5 }
+  { id: 1, title: "週一晚間頌缽冥想", time: "每週一 19:30 - 20:30", maxCapacity: 10, currentCapacity: 8, pointCost: 1 },
+  { id: 2, title: "週三午間放鬆療癒", time: "每週開課 12:30 - 13:30", maxCapacity: 10, currentCapacity: 10, pointCost: 1 }, // 預設已額滿
+  { id: 3, title: "週五晚間身心平衡", time: "每週五 19:00 - 20:00", maxCapacity: 10, currentCapacity: 5, pointCost: 1 },
+  { id: 4, title: "週六早晨能量提升", time: "每週六 10:00 - 11:00", maxCapacity: 10, currentCapacity: 2, pointCost: 1 }
 ];
 
 const DEFAULT_BOOKINGS = [
-  { id: 1001, userId: 2, type: "1on1", date: "2026-07-12", time: "14:00", duration: 60, cost: 1, notes: "最近睡眠品質不佳，希望能加強頭部釋壓。", status: "已確認", timestamp: "2026-07-08 14:32" },
-  { id: 1002, userId: 3, type: "group", sessionId: 1, title: "週一晚間頌缽冥想", date: "2026-07-13", time: "19:30 - 20:30", cost: 0.5, notes: "", status: "已確認", timestamp: "2026-07-08 16:15" },
-  { id: 1003, userId: 4, type: "1on1", date: "2026-07-15", time: "10:30", duration: 30, cost: 0.5, notes: "", status: "待確認", timestamp: "2026-07-09 11:20" }
+  { id: 1001, userId: 2, type: "1on1", slotId: 2, date: "2026-07-12", time: "14:00", duration: 60, cost: 1, notes: "最近睡眠品質不佳，希望能加強頭部釋壓。", status: "已確認", timestamp: "2026-07-08 14:32" },
+  { id: 1002, userId: 3, type: "group", sessionId: 1, title: "週一晚間頌缽冥想", date: "2026-07-13", time: "19:30 - 20:30", cost: 1, notes: "", status: "已確認", timestamp: "2026-07-08 16:15" },
+  { id: 1003, userId: 4, type: "1on1", slotId: 4, date: "2026-07-15", time: "10:30", duration: 60, cost: 1, notes: "", status: "待確認", timestamp: "2026-07-09 11:20" }
 ];
 
 const DEFAULT_TRANSACTIONS = [
-  { id: 5001, userId: 2, amount: 8, type: "add", reason: "註冊送新會員優惠券次數", date: "2026-07-05 10:00", balance: 8 },
-  { id: 5002, userId: 2, amount: 5.5, type: "deduct", reason: "預約 1 對 1 療癒", date: "2026-07-06 14:00", balance: 2.5 },
+  { id: 5001, userId: 2, amount: 8, type: "add", reason: "生日優惠贈送次數", date: "2026-07-05 10:00", balance: 8 },
+  { id: 5002, userId: 2, amount: 1, type: "deduct", reason: "預約 1 對 1 療癒", date: "2026-07-06 14:00", balance: 7 },
   { id: 5003, userId: 3, amount: 5, type: "add", reason: "後台調整可約次數", date: "2026-07-06 12:00", balance: 5 },
   { id: 5004, userId: 4, amount: 1, type: "add", reason: "手動充值次數", date: "2026-07-07 15:30", balance: 1 }
 ];
@@ -74,6 +82,7 @@ let bookings = dbGet("bookings", DEFAULT_BOOKINGS);
 let vouchers = dbGet("vouchers", DEFAULT_VOUCHERS);
 let groupSessions = dbGet("groupSessions", DEFAULT_GROUP_SESSIONS);
 let transactions = dbGet("transactions", DEFAULT_TRANSACTIONS);
+let slots = dbGet("slots", DEFAULT_SLOTS);
 let currentUser = null;
 
 // Save initial database state (local-only, do not write to cloud on load)
@@ -82,6 +91,7 @@ dbSet("bookings", bookings, false);
 dbSet("vouchers", vouchers, false);
 dbSet("groupSessions", groupSessions, false);
 dbSet("transactions", transactions, false);
+dbSet("slots", slots, false);
 
 // ==========================================
 // 2. 視圖切換與路由 (Router)
@@ -310,6 +320,16 @@ window.cancelBooking = function(bookingId) {
     booking.status = "已取消";
     dbSet("bookings", bookings);
     
+    // Free up associated slot if exists
+    if (booking.slotId) {
+      const slot = slots.find(s => s.id === booking.slotId);
+      if (slot) {
+        slot.status = "open";
+        slot.bookingId = null;
+        dbSet("slots", slots);
+      }
+    }
+    
     // 2. Refund points to user
     const member = users.find(u => u.id === booking.userId);
     if (member) {
@@ -336,18 +356,124 @@ window.cancelBooking = function(bookingId) {
   }
 };
 
+// Calendar state variables
+let calCurrentYear = new Date().getFullYear();
+let calCurrentMonth = new Date().getMonth();
+let calSelectedDateStr = null;
+
 // Render 1on1 booking variables
 function render1on1Form() {
   if (!currentUser) return;
   document.getElementById("lblBook1on1UserPoints").textContent = currentUser.points;
   
-  // Set default date to tomorrow
-  const tomorrow = new Date();
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  document.getElementById("book1on1Date").value = tomorrow.toISOString().split("T")[0];
-  document.getElementById("book1on1Time").value = "14:00";
+  calCurrentYear = new Date().getFullYear();
+  calCurrentMonth = new Date().getMonth();
+  calSelectedDateStr = null;
   
-  // Trigger update points
+  document.getElementById("selectedSlotId").value = "";
+  document.getElementById("bookingSlotsGrid").innerHTML = "";
+  document.getElementById("lblSelectedDaySlots").textContent = "時段選擇 (請先點選上方日期)";
+  
+  renderBookingCalendar();
+  update1on1Cost();
+}
+
+function renderBookingCalendar() {
+  const lblMonthYear = document.getElementById("lblCalendarMonthYear");
+  const daysGrid = document.getElementById("calendarDaysGrid");
+  if (!lblMonthYear || !daysGrid) return;
+  
+  lblMonthYear.textContent = `${calCurrentYear} 年 ${calCurrentMonth + 1} 月`;
+  daysGrid.innerHTML = "";
+  
+  const firstDay = new Date(calCurrentYear, calCurrentMonth, 1);
+  const startDayOfWeek = firstDay.getDay();
+  const totalDays = new Date(calCurrentYear, calCurrentMonth + 1, 0).getDate();
+  
+  // Empty slots before first day
+  for (let i = 0; i < startDayOfWeek; i++) {
+    const emptyCell = document.createElement("div");
+    emptyCell.className = "calendar-day-cell empty-cell";
+    daysGrid.appendChild(emptyCell);
+  }
+  
+  const today = new Date();
+  today.setHours(0,0,0,0);
+  
+  // Generate calendar days
+  for (let d = 1; d <= totalDays; d++) {
+    const cellDate = new Date(calCurrentYear, calCurrentMonth, d);
+    const dateStr = `${calCurrentYear}-${String(calCurrentMonth + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+    
+    const cell = document.createElement("div");
+    cell.className = "calendar-day-cell";
+    cell.textContent = d;
+    
+    if (cellDate < today) {
+      cell.classList.add("past-cell");
+    } else {
+      const hasOpenSlots = slots.some(s => s.date === dateStr && s.status === "open");
+      if (hasOpenSlots) {
+        const dot = document.createElement("span");
+        dot.className = "dot-indicator";
+        cell.appendChild(dot);
+      }
+      
+      if (calSelectedDateStr === dateStr) {
+        cell.classList.add("active-selected");
+      }
+      
+      cell.addEventListener("click", () => {
+        document.querySelectorAll(".calendar-day-cell").forEach(c => c.classList.remove("active-selected"));
+        cell.classList.add("active-selected");
+        calSelectedDateStr = dateStr;
+        renderBookingTimeSlots(dateStr);
+      });
+    }
+    daysGrid.appendChild(cell);
+  }
+}
+
+function renderBookingTimeSlots(dateStr) {
+  const lblSelected = document.getElementById("lblSelectedDaySlots");
+  const grid = document.getElementById("bookingSlotsGrid");
+  const hiddenInput = document.getElementById("selectedSlotId");
+  if (!lblSelected || !grid || !hiddenInput) return;
+  
+  lblSelected.textContent = `選擇 ${dateStr} 的時段`;
+  grid.innerHTML = "";
+  hiddenInput.value = "";
+  
+  const daySlots = slots.filter(s => s.date === dateStr).sort((a,b) => a.time.localeCompare(b.time));
+  
+  if (daySlots.length === 0) {
+    grid.innerHTML = `<div style="grid-column: span 7; color: var(--mist); font-size: 13px; text-align: center; padding: 10px 0;">當日無開放預約的時段</div>`;
+    update1on1Cost();
+    return;
+  }
+  
+  const openSlots = daySlots.filter(s => s.status === "open");
+  if (openSlots.length === 0) {
+    grid.innerHTML = `<div style="grid-column: span 7; color: var(--mist); font-size: 13px; text-align: center; padding: 10px 0;">當日時段已被約滿或暫不開放</div>`;
+    update1on1Cost();
+    return;
+  }
+  
+  openSlots.forEach(s => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "slot-btn";
+    btn.textContent = s.time;
+    
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".slot-btn").forEach(b => b.classList.remove("selected"));
+      btn.classList.add("selected");
+      hiddenInput.value = s.id;
+      update1on1Cost();
+    });
+    grid.appendChild(btn);
+  });
+  
   update1on1Cost();
 }
 
@@ -355,18 +481,30 @@ function update1on1Cost() {
   const cost = 1;
   document.getElementById("lblBook1on1Cost").textContent = cost;
   
-  // Warning display
   const warning = document.getElementById("lblBook1on1Warning");
   const submitBtn = document.getElementById("btnSubmit1on1");
+  const selectedSlotId = document.getElementById("selectedSlotId").value;
   
-  if (currentUser.points < cost) {
+  const hasPoints = currentUser.points >= cost;
+  
+  if (!hasPoints) {
     warning.style.display = "flex";
+    warning.innerHTML = `<i data-lucide="alert-triangle"></i> ⚠️ 次數不足，請先<a href="https://line.me/R/ti/p/%40197nfdme" target="_blank" style="color:var(--brass-soft);text-decoration:underline;">聯絡療癒師加購次數</a>。`;
+    submitBtn.disabled = true;
+    submitBtn.classList.add("disabled");
+  } else if (!selectedSlotId) {
+    warning.style.display = "flex";
+    warning.innerHTML = `<i data-lucide="info"></i> 💡 請先選擇日期與預約時段。`;
     submitBtn.disabled = true;
     submitBtn.classList.add("disabled");
   } else {
     warning.style.display = "none";
     submitBtn.disabled = false;
     submitBtn.classList.remove("disabled");
+  }
+  
+  if (typeof lucide !== 'undefined') {
+    lucide.createIcons();
   }
 }
 
@@ -469,7 +607,8 @@ function renderAdminDashboard(paneId) {
     "overview": "btnAdminMenuOverview",
     "members": "btnAdminMenuMembers",
     "bookings": "btnAdminMenuBookings",
-    "coupons": "btnAdminMenuCoupons"
+    "coupons": "btnAdminMenuCoupons",
+    "slots": "btnAdminMenuSlots"
   };
   document.getElementById(paneToMenuMap[paneId])?.classList.add("active");
   
@@ -536,6 +675,11 @@ function renderAdminDashboard(paneId) {
   // 5. Coupon management lists
   if (paneId === "coupons") {
     renderAdminCouponsPanel();
+  }
+  
+  // 6. Slots management lists
+  if (paneId === "slots") {
+    renderAdminSlotsPanel();
   }
   
   // Refresh icons
@@ -709,6 +853,16 @@ window.adminApproveBooking = function(bookingId) {
   
   booking.status = "已確認";
   dbSet("bookings", bookings);
+  
+  // Update slot status to booked
+  if (booking.slotId) {
+    const slot = slots.find(s => s.id === booking.slotId);
+    if (slot) {
+      slot.status = "booked";
+      dbSet("slots", slots);
+    }
+  }
+  
   alert("預約已確認！");
   renderAdminDashboard(activeAdminPane);
 };
@@ -722,6 +876,16 @@ window.adminRejectBooking = function(bookingId) {
     // 1. Update Booking
     booking.status = "已取消";
     dbSet("bookings", bookings);
+    
+    // Free up associated slot
+    if (booking.slotId) {
+      const slot = slots.find(s => s.id === booking.slotId);
+      if (slot) {
+        slot.status = "open";
+        slot.bookingId = null;
+        dbSet("slots", slots);
+      }
+    }
     
     // 2. Refund user points
     const member = users.find(u => u.id === booking.userId);
@@ -786,6 +950,93 @@ function renderAdminCouponsPanel() {
   });
 }
 
+// 4.5 Booking Slots Panel
+function renderAdminSlotsPanel() {
+  const container = document.getElementById("adminSlotList");
+  if (!container) return;
+  container.innerHTML = "";
+  
+  const sortedSlots = [...slots].sort((a, b) => {
+    const dateComp = b.date.localeCompare(a.date);
+    if (dateComp !== 0) return dateComp;
+    return a.time.localeCompare(b.time);
+  });
+  
+  if (sortedSlots.length === 0) {
+    container.innerHTML = `<tr><td colspan="4" class="tx-empty" style="text-align:center;">目前無任何開放時段紀錄</td></tr>`;
+    return;
+  }
+  
+  sortedSlots.forEach(s => {
+    const row = document.createElement("tr");
+    
+    let statusText = "";
+    let statusClass = "";
+    if (s.status === "open") {
+      statusText = "開放中";
+      statusClass = "status-confirmed";
+    } else if (s.status === "pending") {
+      statusText = "待確認";
+      statusClass = "status-pending";
+    } else if (s.status === "booked") {
+      statusText = "已預約";
+      statusClass = "status-completed";
+    } else if (s.status === "closed") {
+      statusText = "手動關閉";
+      statusClass = "status-cancelled";
+    }
+    
+    let actionBtn = "";
+    if (s.status === "open") {
+      actionBtn = `<button class="table-action-btn danger" onclick="toggleSlotStatus(${s.id}, 'closed')">關閉</button>`;
+    } else if (s.status === "closed") {
+      actionBtn = `<button class="table-action-btn success" onclick="toggleSlotStatus(${s.id}, 'open')">開啟</button>`;
+    } else if (s.status === "pending") {
+      actionBtn = `<span style="font-size:12px;color:var(--mist)">待預約審核</span>`;
+    } else if (s.status === "booked") {
+      actionBtn = `<span style="font-size:12px;color:var(--mist)">已確認預約</span>`;
+    }
+    
+    let deleteBtn = "";
+    if (s.status === "open" || s.status === "closed") {
+      deleteBtn = `<button class="table-action-btn secondary" style="margin-left: 8px;" onclick="deleteSlot(${s.id})">刪除</button>`;
+    }
+    
+    row.innerHTML = `
+      <td><strong>${s.date}</strong></td>
+      <td><span style="font-family:'JetBrains Mono';font-size:14px;">${s.time}</span></td>
+      <td><span class="status-badge ${statusClass}">${statusText}</span></td>
+      <td>
+        <div class="action-btn-group" style="justify-content: flex-start;">
+          ${actionBtn}
+          ${deleteBtn}
+        </div>
+      </td>
+    `;
+    container.appendChild(row);
+  });
+}
+
+window.toggleSlotStatus = function(slotId, newStatus) {
+  const slot = slots.find(s => s.id === slotId);
+  if (!slot) return;
+  
+  slot.status = newStatus;
+  dbSet("slots", slots);
+  renderAdminSlotsPanel();
+};
+
+window.deleteSlot = function(slotId) {
+  const slotIndex = slots.findIndex(s => s.id === slotId);
+  if (slotIndex === -1) return;
+  
+  if (confirm("確定要刪除此開放時段嗎？")) {
+    slots.splice(slotIndex, 1);
+    dbSet("slots", slots);
+    renderAdminSlotsPanel();
+  }
+};
+
 
 // ==========================================
 // 5. 事件監聽設定 (Event Listeners & Form Submissions)
@@ -794,6 +1045,23 @@ function renderAdminCouponsPanel() {
 document.addEventListener("DOMContentLoaded", () => {
   
   // 1. Navigation click bindings
+  document.getElementById("btnPrevMonth").addEventListener("click", () => {
+    calCurrentMonth--;
+    if (calCurrentMonth < 0) {
+      calCurrentMonth = 11;
+      calCurrentYear--;
+    }
+    renderBookingCalendar();
+  });
+  document.getElementById("btnNextMonth").addEventListener("click", () => {
+    calCurrentMonth++;
+    if (calCurrentMonth > 11) {
+      calCurrentMonth = 0;
+      calCurrentYear++;
+    }
+    renderBookingCalendar();
+  });
+
   document.getElementById("navLogo").addEventListener("click", (e) => {
     e.preventDefault();
     navigateTo("landing");
@@ -855,17 +1123,23 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("formBook1on1").addEventListener("submit", (e) => {
     e.preventDefault();
     
-    const duration = 60; // 預設單次頌缽時長為 60 分鐘
-    const cost = 1;      // 固定扣除 1 次額度
-    
+    const cost = 1;
     if (currentUser.points < cost) {
       alert("可約次數不足，請加購次數後再進行預約。");
       return;
     }
     
-    const date = document.getElementById("book1on1Date").value;
-    const time = document.getElementById("book1on1Time").value;
-    const notes = document.getElementById("book1on1Notes").value;
+    const slotId = parseInt(document.getElementById("selectedSlotId").value);
+    if (!slotId) {
+      alert("請先選擇預約日期與時段！");
+      return;
+    }
+    
+    const slot = slots.find(s => s.id === slotId);
+    if (!slot || slot.status !== "open") {
+      alert("該時段已不可選，請選擇其他時段！");
+      return;
+    }
     
     // 1. Create booking entry
     const newBookingId = bookings.length > 0 ? bookings[bookings.length - 1].id + 1 : 1001;
@@ -875,17 +1149,23 @@ document.addEventListener("DOMContentLoaded", () => {
       id: newBookingId,
       userId: currentUser.id,
       type: "1on1",
-      date: date,
-      time: time,
-      duration: duration,
+      slotId: slot.id,
+      date: slot.date,
+      time: slot.time,
+      duration: 60, // default standard duration
       cost: cost,
-      notes: notes,
+      notes: document.getElementById("book1on1Notes").value,
       status: "待確認",
       timestamp: timestamp
     };
     
     bookings.push(newBooking);
     dbSet("bookings", bookings);
+    
+    // 2. Lock slot status to pending
+    slot.status = "pending";
+    slot.bookingId = newBookingId;
+    dbSet("slots", slots);
     
     // 2. Deduct points from user
     currentUser.points -= cost;
@@ -1078,7 +1358,45 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("btnAdminMenuMembers").addEventListener("click", () => renderAdminDashboard("members"));
   document.getElementById("btnAdminMenuBookings").addEventListener("click", () => renderAdminDashboard("bookings"));
   document.getElementById("btnAdminMenuCoupons").addEventListener("click", () => renderAdminDashboard("coupons"));
+  document.getElementById("btnAdminMenuSlots").addEventListener("click", () => renderAdminDashboard("slots"));
   document.getElementById("btnAdminBackToMember").addEventListener("click", () => navigateTo("member"));
+  
+  // Submit: Admin open a new slot
+  document.getElementById("formAdminCreateSlot").addEventListener("submit", (e) => {
+    e.preventDefault();
+    
+    const dateVal = document.getElementById("txtSlotDate").value;
+    const timeVal = document.getElementById("txtSlotTime").value;
+    
+    if (!dateVal || !timeVal) {
+      alert("請選擇完整的日期與時間！");
+      return;
+    }
+    
+    const duplicate = slots.find(s => s.date === dateVal && s.time === timeVal);
+    if (duplicate) {
+      alert("此日期與時段已在列表中！");
+      return;
+    }
+    
+    const nextSlotId = slots.length > 0 ? slots[slots.length - 1].id + 1 : 1;
+    const newSlot = {
+      id: nextSlotId,
+      date: dateVal,
+      time: timeVal,
+      status: "open",
+      bookingId: null
+    };
+    
+    slots.push(newSlot);
+    dbSet("slots", slots);
+    
+    // Clear time input but keep date for convenience of opening multiple slots on same day
+    document.getElementById("txtSlotTime").value = "";
+    
+    renderAdminSlotsPanel();
+    alert(`成功開放時段：${dateVal} ${timeVal}！`);
+  });
 
   // Admin Search filter
   document.getElementById("txtSearchMembers").addEventListener("input", (e) => {
@@ -1384,6 +1702,7 @@ async function fetchCloudData() {
     if (cloudData.vouchers) { vouchers = cloudData.vouchers; dbSet("vouchers", vouchers, false); }
     if (cloudData.groupSessions) { groupSessions = cloudData.groupSessions; dbSet("groupSessions", groupSessions, false); }
     if (cloudData.transactions) { transactions = cloudData.transactions; dbSet("transactions", transactions, false); }
+    if (cloudData.slots) { slots = cloudData.slots; dbSet("slots", slots, false); }
     
     console.log("雲端資料庫同步完成！");
     
@@ -1419,7 +1738,8 @@ function pushCloudData() {
       bookings,
       vouchers,
       groupSessions,
-      transactions
+      transactions,
+      slots
     };
     try {
       await database.ref("db_state").set(payload);
@@ -1449,6 +1769,7 @@ window.addEventListener('storage', (e) => {
     vouchers = dbGet("vouchers", DEFAULT_VOUCHERS);
     groupSessions = dbGet("groupSessions", DEFAULT_GROUP_SESSIONS);
     transactions = dbGet("transactions", DEFAULT_TRANSACTIONS);
+    slots = dbGet("slots", DEFAULT_SLOTS);
     
     // 如果當前有登入，更新當前使用者資料並重新渲染
     const savedUserId = localStorage.getItem("singbowl_current_user_id");
