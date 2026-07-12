@@ -1869,24 +1869,61 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   // Mock Authentication: Email Auth Flow
-  document.getElementById("formEmailAuth").addEventListener("submit", (e) => {
+  document.getElementById("formEmailAuth").addEventListener("submit", async (e) => {
     e.preventDefault();
     const email = document.getElementById("authEmail").value.trim().toLowerCase();
     
-    const existing = users.find(u => u.email === email);
-    if (existing) {
-      // User exists, login
-      currentUser = existing;
-      localStorage.setItem("singbowl_current_user_id", currentUser.id);
-      onUserLoginSuccess();
-      alert(`歡迎回來，${currentUser.name}！`);
-    } else {
-      // User doesn't exist, navigate to Registration to complete profile
-      document.getElementById("regName").value = "";
-      document.getElementById("regPhone").value = "";
-      document.getElementById("regEmail").value = email;
-      document.getElementById("formRegisterProfile").dataset.tempEmail = email;
-      navigateTo("register");
+    // 顯示載入提示
+    const btnSubmit = document.getElementById("btnEmailSubmit");
+    const originalText = btnSubmit.textContent;
+    btnSubmit.disabled = true;
+    btnSubmit.textContent = "驗證中...";
+    
+    try {
+      // 1. 直接向 Firebase 雲端資料庫查詢此 Email 是否已註冊
+      const snapshot = await database.ref("users").orderByChild("email").equalTo(email).once("value");
+      const data = snapshot.val();
+      
+      if (data) {
+        // 用戶存在 (Firebase 會回傳包含 key-value 的物件，取第一個)
+        const matchedUser = Object.values(data)[0];
+        currentUser = matchedUser;
+        
+        // 同步寫入本地緩存
+        const idx = users.findIndex(u => u.id === currentUser.id);
+        if (idx !== -1) {
+          users[idx] = currentUser;
+        } else {
+          users.push(currentUser);
+        }
+        dbSet("users", users, false);
+        
+        localStorage.setItem("singbowl_current_user_id", currentUser.id);
+        onUserLoginSuccess();
+        alert(`歡迎回來，${currentUser.name}！`);
+      } else {
+        // 用戶不存在，導向完善會員資料流程
+        document.getElementById("regName").value = "";
+        document.getElementById("regPhone").value = "";
+        document.getElementById("regEmail").value = email;
+        document.getElementById("formRegisterProfile").dataset.tempEmail = email;
+        navigateTo("register");
+      }
+    } catch (err) {
+      console.error("登入驗證錯誤:", err);
+      // 網路錯誤時使用本地備用資料驗證
+      const existing = users.find(u => u.email === email);
+      if (existing) {
+        currentUser = existing;
+        localStorage.setItem("singbowl_current_user_id", currentUser.id);
+        onUserLoginSuccess();
+        alert(`歡迎回來，${currentUser.name} (離線模式)！`);
+      } else {
+        alert("驗證失敗，請檢查網路連線或稍後再試。");
+      }
+    } finally {
+      btnSubmit.disabled = false;
+      btnSubmit.textContent = originalText;
     }
   });
 
