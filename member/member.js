@@ -132,7 +132,7 @@ function navigateTo(viewId) {
     if (viewId === "buy-points") {
       rippleField.style.display = "none";
     } else {
-      rippleField.style.display = "block";
+      rippleField.style.display = "";
     }
   }
 
