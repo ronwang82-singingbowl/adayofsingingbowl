@@ -170,9 +170,6 @@ function initSession() {
   } else {
     onUserLogoutSuccess();
   }
-  
-  // 2. 啟動 Firebase 雲端資料庫即時監聽與同步
-  startRealtimeSync();
 }
 
 function onUserLoginSuccess() {
@@ -2173,6 +2170,9 @@ document.addEventListener("DOMContentLoaded", () => {
     alert(`已成功發放「${couponName}」票券並贈送 ${bonus} 次給會員「${member.name}」！`);
     renderAdminDashboard("coupons");
   });
+
+  // Start Firebase Realtime Synchronization globally on load
+  startRealtimeSync();
 
   // Initialize Session (LINE LIFF 優先)
   if (typeof liff !== "undefined") {
