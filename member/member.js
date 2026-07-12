@@ -171,8 +171,8 @@ function initSession() {
     onUserLogoutSuccess();
   }
   
-  // 2. 異步向雲端資料庫請求最新資料並進行同步
-  fetchCloudData();
+  // 2. 啟動 Firebase 雲端資料庫即時監聽與同步
+  startRealtimeSync();
 }
 
 function onUserLoginSuccess() {
@@ -180,6 +180,9 @@ function onUserLoginSuccess() {
   document.getElementById("btnHeaderLogin").style.display = "none";
   document.getElementById("headerUserMenu").style.display = "flex";
   document.getElementById("headerUserName").textContent = currentUser.name;
+  
+  // Hide Home button when logged in
+  document.getElementById("btnNavHome").style.display = "none";
   
   // Show nav links based on role
   document.getElementById("btnNavMember").style.display = "block";
@@ -205,6 +208,9 @@ function onUserLogoutSuccess() {
   const navBuyPoints = document.getElementById("btnNavBuyPoints");
   if (navBuyPoints) navBuyPoints.style.display = "none";
   document.getElementById("btnNavAdmin").style.display = "none";
+  
+  // Show Home button when logged out
+  document.getElementById("btnNavHome").style.display = "block";
   
   navigateTo("landing");
 }
@@ -2262,17 +2268,22 @@ function runMockLineLogin() {
   }
 }
 
-// 從雲端資料庫 (Firebase) 讀取最新狀態並同步
-async function fetchCloudData() {
-  try {
-    const snapshot = await database.ref("db_state").once("value");
+// 從雲端資料庫 (Firebase) 監聽最新狀態並即時同步
+let isInitialSyncDone = false;
+function startRealtimeSync() {
+  database.ref("db_state").on("value", (snapshot) => {
     const cloudData = snapshot.val();
     
     if (!cloudData) {
-      console.log("雲端資料庫尚未初始化，正在寫入預設資料...");
-      pushCloudData();
+      if (!isInitialSyncDone) {
+        console.log("雲端資料庫尚未初始化，正在寫入預設資料...");
+        pushCloudData();
+        isInitialSyncDone = true;
+      }
       return;
     }
+    
+    isInitialSyncDone = true;
     
     if (cloudData.users) { users = cloudData.users; dbSet("users", users, false); }
     if (cloudData.bookings) { bookings = cloudData.bookings; dbSet("bookings", bookings, false); }
@@ -2282,7 +2293,7 @@ async function fetchCloudData() {
     if (cloudData.slots) { slots = cloudData.slots; dbSet("slots", slots, false); }
     if (cloudData.remittances) { remittances = cloudData.remittances; dbSet("remittances", remittances, false); }
     
-    console.log("雲端資料庫同步完成！");
+    console.log("雲端資料庫即時同步更新！");
     
     // 更新當前使用者狀態並重新渲染 UI
     const savedUserId = localStorage.getItem("singbowl_current_user_id");
@@ -2290,21 +2301,26 @@ async function fetchCloudData() {
       const updatedUser = users.find(u => u.id === parseInt(savedUserId));
       if (updatedUser) {
         currentUser = updatedUser;
-        if (currentUser.role === "admin") {
-          renderAdminDashboard(activeAdminPane);
-        } else {
-          renderDashboard();
+        // 根據當前作用中的分頁重新渲染
+        const activeSection = document.querySelector(".view-section.active");
+        if (activeSection) {
+          const viewId = activeSection.id.replace("view-", "");
+          if (viewId === "member") renderDashboard();
+          if (viewId === "admin") renderAdminDashboard(activeAdminPane);
+          if (viewId === "buy-points") renderBuyPointsPage();
+          if (viewId === "book-1on1") render1on1Form();
+          if (viewId === "book-group") renderGroupForm();
         }
       } else {
-        // 找不到此用戶（如資料庫重建），強制登出並清除無效的本地 Session
+        // 找不到此用戶，強制登出並清除無效的本地 Session
         currentUser = null;
         localStorage.removeItem("singbowl_current_user_id");
         onUserLogoutSuccess();
       }
     }
-  } catch (err) {
-    console.error("雲端讀取錯誤:", err);
-  }
+  }, (err) => {
+    console.error("雲端監聽錯誤:", err);
+  });
 }
 
 // 異步將最新狀態寫入雲端資料庫 (帶有 300ms 防抖優化)
