@@ -139,6 +139,21 @@ button {
 
 .logo {
   display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+}
+
+.logo-img {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.logo-text-group {
+  display: flex;
   flex-direction: column;
 }
 
