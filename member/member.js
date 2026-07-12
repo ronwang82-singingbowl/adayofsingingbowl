@@ -1087,7 +1087,7 @@ function renderAdminCouponsPanel() {
   const container = document.getElementById("adminCouponList");
   container.innerHTML = "";
   
-  vouchers.sort((a,b) => b.id - a.id).forEach(v => {
+  [...vouchers].sort((a,b) => b.id - a.id).forEach(v => {
     const member = users.find(u => u.id === v.userId);
     const mName = member ? member.name : "未知";
     const row = document.createElement("tr");
@@ -2223,7 +2223,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!member) return;
     
     // Add coupon to vouchers list
-    const nextCpnId = vouchers.length > 0 ? vouchers[vouchers.length - 1].id + 1 : 1;
+    const nextCpnId = vouchers.length > 0 ? Math.max(...vouchers.map(v => v.id)) + 1 : 1;
     const randomCode = Math.random().toString(36).substring(2, 8).toUpperCase();
     
     const newCoupon = {
@@ -2549,6 +2549,12 @@ function pushNode(key, data) {
   // 管理員：直接寫入全量 node 陣列
   if (currentUser && currentUser.role === "admin") {
     database.ref(key).set(data);
+    // 智慧清除：當陣列長度縮減時，主動刪除後面殘留的 Firebase 尾端節點
+    if (Array.isArray(data)) {
+      for (let i = data.length; i < data.length + 15; i++) {
+        database.ref(`${key}/${i}`).remove();
+      }
+    }
     return;
   }
   

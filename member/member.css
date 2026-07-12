@@ -1461,8 +1461,26 @@ button {
 /* Coupon Panel Specifics */
 .coupon-management-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 360px 1fr;
   gap: 24px;
+}
+
+.coupon-log-table th,
+.coupon-log-table td {
+  padding: 10px 6px;
+  font-size: 13px;
+  vertical-align: middle;
+}
+
+.coupon-log-table th {
+  white-space: nowrap;
+}
+
+.coupon-log-table td:nth-child(1), /* 會員 */
+.coupon-log-table td:nth-child(3), /* 贈送次數 */
+.coupon-log-table td:nth-child(4), /* 狀態 */
+.coupon-log-table td:nth-child(5)  /* 操作 */ {
+  white-space: nowrap;
 }
 
 .coupon-form-card, .coupon-log-card {
