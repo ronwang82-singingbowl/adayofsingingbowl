@@ -79,7 +79,7 @@ let pushTimeout = null;
 function dbSet(key, data, syncToCloud = true) {
   localStorage.setItem(`singbowl_${key}`, JSON.stringify(data));
   if (syncToCloud) {
-    pushCloudData();
+    pushNode(key, data);
   }
 }
 
@@ -192,6 +192,9 @@ function onUserLoginSuccess() {
     document.getElementById("btnNavAdmin").style.display = "none";
     navigateTo("member");
   }
+
+  // 註冊該用戶專屬的即時監聽器
+  startRealtimeSync();
 }
 
 function onUserLogoutSuccess() {
@@ -208,6 +211,9 @@ function onUserLogoutSuccess() {
   
   // Show Home button when logged out
   document.getElementById("btnNavHome").style.display = "block";
+  
+  // 重新註冊訪客級即時監聽器
+  startRealtimeSync();
   
   navigateTo("landing");
 }
@@ -2325,79 +2331,233 @@ function runMockLineLogin() {
   }
 }
 
-// 從雲端資料庫 (Firebase) 監聽最新狀態並即時同步
-let isInitialSyncDone = false;
-function startRealtimeSync() {
-  database.ref("db_state").on("value", (snapshot) => {
-    const cloudData = snapshot.val();
-    
-    if (!cloudData) {
-      if (!isInitialSyncDone) {
-        console.log("雲端資料庫尚未初始化，正在寫入預設資料...");
-        pushCloudData();
-        isInitialSyncDone = true;
-      }
-      return;
-    }
-    
-    isInitialSyncDone = true;
-    
-    if (cloudData.users) { users = cloudData.users; dbSet("users", users, false); }
-    if (cloudData.bookings) { bookings = cloudData.bookings; dbSet("bookings", bookings, false); }
-    if (cloudData.vouchers) { vouchers = cloudData.vouchers; dbSet("vouchers", vouchers, false); }
-    if (cloudData.groupSessions) { groupSessions = cloudData.groupSessions; dbSet("groupSessions", groupSessions, false); }
-    if (cloudData.transactions) { transactions = cloudData.transactions; dbSet("transactions", transactions, false); }
-    if (cloudData.slots) { slots = cloudData.slots; dbSet("slots", slots, false); }
-    if (cloudData.remittances) { remittances = cloudData.remittances; dbSet("remittances", remittances, false); }
-    
-    console.log("雲端資料庫即時同步更新！");
-    
-    // 更新當前使用者狀態並重新渲染 UI
-    const savedUserId = localStorage.getItem("singbowl_current_user_id");
-    if (savedUserId) {
-      const updatedUser = users.find(u => u.id === parseInt(savedUserId));
-      if (updatedUser) {
-        currentUser = updatedUser;
-        // 根據當前作用中的分頁重新渲染
-        const activeSection = document.querySelector(".view-section.active");
-        if (activeSection) {
-          const viewId = activeSection.id.replace("view-", "");
-          if (viewId === "member") renderDashboard();
-          if (viewId === "admin") renderAdminDashboard(activeAdminPane);
-          if (viewId === "buy-points") renderBuyPointsPage();
-          if (viewId === "book-1on1") render1on1Form();
-          if (viewId === "book-group") renderGroupForm();
-        }
-      } else {
-        // 找不到此用戶，強制登出並清除無效的本地 Session
-        currentUser = null;
-        localStorage.removeItem("singbowl_current_user_id");
-        onUserLogoutSuccess();
-      }
-    }
-  }, (err) => {
-    console.error("雲端監聽錯誤:", err);
-  });
+// 從雲端資料庫 (Firebase) 監聽最新狀態並即時同步 (智慧型角色分權隔離與全域防重聽)
+let activeListeners = [];
+
+function clearActiveListeners() {
+  activeListeners.forEach(ref => ref.off());
+  activeListeners = [];
 }
 
-// 異步將最新狀態寫入雲端資料庫 (帶有 300ms 防抖優化)
+function startRealtimeSync() {
+  clearActiveListeners();
+  
+  const savedUserId = localStorage.getItem("singbowl_current_user_id");
+  const currentUserId = currentUser ? currentUser.id : (savedUserId ? parseInt(savedUserId) : null);
+  const isAdmin = currentUser ? (currentUser.role === "admin") : false;
+  
+  console.log(`啟動雲端即時同步監聽... (用戶ID: ${currentUserId}, 管理員權限: ${isAdmin})`);
+  
+  // 1. 公共節點：所有人 (含未登入訪客) 皆監聽預約時段 slots 與團體課程 groupSessions
+  const slotsRef = database.ref("slots");
+  slotsRef.on("value", (snapshot) => {
+    const val = snapshot.val();
+    slots = val ? (Array.isArray(val) ? val.filter(Boolean) : Object.values(val)) : [];
+    dbSet("slots", slots, false);
+    triggerViewRender();
+  });
+  activeListeners.push(slotsRef);
+  
+  const groupSessionsRef = database.ref("groupSessions");
+  groupSessionsRef.on("value", (snapshot) => {
+    const val = snapshot.val();
+    groupSessions = val ? (Array.isArray(val) ? val.filter(Boolean) : Object.values(val)) : [];
+    dbSet("groupSessions", groupSessions, false);
+    triggerViewRender();
+  });
+  activeListeners.push(groupSessionsRef);
+  
+  // 2. 角色權限隔離節點監聽
+  if (currentUserId) {
+    if (isAdmin) {
+      // 管理員：監聽/下載所有人的完整明細
+      const usersRef = database.ref("users");
+      usersRef.on("value", (snapshot) => {
+        const val = snapshot.val();
+        users = val ? (Array.isArray(val) ? val.filter(Boolean) : Object.values(val)) : [];
+        dbSet("users", users, false);
+        syncCurrentUser();
+        triggerViewRender();
+      });
+      activeListeners.push(usersRef);
+      
+      const bookingsRef = database.ref("bookings");
+      bookingsRef.on("value", (snapshot) => {
+        const val = snapshot.val();
+        bookings = val ? (Array.isArray(val) ? val.filter(Boolean) : Object.values(val)) : [];
+        dbSet("bookings", bookings, false);
+        triggerViewRender();
+      });
+      activeListeners.push(bookingsRef);
+      
+      const vouchersRef = database.ref("vouchers");
+      vouchersRef.on("value", (snapshot) => {
+        const val = snapshot.val();
+        vouchers = val ? (Array.isArray(val) ? val.filter(Boolean) : Object.values(val)) : [];
+        dbSet("vouchers", vouchers, false);
+        triggerViewRender();
+      });
+      activeListeners.push(vouchersRef);
+      
+      const transactionsRef = database.ref("transactions");
+      transactionsRef.on("value", (snapshot) => {
+        const val = snapshot.val();
+        transactions = val ? (Array.isArray(val) ? val.filter(Boolean) : Object.values(val)) : [];
+        dbSet("transactions", transactions, false);
+        triggerViewRender();
+      });
+      activeListeners.push(transactionsRef);
+      
+      const remittancesRef = database.ref("remittances");
+      remittancesRef.on("value", (snapshot) => {
+        const val = snapshot.val();
+        remittances = val ? (Array.isArray(val) ? val.filter(Boolean) : Object.values(val)) : [];
+        dbSet("remittances", remittances, false);
+        triggerViewRender();
+      });
+      activeListeners.push(remittancesRef);
+      
+    } else {
+      // 一般會員：只下載並監聽屬於自己的數據，保護隱私安全 (OrderByChild + EqualTo)
+      
+      // 監聽自己的用戶帳戶資料
+      const userRef = database.ref(`users/${currentUserId}`);
+      userRef.on("value", (snapshot) => {
+        const val = snapshot.val();
+        if (val) {
+          const idx = users.findIndex(u => u.id === currentUserId);
+          if (idx !== -1) {
+            users[idx] = val;
+          } else {
+            users.push(val);
+          }
+          dbSet("users", users, false);
+          currentUser = val;
+          syncCurrentUser();
+          triggerViewRender();
+        }
+      });
+      activeListeners.push(userRef);
+      
+      // 監聽自己的預約明細
+      const myBookingsRef = database.ref("bookings").orderByChild("userId").equalTo(currentUserId);
+      myBookingsRef.on("value", (snapshot) => {
+        const val = snapshot.val();
+        bookings = val ? (Array.isArray(val) ? val.filter(Boolean) : Object.values(val)) : [];
+        dbSet("bookings", bookings, false);
+        triggerViewRender();
+      });
+      activeListeners.push(myBookingsRef);
+      
+      // 監聽自己的優惠券
+      const myVouchersRef = database.ref("vouchers").orderByChild("userId").equalTo(currentUserId);
+      myVouchersRef.on("value", (snapshot) => {
+        const val = snapshot.val();
+        vouchers = val ? (Array.isArray(val) ? val.filter(Boolean) : Object.values(val)) : [];
+        dbSet("vouchers", vouchers, false);
+        triggerViewRender();
+      });
+      activeListeners.push(myVouchersRef);
+      
+      // 監聽自己的點數歷史帳本
+      const myTransactionsRef = database.ref("transactions").orderByChild("userId").equalTo(currentUserId);
+      myTransactionsRef.on("value", (snapshot) => {
+        const val = snapshot.val();
+        transactions = val ? (Array.isArray(val) ? val.filter(Boolean) : Object.values(val)) : [];
+        dbSet("transactions", transactions, false);
+        triggerViewRender();
+      });
+      activeListeners.push(myTransactionsRef);
+      
+      // 監聽自己的匯款對帳單
+      const myRemittancesRef = database.ref("remittances").orderByChild("userId").equalTo(currentUserId);
+      myRemittancesRef.on("value", (snapshot) => {
+        const val = snapshot.val();
+        remittances = val ? (Array.isArray(val) ? val.filter(Boolean) : Object.values(val)) : [];
+        dbSet("remittances", remittances, false);
+        triggerViewRender();
+      });
+      activeListeners.push(myRemittancesRef);
+    }
+  }
+}
+
+function syncCurrentUser() {
+  const savedUserId = localStorage.getItem("singbowl_current_user_id");
+  if (savedUserId) {
+    const updatedUser = users.find(u => u.id === parseInt(savedUserId));
+    if (updatedUser) {
+      currentUser = updatedUser;
+    }
+  }
+}
+
+function triggerViewRender() {
+  const activeSection = document.querySelector(".view-section.active");
+  if (activeSection) {
+    const viewId = activeSection.id.replace("view-", "");
+    if (viewId === "member") renderDashboard();
+    if (viewId === "admin") renderAdminDashboard(activeAdminPane);
+    if (viewId === "buy-points") renderBuyPointsPage();
+    if (viewId === "book-1on1") render1on1Form();
+    if (viewId === "book-group") renderGroupForm();
+  }
+}
+
+// 雲端增量/段點寫入 (防止會員端覆蓋其他會員的資料)
+function pushNode(key, data) {
+  // 管理員：直接寫入全量 node 陣列
+  if (currentUser && currentUser.role === "admin") {
+    database.ref(key).set(data);
+    return;
+  }
+  
+  // 一般會員：採用增量寫入 (個別 ID 的段點寫入)，保護其他使用者記錄不被複寫
+  if (key === "bookings") {
+    data.forEach(item => {
+      if (item && item.userId === currentUser.id) {
+        database.ref(`bookings/${item.id}`).set(item);
+      }
+    });
+  } else if (key === "remittances") {
+    data.forEach(item => {
+      if (item && item.userId === currentUser.id) {
+        database.ref(`remittances/${item.id}`).set(item);
+      }
+    });
+  } else if (key === "users") {
+    data.forEach(item => {
+      if (item && item.id === currentUser.id) {
+        database.ref(`users/${item.id}`).set(item);
+      }
+    });
+  } else if (key === "transactions") {
+    data.forEach(item => {
+      if (item && item.userId === currentUser.id) {
+        database.ref(`transactions/${item.id}`).set(item);
+      }
+    });
+  } else {
+    // slots, groupSessions, vouchers 等公共節點 (唯讀)
+    database.ref(key).set(data);
+  }
+}
+
+// 全量資料初始推送 (僅管理員可用或未初始化時備用，帶 300ms 防抖)
 function pushCloudData() {
   if (pushTimeout) clearTimeout(pushTimeout);
   pushTimeout = setTimeout(async () => {
-    const payload = {
-      users,
-      bookings,
-      vouchers,
-      groupSessions,
-      transactions,
-      slots,
-      remittances
-    };
     try {
-      await database.ref("db_state").set(payload);
-      console.log("雲端資料同步寫入成功！");
+      await database.ref("users").set(users);
+      await database.ref("bookings").set(bookings);
+      await database.ref("vouchers").set(vouchers);
+      await database.ref("groupSessions").set(groupSessions);
+      await database.ref("transactions").set(transactions);
+      await database.ref("slots").set(slots);
+      await database.ref("remittances").set(remittances);
+      console.log("雲端全量資料同步寫入成功！");
     } catch (err) {
-      console.error("雲端寫入錯誤:", err);
+      console.error("雲端全量寫入錯誤:", err);
     }
   }, 300);
 }
