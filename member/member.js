@@ -636,6 +636,16 @@ function renderBuyPointsPage() {
   
   document.getElementById("buyUserBankName").value = bankName || "尚未設定 (請先至個人資料填寫並綁定)";
   document.getElementById("buyUserBankLast5").value = bankLast5 || "尚未設定 (請先至個人資料填寫並綁定)";
+
+  // Show/Hide warning if bank info not set
+  const bankWarning = document.getElementById("buyPointsBankWarning");
+  if (bankWarning) {
+    if (!currentUser.paymentBankName || !currentUser.paymentBankLast5) {
+      bankWarning.style.display = "flex";
+    } else {
+      bankWarning.style.display = "none";
+    }
+  }
   
   // Reset selected package
   document.querySelectorAll(".package-card").forEach(c => c.classList.remove("selected"));
@@ -643,6 +653,9 @@ function renderBuyPointsPage() {
   document.getElementById("buyPointsCount").value = "";
   document.getElementById("buyPointsAmount").value = "";
   document.getElementById("buyActualAmount").value = "";
+  
+  const lblVirtual = document.getElementById("lblVirtualAccount");
+  if (lblVirtual) lblVirtual.textContent = "請點選上方方案自動分配帳號";
   
   // Render user remittance history
   renderRemittanceHistory();
@@ -699,11 +712,21 @@ function getPackageName(packageId) {
   return "未知方案";
 }
 
+function generateVirtualAccount(userId, packageId) {
+  const padUser = String(userId).padStart(3, '0');
+  const padPack = String(packageId).padStart(2, '0');
+  const hash = String((userId * 17 + packageId * 31 + 47) % 100000).padStart(5, '0');
+  return `9527-${padUser}-${padPack}${hash}`;
+}
+
 // ==========================================
 // 4. 管理後台渲染 (Admin UI Rendering)
 // ==========================================
 
 let activeAdminPane = "overview";
+let adminSlotCurrentYear = new Date().getFullYear();
+let adminSlotCurrentMonth = new Date().getMonth();
+let adminSlotSelectedDateStr = null;
 
 function renderAdminDashboard(paneId) {
   activeAdminPane = paneId;
@@ -1077,22 +1100,100 @@ function renderAdminCouponsPanel() {
 
 // 4.5 Booking Slots Panel
 function renderAdminSlotsPanel() {
-  const container = document.getElementById("adminSlotList");
-  if (!container) return;
-  container.innerHTML = "";
+  renderAdminSlotsCalendar();
+  if (adminSlotSelectedDateStr) {
+    renderAdminDateSlots(adminSlotSelectedDateStr);
+  } else {
+    const contentPanel = document.getElementById("adminSlotSettingsContent");
+    const placeholder = document.getElementById("adminSlotSettingsPlaceholder");
+    if (contentPanel) contentPanel.style.display = "none";
+    if (placeholder) placeholder.style.display = "block";
+    
+    const lblSelected = document.getElementById("lblAdminSelectedSlotDate");
+    if (lblSelected) lblSelected.textContent = "選擇日期開放時段";
+  }
+}
+
+function renderAdminSlotsCalendar() {
+  const lblMonthYear = document.getElementById("lblAdminSlotCalendarMonthYear");
+  const daysGrid = document.getElementById("adminSlotCalendarDaysGrid");
+  if (!lblMonthYear || !daysGrid) return;
   
-  const sortedSlots = [...slots].sort((a, b) => {
-    const dateComp = b.date.localeCompare(a.date);
-    if (dateComp !== 0) return dateComp;
-    return a.time.localeCompare(b.time);
-  });
+  lblMonthYear.textContent = `${adminSlotCurrentYear} 年 ${adminSlotCurrentMonth + 1} 月`;
+  daysGrid.innerHTML = "";
   
-  if (sortedSlots.length === 0) {
-    container.innerHTML = `<tr><td colspan="4" class="tx-empty" style="text-align:center;">目前無任何開放時段紀錄</td></tr>`;
+  const firstDay = new Date(adminSlotCurrentYear, adminSlotCurrentMonth, 1);
+  const startDayOfWeek = firstDay.getDay();
+  const totalDays = new Date(adminSlotCurrentYear, adminSlotCurrentMonth + 1, 0).getDate();
+  
+  // Empty slots before first day
+  for (let i = 0; i < startDayOfWeek; i++) {
+    const emptyCell = document.createElement("div");
+    emptyCell.className = "calendar-day-cell empty-cell";
+    daysGrid.appendChild(emptyCell);
+  }
+  
+  const today = new Date();
+  today.setHours(0,0,0,0);
+  
+  // Generate calendar days
+  for (let d = 1; d <= totalDays; d++) {
+    const cellDate = new Date(adminSlotCurrentYear, adminSlotCurrentMonth, d);
+    const dateStr = `${adminSlotCurrentYear}-${String(adminSlotCurrentMonth + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+    
+    const cell = document.createElement("div");
+    cell.className = "calendar-day-cell";
+    cell.textContent = d;
+    
+    // Check if slots exist on this day
+    const hasSlots = slots.some(s => s.date === dateStr);
+    if (hasSlots) {
+      const dot = document.createElement("span");
+      dot.className = "dot-indicator";
+      cell.appendChild(dot);
+    }
+    
+    if (adminSlotSelectedDateStr === dateStr) {
+      cell.classList.add("active-selected");
+    }
+    
+    cell.addEventListener("click", () => {
+      document.querySelectorAll("#adminSlotCalendarDaysGrid .calendar-day-cell").forEach(c => c.classList.remove("active-selected"));
+      cell.classList.add("active-selected");
+      adminSlotSelectedDateStr = dateStr;
+      renderAdminDateSlots(dateStr);
+    });
+    
+    daysGrid.appendChild(cell);
+  }
+}
+
+function renderAdminDateSlots(dateStr) {
+  const contentPanel = document.getElementById("adminSlotSettingsContent");
+  const placeholder = document.getElementById("adminSlotSettingsPlaceholder");
+  const lblSelected = document.getElementById("lblAdminSelectedSlotDate");
+  const gridContainer = document.getElementById("adminDaySlotList");
+  
+  if (!contentPanel || !placeholder || !lblSelected || !gridContainer) return;
+  
+  // Set selected date in hidden input of custom time form
+  const txtSlotDate = document.getElementById("txtSlotDate");
+  if (txtSlotDate) txtSlotDate.value = dateStr;
+  
+  lblSelected.textContent = `設定 ${dateStr} 的開放時段`;
+  placeholder.style.display = "none";
+  contentPanel.style.display = "block";
+  
+  gridContainer.innerHTML = "";
+  
+  const daySlots = slots.filter(s => s.date === dateStr).sort((a, b) => a.time.localeCompare(b.time));
+  
+  if (daySlots.length === 0) {
+    gridContainer.innerHTML = `<tr><td colspan="3" class="text-center text-muted" style="padding:15px 0;">本日尚未開放任何時段。</td></tr>`;
     return;
   }
   
-  sortedSlots.forEach(s => {
+  daySlots.forEach(s => {
     const row = document.createElement("tr");
     
     let statusText = "";
@@ -1101,7 +1202,7 @@ function renderAdminSlotsPanel() {
       statusText = "開放中";
       statusClass = "status-confirmed";
     } else if (s.status === "pending") {
-      statusText = "待確認";
+      statusText = "待對帳/確認";
       statusClass = "status-pending";
     } else if (s.status === "booked") {
       statusText = "已預約";
@@ -1113,9 +1214,9 @@ function renderAdminSlotsPanel() {
     
     let actionBtn = "";
     if (s.status === "open") {
-      actionBtn = `<button class="table-action-btn danger" onclick="toggleSlotStatus(${s.id}, 'closed')">關閉</button>`;
+      actionBtn = `<button type="button" class="table-action-btn danger" onclick="toggleSlotStatus(${s.id}, 'closed')">關閉</button>`;
     } else if (s.status === "closed") {
-      actionBtn = `<button class="table-action-btn success" onclick="toggleSlotStatus(${s.id}, 'open')">開啟</button>`;
+      actionBtn = `<button type="button" class="table-action-btn success" onclick="toggleSlotStatus(${s.id}, 'open')">開啟</button>`;
     } else if (s.status === "pending") {
       actionBtn = `<span style="font-size:12px;color:var(--mist)">待預約審核</span>`;
     } else if (s.status === "booked") {
@@ -1124,12 +1225,11 @@ function renderAdminSlotsPanel() {
     
     let deleteBtn = "";
     if (s.status === "open" || s.status === "closed") {
-      deleteBtn = `<button class="table-action-btn secondary" style="margin-left: 8px;" onclick="deleteSlot(${s.id})">刪除</button>`;
+      deleteBtn = `<button type="button" class="table-action-btn secondary" style="margin-left: 8px;" onclick="deleteSlot(${s.id})">刪除</button>`;
     }
     
     row.innerHTML = `
-      <td><strong>${s.date}</strong></td>
-      <td><span style="font-family:'JetBrains Mono';font-size:14px;">${s.time}</span></td>
+      <td><span style="font-family:'JetBrains Mono';font-size:14px;font-weight:bold;">${s.time}</span></td>
       <td><span class="status-badge ${statusClass}">${statusText}</span></td>
       <td>
         <div class="action-btn-group" style="justify-content: flex-start;">
@@ -1138,8 +1238,35 @@ function renderAdminSlotsPanel() {
         </div>
       </td>
     `;
-    container.appendChild(row);
+    gridContainer.appendChild(row);
   });
+}
+
+function addAdminSlot(dateVal, timeVal) {
+  if (!dateVal || !timeVal) {
+    alert("日期與時間無效！");
+    return;
+  }
+  
+  const duplicate = slots.find(s => s.date === dateVal && s.time === timeVal);
+  if (duplicate) {
+    alert("此日期與時段已在列表中！");
+    return;
+  }
+  
+  const nextSlotId = slots.length > 0 ? slots[slots.length - 1].id + 1 : 1;
+  const newSlot = {
+    id: nextSlotId,
+    date: dateVal,
+    time: timeVal,
+    status: "open",
+    bookingId: null
+  };
+  
+  slots.push(newSlot);
+  dbSet("slots", slots);
+  
+  renderAdminSlotsPanel();
 }
 
 window.toggleSlotStatus = function(slotId, newStatus) {
@@ -1435,7 +1562,19 @@ document.addEventListener("DOMContentLoaded", () => {
       document.getElementById("buyPointsCount").value = points;
       document.getElementById("buyPointsAmount").value = amount;
       document.getElementById("buyActualAmount").value = amount;
+
+      // Dynamic virtual account generation
+      if (currentUser) {
+        const vAcc = generateVirtualAccount(currentUser.id, parseInt(packageId));
+        const lblVirtual = document.getElementById("lblVirtualAccount");
+        if (lblVirtual) lblVirtual.textContent = vAcc;
+      }
     });
+  });
+
+  // Warning banner click jump to edit profile
+  document.getElementById("buyPointsBankWarning")?.addEventListener("click", () => {
+    document.getElementById("btnEditProfile")?.click();
   });
 
   // Remittance Slip Submit Listener
@@ -1763,41 +1902,47 @@ document.addEventListener("DOMContentLoaded", () => {
     renderAdminDashboard("remittances");
   });
   
+  // Admin Slot Calendar Navigations
+  document.getElementById("btnAdminSlotPrevMonth")?.addEventListener("click", () => {
+    adminSlotCurrentMonth--;
+    if (adminSlotCurrentMonth < 0) {
+      adminSlotCurrentMonth = 11;
+      adminSlotCurrentYear--;
+    }
+    renderAdminSlotsCalendar();
+  });
+  
+  document.getElementById("btnAdminSlotNextMonth")?.addEventListener("click", () => {
+    adminSlotCurrentMonth++;
+    if (adminSlotCurrentMonth > 11) {
+      adminSlotCurrentMonth = 0;
+      adminSlotCurrentYear++;
+    }
+    renderAdminSlotsCalendar();
+  });
+
+  // Admin Quick Slots buttons
+  document.querySelectorAll(".btn-quick-time").forEach(btn => {
+    btn.addEventListener("click", () => {
+      if (!adminSlotSelectedDateStr) {
+        alert("請先點選左側日曆選擇日期！");
+        return;
+      }
+      const timeVal = btn.getAttribute("data-time");
+      addAdminSlot(adminSlotSelectedDateStr, timeVal);
+    });
+  });
+
   // Submit: Admin open a new slot
-  document.getElementById("formAdminCreateSlot").addEventListener("submit", (e) => {
+  document.getElementById("formAdminCreateSlot")?.addEventListener("submit", (e) => {
     e.preventDefault();
-    
-    const dateVal = document.getElementById("txtSlotDate").value;
+    if (!adminSlotSelectedDateStr) {
+      alert("請先點選左側日曆選擇日期！");
+      return;
+    }
     const timeVal = document.getElementById("txtSlotTime").value;
-    
-    if (!dateVal || !timeVal) {
-      alert("請選擇完整的日期與時間！");
-      return;
-    }
-    
-    const duplicate = slots.find(s => s.date === dateVal && s.time === timeVal);
-    if (duplicate) {
-      alert("此日期與時段已在列表中！");
-      return;
-    }
-    
-    const nextSlotId = slots.length > 0 ? slots[slots.length - 1].id + 1 : 1;
-    const newSlot = {
-      id: nextSlotId,
-      date: dateVal,
-      time: timeVal,
-      status: "open",
-      bookingId: null
-    };
-    
-    slots.push(newSlot);
-    dbSet("slots", slots);
-    
-    // Clear time input but keep date for convenience of opening multiple slots on same day
+    addAdminSlot(adminSlotSelectedDateStr, timeVal);
     document.getElementById("txtSlotTime").value = "";
-    
-    renderAdminSlotsPanel();
-    alert(`成功開放時段：${dateVal} ${timeVal}！`);
   });
 
   // Admin Search filter
