@@ -2237,6 +2237,9 @@ document.addEventListener("DOMContentLoaded", () => {
   // Start Firebase Realtime Synchronization globally on load
   startRealtimeSync();
 
+  // 智慧型資料遷移 (自動將舊版 db_state 移至新分級節點，防止舊會員資料丟失)
+  migrateDatabaseIfNecessary();
+
   // Initialize Session (LINE LIFF 優先)
   if (typeof liff !== "undefined") {
     liff.init({ liffId: "2010665706-wxtkVO4B" })
@@ -2560,6 +2563,40 @@ function pushCloudData() {
       console.error("雲端全量寫入錯誤:", err);
     }
   }, 300);
+}
+
+// 智慧型資料遷移 (自動將舊版 db_state 移至新分級節點，防止舊會員資料丟失)
+async function migrateDatabaseIfNecessary() {
+  try {
+    const oldSnapshot = await database.ref("db_state").once("value");
+    const oldData = oldSnapshot.val();
+    
+    if (oldData) {
+      console.log("發現舊版 db_state 資料，正在檢查是否需要遷移...");
+      const usersSnapshot = await database.ref("users").once("value");
+      const currentUsers = usersSnapshot.val();
+      
+      // 如果新 users 節點不存在，或比舊版資料少，就進行一鍵遷移
+      const shouldMigrate = !currentUsers || Object.keys(currentUsers).length <= DEFAULT_USERS.length;
+      
+      if (shouldMigrate) {
+        console.log("正在執行一鍵無痛遷移...");
+        if (oldData.users) await database.ref("users").set(oldData.users);
+        if (oldData.bookings) await database.ref("bookings").set(oldData.bookings);
+        if (oldData.vouchers) await database.ref("vouchers").set(oldData.vouchers);
+        if (oldData.groupSessions) await database.ref("groupSessions").set(oldData.groupSessions);
+        if (oldData.transactions) await database.ref("transactions").set(oldData.transactions);
+        if (oldData.slots) await database.ref("slots").set(oldData.slots);
+        if (oldData.remittances) await database.ref("remittances").set(oldData.remittances);
+        console.log("一鍵無痛資料遷移完成！");
+        
+        // 遷移成功後，重新啟動監聽以加載最新搬遷過來的資料
+        startRealtimeSync();
+      }
+    }
+  } catch (err) {
+    console.error("資料遷移錯誤:", err);
+  }
 }
 
 function getNowDateTimeString() {
