@@ -83,6 +83,11 @@ function dbSet(key, data, syncToCloud = true) {
   }
 }
 
+// Google API Integration variables
+let googleTokenClient = null;
+let googleAccessToken = null;
+let googleClientId = "";
+
 // Global state variables
 let users = dbGet("users", DEFAULT_USERS);
 let bookings = dbGet("bookings", DEFAULT_BOOKINGS);
@@ -838,6 +843,7 @@ function renderAdminDashboard(paneId) {
   // 6. Slots management lists
   if (paneId === "slots") {
     renderAdminSlotsPanel();
+    updateGoogleSyncUI(!!googleAccessToken);
   }
   
   // 7. Remittance management lists
@@ -2286,6 +2292,56 @@ document.addEventListener("DOMContentLoaded", () => {
     renderAdminDashboard("coupons");
   });
 
+  // Google Calendar Integration DOM binds
+  document.getElementById("btnGoogleAuth")?.addEventListener("click", () => {
+    if (!googleTokenClient) {
+      alert("請先填寫並儲存 Google Client ID！");
+      document.getElementById("divGoogleConfigForm").style.display = "block";
+      return;
+    }
+    // Launch GIS Auth Popup
+    googleTokenClient.requestAccessToken({ prompt: "consent" });
+  });
+
+  document.getElementById("btnGoogleSync")?.addEventListener("click", () => {
+    syncGoogleCalendarEvents();
+  });
+
+  document.getElementById("btnToggleGoogleConfig")?.addEventListener("click", (e) => {
+    const form = document.getElementById("divGoogleConfigForm");
+    const btn = document.getElementById("btnToggleGoogleConfig");
+    if (!form || !btn) return;
+    
+    if (form.style.display === "none") {
+      form.style.display = "block";
+      btn.innerHTML = '<i data-lucide="settings"></i> 收合 Client ID 設定';
+    } else {
+      form.style.display = "none";
+      btn.innerHTML = '<i data-lucide="settings"></i> 展開 Client ID 設定';
+    }
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+  });
+
+  document.getElementById("btnSaveGoogleConfig")?.addEventListener("click", () => {
+    const clientId = document.getElementById("txtGoogleClientId").value.trim();
+    if (!clientId) {
+      alert("請輸入有效的 Client ID！");
+      return;
+    }
+    database.ref("settings/googleClientId").set(clientId)
+      .then(() => {
+        alert("🎉 Google Client ID 設定已成功儲存！");
+        document.getElementById("divGoogleConfigForm").style.display = "none";
+        const btn = document.getElementById("btnToggleGoogleConfig");
+        if (btn) btn.innerHTML = '<i data-lucide="settings"></i> 展開 Client ID 設定';
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+      })
+      .catch(err => {
+        console.error("儲存設定失敗:", err);
+        alert("❌ 儲存設定失敗，請確認網路連線。");
+      });
+  });
+
   // Start Firebase Realtime Synchronization globally on load
   startRealtimeSync();
 
@@ -2421,6 +2477,16 @@ function startRealtimeSync() {
     triggerViewRender();
   });
   activeListeners.push(groupSessionsRef);
+  
+  // 1.1 監聽 Google Client ID 設定
+  const googleClientIdRef = database.ref("settings/googleClientId");
+  googleClientIdRef.on("value", (snapshot) => {
+    googleClientId = snapshot.val() || "";
+    const input = document.getElementById("txtGoogleClientId");
+    if (input) input.value = googleClientId;
+    initGoogleGis();
+  });
+  activeListeners.push(googleClientIdRef);
   
   // 2. 角色權限隔離節點監聽
   if (currentUserId) {
@@ -2665,6 +2731,197 @@ function getNowDateTimeString() {
   const hh = String(now.getHours()).padStart(2, '0');
   const min = String(now.getMinutes()).padStart(2, '0');
   return `${yyyy}-${mm}-${dd} ${hh}:${min}`;
+}
+
+// ==========================================
+// 8. Google 日曆整合與智慧防衝突同步函數
+// ==========================================
+
+function initGoogleGis() {
+  if (typeof google === "undefined" || !googleClientId) {
+    updateGoogleSyncUI(false);
+    return;
+  }
+  try {
+    googleTokenClient = google.accounts.oauth2.initTokenClient({
+      client_id: googleClientId,
+      scope: "https://www.googleapis.com/auth/calendar.readonly",
+      callback: (tokenResponse) => {
+        if (tokenResponse.error) {
+          console.error("Google 授權失敗:", tokenResponse);
+          alert("⚠️ Google 授權失敗，請確認 Client ID 是否填寫正確！");
+          return;
+        }
+        googleAccessToken = tokenResponse.access_token;
+        updateGoogleSyncUI(true);
+        alert("🎉 Google 帳戶授權成功，現在可以點選「立即同步」了！");
+      }
+    });
+    console.log("Google GIS 授權客戶端初始化成功");
+  } catch (err) {
+    console.error("Google GIS 初始化失敗:", err);
+  }
+}
+
+function updateGoogleSyncUI(isLinked) {
+  const dot = document.getElementById("googleSyncDot");
+  const label = document.getElementById("lblGoogleSyncStatus");
+  const btnSync = document.getElementById("btnGoogleSync");
+  const btnAuth = document.getElementById("btnGoogleAuth");
+  
+  if (!dot || !label) return;
+  
+  if (isLinked && googleAccessToken) {
+    dot.className = "status-indicator-dot green";
+    dot.style.background = "#52c41a";
+    label.textContent = "狀態：已授權連結";
+    label.style.color = "#52c41a";
+    if (btnSync) btnSync.disabled = false;
+    if (btnAuth) btnAuth.innerHTML = '<i data-lucide="link"></i> 重新連結';
+  } else {
+    dot.className = "status-indicator-dot red";
+    dot.style.background = "#ff4d4f";
+    label.textContent = googleClientId ? "狀態：未連結" : "狀態：未設定 Client ID";
+    label.style.color = "var(--mist)";
+    if (btnSync) btnSync.disabled = true;
+    if (btnAuth) btnAuth.innerHTML = '<i data-lucide="link"></i> 連結 Google';
+  }
+  
+  if (typeof lucide !== 'undefined') {
+    lucide.createIcons();
+  }
+}
+
+function syncGoogleCalendarEvents() {
+  if (!googleAccessToken) {
+    alert("請先完成 Google 帳戶授權連結！");
+    return;
+  }
+  
+  const btnSync = document.getElementById("btnGoogleSync");
+  const originalHtml = btnSync.innerHTML;
+  btnSync.disabled = true;
+  btnSync.innerHTML = '<i data-lucide="refresh-cw" class="spin"></i> 同步中...';
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+  
+  // 設定時間範圍：今天到 30 天後
+  const timeMin = new Date().toISOString();
+  const timeMax = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+  
+  const url = `https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${encodeURIComponent(timeMin)}&timeMax=${encodeURIComponent(timeMax)}&singleEvents=true&orderBy=startTime`;
+  
+  fetch(url, {
+    headers: {
+      Authorization: `Bearer ${googleAccessToken}`
+    }
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (data.error) {
+      console.error("日曆 API 傳回錯誤:", data.error);
+      alert("❌ 行程同步失敗，原因：" + data.error.message);
+      return;
+    }
+    const events = data.items || [];
+    processGoogleEventsConflict(events);
+  })
+  .catch(err => {
+    console.error("同步連線錯誤:", err);
+    alert("❌ 行程同步連線失敗，請檢查網路狀態。");
+  })
+  .finally(() => {
+    btnSync.disabled = false;
+    btnSync.innerHTML = originalHtml;
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+  });
+}
+
+function processGoogleEventsConflict(events) {
+  if (!events || events.length === 0) {
+    alert("📝 同步報告：您的 Google 日曆未來 30 天內沒有安排任何行程，無任何預約衝突！");
+    return;
+  }
+  
+  const deletedSlots = [];
+  const bookingConflicts = [];
+  
+  // 遍歷 Google 行程
+  events.forEach(event => {
+    const startStr = event.start.dateTime || event.start.date;
+    const endStr = event.end.dateTime || event.end.date;
+    if (!startStr || !endStr) return;
+    
+    const eventStart = new Date(startStr);
+    const eventEnd = new Date(endStr);
+    const eventTitle = event.summary || "無標題行程";
+    
+    // 與系統現有開放時段 slots 比對
+    slots.forEach(slot => {
+      // 轉換 slot 開放時間為 Date 物件 (假設預約時長 60 分鐘)
+      const slotStart = new Date(`${slot.date}T${slot.time}:00`);
+      const slotEnd = new Date(slotStart.getTime() + 60 * 60 * 1000);
+      
+      // 判斷時間區間是否有重疊 Overlap
+      const isOverlap = slotStart < eventEnd && slotEnd > eventStart;
+      
+      if (isOverlap) {
+        if (slot.status === "open") {
+          // 情況 A：還是可約的開放狀態，直接自動刪除該時段！
+          deletedSlots.push(slot);
+        } else if (slot.bookingId) {
+          // 情況 B：該時段已經有會員預約 (不論待確認還是已確認)，收集起來警告提醒
+          const booking = bookings.find(b => b.id === slot.bookingId);
+          if (booking && !bookingConflicts.some(c => c.bookingId === booking.id)) {
+            const member = users.find(u => u.id === booking.userId);
+            bookingConflicts.push({
+              bookingId: booking.id,
+              memberName: member ? member.name : "未知會員",
+              date: slot.date,
+              time: slot.time,
+              eventTitle: eventTitle
+            });
+          }
+        }
+      }
+    });
+  });
+  
+  // 1. 執行時段刪除與寫入
+  if (deletedSlots.length > 0) {
+    deletedSlots.forEach(targetSlot => {
+      const idx = slots.findIndex(s => s.id === targetSlot.id);
+      if (idx !== -1) {
+        slots.splice(idx, 1);
+        // 同步從 Firebase 資料庫刪除
+        database.ref(`slots/${targetSlot.id}`).remove();
+      }
+    });
+    // 更新本地儲存
+    dbSet("slots", slots, true);
+    renderAdminSlotsPanel();
+  }
+  
+  // 2. 彙整顯示同步報告
+  let reportMsg = "🎉 Google 日曆同步防衝突比對完成！\n\n";
+  
+  if (deletedSlots.length > 0) {
+    reportMsg += `✅ 已為您「自動刪除」以下與行程衝突的開放時段：\n`;
+    deletedSlots.forEach(s => {
+      reportMsg += `- ${s.date} ${s.time}\n`;
+    });
+    reportMsg += `\n`;
+  } else {
+    reportMsg += `🔹 本次同步沒有需要被關閉的空閒開放時段。\n\n`;
+  }
+  
+  if (bookingConflicts.length > 0) {
+    reportMsg += `⚠️ 警示：以下時段已有會員預訂，但與您的 Google 日曆行程重疊，請儘速與會員取得聯繫確認：\n`;
+    bookingConflicts.forEach(c => {
+      reportMsg += `- [${c.date} ${c.time}] 會員: ${c.memberName} (衝突行程: ${c.eventTitle})\n`;
+    });
+  }
+  
+  alert(reportMsg);
 }
 
 // 監聽跨分頁 LocalStorage 變動，實現跨分頁即時同步
