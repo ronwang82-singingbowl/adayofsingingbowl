@@ -1697,7 +1697,7 @@ document.addEventListener("DOMContentLoaded", () => {
       userId: currentUser.id,
       amount: cost,
       type: "deduct",
-      reason: `預約 1 對 1 身心整合 (${duration}分鐘)`,
+      reason: `預約 1 對 1 頌缽療癒 (${newBooking.duration}分鐘)`,
       date: timestamp,
       balance: currentUser.points
     });
