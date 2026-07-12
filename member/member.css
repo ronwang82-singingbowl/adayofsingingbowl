@@ -2042,3 +2042,13 @@ button {
   }
 }
 
+/* Members Table Scroll & Non-wrap Styles */
+.members-table {
+  min-width: 850px;
+}
+.members-table th,
+.members-table td {
+  white-space: nowrap;
+  vertical-align: middle;
+}
+

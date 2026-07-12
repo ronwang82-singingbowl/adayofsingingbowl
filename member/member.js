@@ -350,6 +350,21 @@ window.cancelBooking = function(bookingId) {
   const booking = bookings.find(b => b.id === bookingId);
   if (!booking) return;
   
+  // 5 天內預約限制規則：計算距離預約日期的天數差
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  
+  const bookingDate = new Date(booking.date);
+  bookingDate.setHours(0, 0, 0, 0);
+  
+  const diffTime = bookingDate.getTime() - today.getTime();
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  
+  if (diffDays < 5) {
+    alert("⚠️ 很抱歉，本預約距離現在已不足 5 天，無法直接線上取消。\n\n如需取消預約，請私訊官方 LINE 帳號告知原因，由小編為您人工處理。\n\n官方 LINE: https://line.me/R/ti/p/%40197nfdme");
+    return;
+  }
+  
   if (confirm("確定要取消此預約嗎？\n您的預約額度將自動全額退還。")) {
     // 1. Update booking status
     booking.status = "已取消";
