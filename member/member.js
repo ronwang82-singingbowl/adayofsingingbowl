@@ -1096,10 +1096,67 @@ function renderAdminCouponsPanel() {
           ${isUsed ? '已使用' : '未使用'}
         </span>
       </td>
+      <td>
+        <button type="button" class="table-action-btn danger" onclick="deleteAdminCoupon(${v.id})">取消發放</button>
+      </td>
     `;
     container.appendChild(row);
   });
 }
+
+window.deleteAdminCoupon = function(couponId) {
+  const vIndex = vouchers.findIndex(v => v.id === couponId);
+  if (vIndex === -1) return;
+  
+  const voucher = vouchers[vIndex];
+  const member = users.find(u => u.id === voucher.userId);
+  
+  if (!member) {
+    if (confirm("確定要刪除此票券記錄嗎？")) {
+      vouchers.splice(vIndex, 1);
+      dbSet("vouchers", vouchers);
+      renderAdminCouponsPanel();
+    }
+    return;
+  }
+  
+  const is1on1 = voucher.name === "生日優惠贈送次數";
+  const targetNameStr = is1on1 ? "1對1" : "團體";
+  const userPoints = is1on1 ? member.points : (member.groupPoints || 0);
+  
+  let confirmMsg = `確定要取消發放此票券嗎？\n取消後，將自會員「${member.name}」帳戶中扣除已贈送的 ${voucher.bonusPoints} 次 ${targetNameStr} 額度。`;
+  if (userPoints < voucher.bonusPoints) {
+    confirmMsg += `\n\n⚠️ 警告：該會員目前的 ${targetNameStr} 餘額 (${userPoints}次) 低於票券額度 (${voucher.bonusPoints}次)，取消後餘額將扣減至 0 次。`;
+  }
+  
+  if (confirm(confirmMsg)) {
+    if (is1on1) {
+      member.points = Math.max(0, member.points - voucher.bonusPoints);
+    } else {
+      member.groupPoints = Math.max(0, (member.groupPoints || 0) - voucher.bonusPoints);
+    }
+    dbSet("users", users);
+    
+    const timestamp = getNowDateTimeString();
+    const newTxId = transactions.length > 0 ? transactions[transactions.length - 1].id + 1 : 5001;
+    transactions.push({
+      id: newTxId,
+      userId: member.id,
+      amount: voucher.bonusPoints,
+      type: "deduct",
+      reason: `取消發放票券(${targetNameStr})：${voucher.name}`,
+      date: timestamp,
+      balance: is1on1 ? member.points : member.groupPoints
+    });
+    dbSet("transactions", transactions);
+    
+    vouchers.splice(vIndex, 1);
+    dbSet("vouchers", vouchers);
+    
+    alert(`成功取消票券，已扣除會員「${member.name}」相關額度！`);
+    renderAdminCouponsPanel();
+  }
+};
 
 // 4.5 Booking Slots Panel
 function renderAdminSlotsPanel() {
