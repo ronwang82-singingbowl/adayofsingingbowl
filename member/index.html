@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>缽日 - 頌缽療癒 身心平衡</title>
-  <link rel="icon" type="image/png" href="favicon.png?v=22">
+  <link rel="icon" type="image/png" href="favicon.png?v=23">
   
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -12,7 +12,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;500;600;700&family=Noto+Sans+TC:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   
   <!-- CSS -->
-  <link rel="stylesheet" href="member.css?v=22">
+  <link rel="stylesheet" href="member.css?v=23">
   
   <!-- Lucide Icons (CDN) -->
   <script src="https://unpkg.com/lucide@latest"></script>
@@ -971,7 +971,7 @@
           <h2>調整可約次數</h2>
           <p class="auth-subtitle">手動增加或扣除會員的預約次數</p>
           <div class="member-current-points-badge">
-            <span id="lblAdjustTargetName">會員大名</span> 餘額：1對1 <strong id="lblAdjustTargetPoints">0</strong> 次 / 團體 <strong id="lblAdjustTargetGroupPoints">0</strong> 次
+            <span id="lblAdjustTargetName">會員大名</span> 餘額：通用 <strong id="lblAdjustTargetPoints">0</strong> 次 / 贈送-1對1 <strong id="lblAdjustTargetGifted">0</strong> 次 / 贈送-團體 <strong id="lblAdjustTargetGiftedGroup">0</strong> 次
           </div>
 
           <form id="formAdminAdjustPoints">
@@ -979,8 +979,9 @@
             <div class="form-group">
               <label class="form-label" for="adjustPointTargetType">調整次數項目 *</label>
               <select class="form-input select-input" id="adjustPointTargetType" required>
-                <option value="1on1">1對1 頌缽次數</option>
-                <option value="group">團體頌缽次數</option>
+                <option value="common">通用次數 (1對1及團體皆適用)</option>
+                <option value="gifted_1on1">贈送-1對1次數 (限1對1頌缽)</option>
+                <option value="gifted_group">贈送-團體次數 (限團體頌缽)</option>
               </select>
             </div>
             <div class="form-group">
@@ -1127,6 +1128,6 @@
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 
   <!-- JavaScript -->
-  <script src="member.js?v=22"></script>
+  <script src="member.js?v=23"></script>
 </body>
 </html>
