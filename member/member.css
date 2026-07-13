@@ -1694,7 +1694,7 @@ button {
 }
 .calendar-day-cell.active-selected {
   background: var(--brass) !important;
-  color: var(--ink-1) !important;
+  color: #FFFFFF !important;
   font-weight: bold;
 }
 .calendar-day-cell.empty-cell {
@@ -1713,7 +1713,7 @@ button {
   bottom: 4px;
 }
 .calendar-day-cell.active-selected .dot-indicator {
-  background: var(--ink-1);
+  background: #FFFFFF;
 }
 
 /* Time Slots Grid */
@@ -1741,7 +1741,7 @@ button {
 }
 .slot-btn.selected {
   background: var(--brass) !important;
-  color: var(--ink-1) !important;
+  color: #FFFFFF !important;
   border-color: var(--brass) !important;
   font-weight: bold;
 }
@@ -1822,7 +1822,7 @@ button {
 }
 .package-tag.hot {
   background: var(--brass);
-  color: var(--ink-1);
+  color: #FFFFFF;
 }
 .package-points {
   font-family: "Noto Serif TC", serif;
