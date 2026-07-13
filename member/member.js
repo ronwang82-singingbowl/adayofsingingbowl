@@ -666,14 +666,10 @@ function renderBuyPointsPage() {
   document.getElementById("buyUserBankName").value = bankName || "尚未設定 (請先至個人資料填寫並綁定)";
   document.getElementById("buyUserBankLast5").value = bankLast5 || "尚未設定 (請先至個人資料填寫並綁定)";
 
-  // Show/Hide warning if bank info not set
+  // Show/Hide warning if bank info not set (Disabled, since payment/remittance info is hidden)
   const bankWarning = document.getElementById("buyPointsBankWarning");
   if (bankWarning) {
-    if (!currentUser.paymentBankName || !currentUser.paymentBankLast5) {
-      bankWarning.style.display = "flex";
-    } else {
-      bankWarning.style.display = "none";
-    }
+    bankWarning.style.display = "none";
   }
   
   // Reset selected package
@@ -1650,7 +1646,19 @@ document.addEventListener("DOMContentLoaded", () => {
       document.getElementById("buyPointsAmount").value = amount;
       document.getElementById("buyActualAmount").value = amount;
 
-      // Dynamic virtual account generation
+      // 預留：將來您可以將不同的方案對應到不同的購買連結
+      const btnGo = document.getElementById("btnGoToPurchase");
+      if (btnGo) {
+        if (packageId === "1") {
+          btnGo.href = "https://line.me/R/ti/p/%40197nfdme"; // 1點 購買連結 (目前預設官方 LINE)
+        } else if (packageId === "8") {
+          btnGo.href = "https://line.me/R/ti/p/%40197nfdme"; // 8點 購買連結 (目前預設官方 LINE)
+        } else if (packageId === "15") {
+          btnGo.href = "https://line.me/R/ti/p/%40197nfdme"; // 15點 購買連結 (目前預設官方 LINE)
+        }
+      }
+
+      // Dynamic virtual account generation (kept for DB compatibility)
       if (currentUser) {
         const vAcc = generateVirtualAccount(currentUser.id, parseInt(packageId));
         const lblVirtual = document.getElementById("lblVirtualAccount");

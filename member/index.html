@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>缽日 - 頌缽療癒 身心平衡</title>
-  <link rel="icon" type="image/png" href="favicon.png?v=20">
+  <link rel="icon" type="image/png" href="favicon.png?v=21">
   
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -12,7 +12,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;500;600;700&family=Noto+Sans+TC:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   
   <!-- CSS -->
-  <link rel="stylesheet" href="member.css?v=20">
+  <link rel="stylesheet" href="member.css?v=21">
   
   <!-- Lucide Icons (CDN) -->
   <script src="https://unpkg.com/lucide@latest"></script>
@@ -355,10 +355,10 @@
       <section id="view-buy-points" class="view-section">
         <div class="buy-points-container">
           <h2>加購服務點數</h2>
-          <p class="auth-subtitle">選擇適合您的點數套票，完成匯款後填寫回條對帳</p>
+          <p class="auth-subtitle">選擇適合您的點數方案，點選下方按鈕前往購買</p>
 
           <!-- Anti-Fraud Banner -->
-          <div class="anti-fraud-banner">
+          <div class="anti-fraud-banner" style="display: none !important;">
             <div class="banner-title"><i data-lucide="shield-alert"></i> 防範三方詐騙與帳戶交易安全聲明</div>
             <div class="banner-body">
               <ul>
@@ -384,15 +384,22 @@
               <div class="package-desc">再加贈 1 次團體頌缽療癒</div>
             </div>
             <div class="package-card" data-package-id="15" data-points="15" data-amount="29000">
-              <div class="package-tag">深度療癒 (省$6,000 + 加贈)</div>
+              <div class="package-tag">深度療癒 (省$1,000 + 加贈)</div>
               <div class="package-points">15 點</div>
               <div class="package-price">$29,000</div>
               <div class="package-desc">再加贈 2 次團體頌缽療癒</div>
             </div>
           </div>
 
+          <!-- Purchase Action Button -->
+          <div class="purchase-btn-container" style="margin-top: 35px; text-align: center;">
+            <a href="https://line.me/R/ti/p/%40197nfdme" target="_blank" class="cta-btn primary-btn large-btn" id="btnGoToPurchase" style="display: inline-flex; align-items: center; justify-content: center; padding: 14px 48px; font-size: 16px; font-weight: 600; text-decoration: none; border-radius: 30px; box-shadow: 0 4px 12px rgba(115, 132, 107, 0.3); transition: all 0.3s ease;">
+              <i data-lucide="shopping-bag" style="width: 18px; height: 18px; margin-right: 8px;"></i> 前往購買
+            </a>
+          </div>
+
           <!-- Bank Account Details -->
-          <div class="bank-info-card">
+          <div class="bank-info-card" style="display: none !important;">
             <div class="card-title"><i data-lucide="landmark"></i> 專屬匯款虛擬帳號 (對帳專用)</div>
             <div class="bank-details">
               <div class="bank-detail-item"><strong>收款銀行：</strong> 國泰世華銀行 (代碼 013)</div>
@@ -403,13 +410,13 @@
           </div>
 
           <!-- Anti-Fraud Binding Link Warning -->
-          <div id="buyPointsBankWarning" class="alert-box-warning" style="display: none;">
+          <div id="buyPointsBankWarning" class="alert-box-warning" style="display: none !important;">
             <i data-lucide="help-circle"></i>
             <span>您尚未填寫常用匯出帳戶資訊，<strong>請點此前往「個人資料」綁定常用銀行與後五碼</strong>，以完成點數購買。</span>
           </div>
 
           <!-- Remittance Form -->
-          <form id="formSubmitRemittance" class="remittance-form">
+          <form id="formSubmitRemittance" class="remittance-form" style="display: none !important;">
             <input type="hidden" id="buyPackageId" value="">
             <input type="hidden" id="buyPointsCount" value="">
             <input type="hidden" id="buyPointsAmount" value="">
@@ -462,7 +469,7 @@
           </form>
 
           <!-- History List -->
-          <div class="history-section mt-5">
+          <div class="history-section mt-5" style="display: none !important;">
             <h3>歷史儲值審核紀錄</h3>
             <div class="table-container">
               <table class="history-table">
@@ -1120,6 +1127,6 @@
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 
   <!-- JavaScript -->
-  <script src="member.js?v=20"></script>
+  <script src="member.js?v=21"></script>
 </body>
 </html>
