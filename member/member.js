@@ -926,9 +926,10 @@ function renderAdminMemberList() {
   } else {
     filteredMembers.forEach(u => {
       const row = document.createElement("tr");
+      const pwdText = u.lineUserId ? "LINE註冊" : (u.password || "未設定");
       row.innerHTML = `
         <td><strong>${u.name}</strong></td>
-        <td>${u.phone}<br><span style="font-size:11px;color:var(--mist);">${u.email}</span><br><span style="font-size:11px;color:var(--brass-soft);font-weight:500;">密碼: ${u.password || "未設定"}</span></td>
+        <td>${u.phone}<br><span style="font-size:11px;color:var(--mist);">${u.email}</span><br><span style="font-size:11px;color:var(--brass-soft);font-weight:500;">密碼: ${pwdText}</span></td>
         <td>${u.gender}</td>
         <td>${u.joinDate}</td>
         <td>通用: <strong class="text-brass">${u.points || 0}</strong> 次<br>贈送1對1: <strong class="text-brass">${u.giftedPoints || 0}</strong> 次<br>贈送團體: <strong class="text-brass">${u.giftedGroupPoints || 0}</strong> 次</td>
