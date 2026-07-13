@@ -117,6 +117,23 @@ const VIEWS = [
 ];
 
 function navigateTo(viewId) {
+  if (viewId === "auth") {
+    const passwordGroup = document.getElementById("authPasswordGroup");
+    const passwordInput = document.getElementById("authPassword");
+    const btnSubmit = document.getElementById("btnEmailSubmit");
+    const authEmail = document.getElementById("authEmail");
+    if (passwordGroup) passwordGroup.style.display = "none";
+    if (passwordInput) {
+      passwordInput.required = false;
+      passwordInput.value = "";
+    }
+    if (authEmail) {
+      authEmail.readOnly = false;
+      authEmail.value = "";
+    }
+    if (btnSubmit) btnSubmit.textContent = "下一步";
+  }
+  
   VIEWS.forEach(view => {
     const el = document.getElementById(`view-${view}`);
     if (el) {
@@ -911,7 +928,7 @@ function renderAdminMemberList() {
       const row = document.createElement("tr");
       row.innerHTML = `
         <td><strong>${u.name}</strong></td>
-        <td>${u.phone}<br><span style="font-size:11px;color:var(--mist);">${u.email}</span></td>
+        <td>${u.phone}<br><span style="font-size:11px;color:var(--mist);">${u.email}</span><br><span style="font-size:11px;color:var(--brass-soft);font-weight:500;">密碼: ${u.password || "未設定"}</span></td>
         <td>${u.gender}</td>
         <td>${u.joinDate}</td>
         <td>通用: <strong class="text-brass">${u.points || 0}</strong> 次<br>贈送1對1: <strong class="text-brass">${u.giftedPoints || 0}</strong> 次<br>贈送團體: <strong class="text-brass">${u.giftedGroupPoints || 0}</strong> 次</td>
@@ -984,6 +1001,7 @@ window.openEditMember = function(memberId) {
   document.getElementById("editMemName").value = member.name;
   document.getElementById("editMemEmail").value = member.email;
   document.getElementById("editMemPhone").value = member.phone;
+  document.getElementById("editMemPassword").value = member.password || "";
   
   const genderRadios = document.getElementsByName("editMemGender");
   genderRadios.forEach(radio => {
@@ -1975,58 +1993,153 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("formEmailAuth").addEventListener("submit", async (e) => {
     e.preventDefault();
     const email = document.getElementById("authEmail").value.trim().toLowerCase();
-    
-    // 顯示載入提示
+    const passwordGroup = document.getElementById("authPasswordGroup");
+    const passwordInput = document.getElementById("authPassword");
     const btnSubmit = document.getElementById("btnEmailSubmit");
-    const originalText = btnSubmit.textContent;
-    btnSubmit.disabled = true;
-    btnSubmit.textContent = "驗證中...";
     
-    try {
-      // 1. 直接向 Firebase 雲端資料庫查詢此 Email 是否已註冊
-      const snapshot = await database.ref("users").orderByChild("email").equalTo(email).once("value");
-      const data = snapshot.val();
+    // Check if password field is currently visible
+    const isPasswordVisible = passwordGroup.style.display === "block";
+    
+    if (!isPasswordVisible) {
+      // 1. Email check step
+      btnSubmit.disabled = true;
+      btnSubmit.textContent = "驗證中...";
       
-      if (data) {
-        // 用戶存在 (Firebase 會回傳包含 key-value 的物件，取第一個)
-        const matchedUser = Object.values(data)[0];
-        currentUser = matchedUser;
+      try {
+        const snapshot = await database.ref("users").orderByChild("email").equalTo(email).once("value");
+        const data = snapshot.val();
         
-        // 同步寫入本地緩存
-        const idx = users.findIndex(u => u.id === currentUser.id);
-        if (idx !== -1) {
-          users[idx] = currentUser;
+        if (data) {
+          // User exists! Show password field
+          passwordGroup.style.display = "block";
+          passwordInput.required = true;
+          passwordInput.value = "";
+          passwordInput.focus();
+          btnSubmit.textContent = "確認登入";
+          
+          // Disable email input to prevent changing email during password entry
+          document.getElementById("authEmail").readOnly = true;
         } else {
-          users.push(currentUser);
+          // User does not exist, go to registration
+          document.getElementById("regName").value = "";
+          document.getElementById("regPhone").value = "";
+          document.getElementById("regPassword").value = "";
+          document.getElementById("regEmail").value = email;
+          document.getElementById("formRegisterProfile").dataset.tempEmail = email;
+          navigateTo("register");
         }
-        dbSet("users", users, false);
+      } catch (err) {
+        console.error("登入驗證錯誤:", err);
+        // Fallback for offline mode
+        const existing = users.find(u => u.email === email);
+        if (existing) {
+          passwordGroup.style.display = "block";
+          passwordInput.required = true;
+          passwordInput.value = "";
+          passwordInput.focus();
+          btnSubmit.textContent = "確認登入 (本地)";
+          document.getElementById("authEmail").readOnly = true;
+        } else {
+          // Go to registration
+          document.getElementById("regName").value = "";
+          document.getElementById("regPhone").value = "";
+          document.getElementById("regPassword").value = "";
+          document.getElementById("regEmail").value = email;
+          document.getElementById("formRegisterProfile").dataset.tempEmail = email;
+          navigateTo("register");
+        }
+      } finally {
+        btnSubmit.disabled = false;
+      }
+    } else {
+      // 2. Password verification step
+      const password = passwordInput.value.trim();
+      if (!password) {
+        alert("請輸入密碼！");
+        return;
+      }
+      
+      btnSubmit.disabled = true;
+      btnSubmit.textContent = "登入中...";
+      
+      try {
+        const snapshot = await database.ref("users").orderByChild("email").equalTo(email).once("value");
+        const data = snapshot.val();
         
-        localStorage.setItem("singbowl_current_user_id", currentUser.id);
-        onUserLoginSuccess();
-        alert(`歡迎回來，${currentUser.name}！`);
-      } else {
-        // 用戶不存在，導向完善會員資料流程
-        document.getElementById("regName").value = "";
-        document.getElementById("regPhone").value = "";
-        document.getElementById("regEmail").value = email;
-        document.getElementById("formRegisterProfile").dataset.tempEmail = email;
-        navigateTo("register");
+        if (data) {
+          const matchedKey = Object.keys(data)[0];
+          const matchedUser = Object.values(data)[0];
+          
+          // Migration strategy: if existing user doesn't have a password yet, save the entered password!
+          if (!matchedUser.password) {
+            matchedUser.password = password;
+            await database.ref(`users/${matchedKey}`).set(matchedUser);
+          }
+          
+          if (matchedUser.password === password) {
+            currentUser = matchedUser;
+            
+            // Sync with local users cache
+            const idx = users.findIndex(u => u.id === currentUser.id);
+            if (idx !== -1) {
+              users[idx] = currentUser;
+            } else {
+              users.push(currentUser);
+            }
+            dbSet("users", users, false);
+            
+            localStorage.setItem("singbowl_current_user_id", currentUser.id);
+            onUserLoginSuccess();
+            alert(`歡迎回來，${currentUser.name}！`);
+            
+            // Reset auth form state
+            passwordGroup.style.display = "none";
+            passwordInput.required = false;
+            passwordInput.value = "";
+            document.getElementById("authEmail").readOnly = false;
+            btnSubmit.textContent = "下一步";
+          } else {
+            alert("密碼不正確，請重新輸入！");
+            passwordInput.focus();
+          }
+        } else {
+          alert("用戶不存在，請重新輸入。");
+          // reset form
+          passwordGroup.style.display = "none";
+          passwordInput.required = false;
+          document.getElementById("authEmail").readOnly = false;
+          btnSubmit.textContent = "下一步";
+        }
+      } catch (err) {
+        console.error("密碼驗證錯誤:", err);
+        // Fallback for offline mode
+        const existing = users.find(u => u.email === email);
+        if (existing) {
+          if (!existing.password) {
+            existing.password = password;
+            dbSet("users", users);
+          }
+          if (existing.password === password) {
+            currentUser = existing;
+            localStorage.setItem("singbowl_current_user_id", currentUser.id);
+            onUserLoginSuccess();
+            alert(`歡迎回來，${currentUser.name} (離線模式)！`);
+            
+            passwordGroup.style.display = "none";
+            passwordInput.required = false;
+            passwordInput.value = "";
+            document.getElementById("authEmail").readOnly = false;
+            btnSubmit.textContent = "下一步";
+          } else {
+            alert("密碼不正確，請重新輸入！");
+            passwordInput.focus();
+          }
+        } else {
+          alert("驗證失敗，請檢查網路連線或稍後再試。");
+        }
+      } finally {
+        btnSubmit.disabled = false;
       }
-    } catch (err) {
-      console.error("登入驗證錯誤:", err);
-      // 網路錯誤時使用本地備用資料驗證
-      const existing = users.find(u => u.email === email);
-      if (existing) {
-        currentUser = existing;
-        localStorage.setItem("singbowl_current_user_id", currentUser.id);
-        onUserLoginSuccess();
-        alert(`歡迎回來，${currentUser.name} (離線模式)！`);
-      } else {
-        alert("驗證失敗，請檢查網路連線或稍後再試。");
-      }
-    } finally {
-      btnSubmit.disabled = false;
-      btnSubmit.textContent = originalText;
     }
   });
 
@@ -2040,6 +2153,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const name = document.getElementById("regName").value.trim();
     const phone = document.getElementById("regPhone").value.trim();
     const gender = document.querySelector('input[name="regGender"]:checked').value;
+    
+    const password = document.getElementById("regPassword").value.trim();
     
     // 驗證電子郵件是否已被註冊
     const existing = users.find(u => u.email === email);
@@ -2058,6 +2173,7 @@ document.addEventListener("DOMContentLoaded", () => {
       name: name,
       phone: phone,
       gender: gender,
+      password: password, // Store set login password
       role: "member",
       points: 0, // 預設新註冊會員起步次數為 0
       joinDate: dateStr,
@@ -2256,6 +2372,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const newName = document.getElementById("editMemName").value.trim();
     const newEmail = document.getElementById("editMemEmail").value.trim().toLowerCase();
     const newPhone = document.getElementById("editMemPhone").value.trim();
+    const newPassword = document.getElementById("editMemPassword").value.trim();
     const newGender = document.querySelector('input[name="editMemGender"]:checked').value;
     
     // 檢查 Email 是否與其他會員衝突
@@ -2269,6 +2386,7 @@ document.addEventListener("DOMContentLoaded", () => {
     users[memberIndex].name = newName;
     users[memberIndex].email = newEmail;
     users[memberIndex].phone = newPhone;
+    users[memberIndex].password = newPassword;
     users[memberIndex].gender = newGender;
     
     dbSet("users", users);
@@ -2289,6 +2407,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const name = document.getElementById("addMemName").value.trim();
     const email = document.getElementById("addMemEmail").value.trim().toLowerCase();
     const phone = document.getElementById("addMemPhone").value.trim();
+    const password = document.getElementById("addMemPassword").value.trim();
     const gender = document.querySelector('input[name="addMemGender"]:checked').value;
     
     // Check if email unique
@@ -2306,6 +2425,7 @@ document.addEventListener("DOMContentLoaded", () => {
       name: name,
       phone: phone,
       gender: gender,
+      password: password, // Save initial password
       role: "member",
       points: 0, // Starts at 0 points
       joinDate: dateStr
@@ -2318,6 +2438,7 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("addMemName").value = "";
     document.getElementById("addMemEmail").value = "";
     document.getElementById("addMemPhone").value = "";
+    document.getElementById("addMemPassword").value = "";
     
     alert(`會員「${name}」已成功新增！`);
     renderAdminDashboard("members");

@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>缽日 - 頌缽療癒 身心平衡</title>
-  <link rel="icon" type="image/png" href="favicon.png?v=23">
+  <link rel="icon" type="image/png" href="favicon.png?v=24">
   
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -12,7 +12,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;500;600;700&family=Noto+Sans+TC:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   
   <!-- CSS -->
-  <link rel="stylesheet" href="member.css?v=23">
+  <link rel="stylesheet" href="member.css?v=24">
   
   <!-- Lucide Icons (CDN) -->
   <script src="https://unpkg.com/lucide@latest"></script>
@@ -135,7 +135,11 @@
               <label class="form-label" for="authEmail">電子郵件 *</label>
               <input type="email" class="form-input" id="authEmail" required placeholder="example@email.com">
             </div>
-            <button type="submit" class="cta-btn primary-btn w-100" id="btnEmailSubmit">下一步</button>
+            <div class="form-group" id="authPasswordGroup" style="display: none; margin-top: 15px;">
+              <label class="form-label" for="authPassword">登入密碼 *</label>
+              <input type="password" class="form-input" id="authPassword" placeholder="請輸入您的密碼">
+            </div>
+            <button type="submit" class="cta-btn primary-btn w-100" id="btnEmailSubmit" style="margin-top: 15px;">下一步</button>
           </form>
           
           <button class="back-link" id="btnAuthBack"><i data-lucide="arrow-left"></i> 返回首頁</button>
@@ -160,6 +164,10 @@
             <div class="form-group">
               <label class="form-label">電子郵件 *</label>
               <input type="email" class="form-input" id="regEmail" required placeholder="例：user@example.com">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="regPassword">設定登入密碼 *</label>
+              <input type="password" class="form-input" id="regPassword" required placeholder="請設定您的密碼 (最少4個字元)" minlength="4">
             </div>
             <div class="form-group">
               <label class="form-label">生理性別 *</label>
@@ -1035,6 +1043,10 @@
               <input type="tel" class="form-input" id="editMemPhone" required placeholder="例：0912-345-678">
             </div>
             <div class="form-group">
+              <label class="form-label" for="editMemPassword">登入密碼 *</label>
+              <input type="text" class="form-input" id="editMemPassword" required placeholder="修改會員的登入密碼">
+            </div>
+            <div class="form-group">
               <label class="form-label">生理性別 *</label>
               <div class="gender-radio-group">
                 <label class="gender-label">
@@ -1078,6 +1090,10 @@
             <div class="form-group">
               <label class="form-label" for="addMemPhone">手機號碼 *</label>
               <input type="tel" class="form-input" id="addMemPhone" required placeholder="例：0912-345-678" pattern="09\d{2}-\d{3}-\d{3}|09\d{8}">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="addMemPassword">登入密碼 *</label>
+              <input type="text" class="form-input" id="addMemPassword" required placeholder="請設定會員登入密碼">
             </div>
             <div class="form-group">
               <label class="form-label">生理性別 *</label>
@@ -1128,6 +1144,6 @@
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 
   <!-- JavaScript -->
-  <script src="member.js?v=23"></script>
+  <script src="member.js?v=24"></script>
 </body>
 </html>
