@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>缽日 - 頌缽療癒 身心平衡</title>
-  <link rel="icon" type="image/png" href="favicon.png?v=25">
+  <link rel="icon" type="image/png" href="favicon.png?v=26">
   
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -12,7 +12,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;500;600;700&family=Noto+Sans+TC:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   
   <!-- CSS -->
-  <link rel="stylesheet" href="member.css?v=25">
+  <link rel="stylesheet" href="member.css?v=26">
   
   <!-- Lucide Icons (CDN) -->
   <script src="https://unpkg.com/lucide@latest"></script>
@@ -121,25 +121,28 @@
           <h2>登入 / 註冊</h2>
           <p class="auth-subtitle">歡迎來到缽日，請選擇登入方式</p>
           
-          <button class="auth-btn line-btn" id="btnLineLogin">
-            <span class="line-icon"><i data-lucide="message-square"></i></span>
-            <span>LINE 帳號快速登入 / 註冊</span>
-          </button>
-          
-          <div class="auth-divider">
-            <span>或使用 Email 登入</span>
+          <div class="auth-options" id="authOptionsContainer">
+            <button class="auth-btn line-btn" id="btnLineLogin" style="margin-bottom: 12px;">
+              <span class="line-icon"><i data-lucide="message-square"></i></span>
+              <span>LINE 帳號快速登入 / 註冊</span>
+            </button>
+            <button class="auth-btn email-btn" id="btnGeneralLogin">
+              <span class="line-icon"><i data-lucide="mail"></i></span>
+              <span>一般登入 / 註冊</span>
+            </button>
           </div>
           
-          <form id="formEmailAuth">
+          <form id="formEmailAuth" style="display: none;">
             <div class="form-group">
               <label class="form-label" for="authEmail">電子郵件 *</label>
               <input type="email" class="form-input" id="authEmail" required placeholder="example@email.com">
             </div>
-            <div class="form-group" id="authPasswordGroup" style="display: none; margin-top: 15px;">
+            <div class="form-group" id="authPasswordGroup" style="margin-top: 15px;">
               <label class="form-label" for="authPassword">登入密碼 *</label>
               <input type="password" class="form-input" id="authPassword" placeholder="請輸入您的密碼">
             </div>
-            <button type="submit" class="cta-btn primary-btn w-100" id="btnEmailSubmit" style="margin-top: 15px;">下一步</button>
+            <button type="submit" class="cta-btn primary-btn w-100" id="btnEmailSubmit" style="margin-top: 15px;">確認登入</button>
+            <button type="button" class="back-link w-100" id="btnBackToAuthOptions" style="margin-top: 15px; display: flex; align-items: center; justify-content: center; gap: 4px; background: none; border: none; color: var(--mist); cursor: pointer; font-size: 13.5px;"><i data-lucide="arrow-left" style="width: 14px; height: 14px;"></i> 返回選擇登入方式</button>
           </form>
           
           <button class="back-link" id="btnAuthBack"><i data-lucide="arrow-left"></i> 返回首頁</button>
@@ -1144,6 +1147,6 @@
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 
   <!-- JavaScript -->
-  <script src="member.js?v=25"></script>
+  <script src="member.js?v=26"></script>
 </body>
 </html>

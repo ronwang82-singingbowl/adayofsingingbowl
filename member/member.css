@@ -475,6 +475,18 @@ button {
   transform: translateY(-1px);
 }
 
+.auth-btn.email-btn {
+  background: var(--brass);
+  color: #FFFFFF;
+  border: none;
+  cursor: pointer;
+}
+
+.auth-btn.email-btn:hover {
+  background: var(--brass-soft);
+  transform: translateY(-1px);
+}
+
 .line-icon {
   display: flex;
   align-items: center;

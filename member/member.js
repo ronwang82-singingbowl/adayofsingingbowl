@@ -118,20 +118,22 @@ const VIEWS = [
 
 function navigateTo(viewId) {
   if (viewId === "auth") {
-    const passwordGroup = document.getElementById("authPasswordGroup");
+    const optionsContainer = document.getElementById("authOptionsContainer");
+    const emailForm = document.getElementById("formEmailAuth");
+    const backBtn = document.getElementById("btnAuthBack");
+    const emailInput = document.getElementById("authEmail");
     const passwordInput = document.getElementById("authPassword");
-    const btnSubmit = document.getElementById("btnEmailSubmit");
-    const authEmail = document.getElementById("authEmail");
-    if (passwordGroup) passwordGroup.style.display = "none";
+    
+    if (optionsContainer) optionsContainer.style.display = "block";
+    if (backBtn) backBtn.style.display = "block";
+    if (emailForm) emailForm.style.display = "none";
+    if (emailInput) {
+      emailInput.readOnly = false;
+      emailInput.value = "";
+    }
     if (passwordInput) {
-      passwordInput.required = false;
       passwordInput.value = "";
     }
-    if (authEmail) {
-      authEmail.readOnly = false;
-      authEmail.value = "";
-    }
-    if (btnSubmit) btnSubmit.textContent = "下一步";
   }
   
   VIEWS.forEach(view => {
@@ -1990,157 +1992,114 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
+  // General Email Login UI Navigation
+  document.getElementById("btnGeneralLogin").addEventListener("click", () => {
+    document.getElementById("authOptionsContainer").style.display = "none";
+    document.getElementById("btnAuthBack").style.display = "none";
+    document.getElementById("formEmailAuth").style.display = "block";
+    document.getElementById("authEmail").focus();
+  });
+  
+  document.getElementById("btnBackToAuthOptions").addEventListener("click", () => {
+    document.getElementById("authOptionsContainer").style.display = "block";
+    document.getElementById("btnAuthBack").style.display = "block";
+    document.getElementById("formEmailAuth").style.display = "none";
+  });
+
   // Mock Authentication: Email Auth Flow
   document.getElementById("formEmailAuth").addEventListener("submit", async (e) => {
     e.preventDefault();
     const email = document.getElementById("authEmail").value.trim().toLowerCase();
-    const passwordGroup = document.getElementById("authPasswordGroup");
     const passwordInput = document.getElementById("authPassword");
+    const password = passwordInput.value.trim();
     const btnSubmit = document.getElementById("btnEmailSubmit");
     
-    // Check if password field is currently visible
-    const isPasswordVisible = passwordGroup.style.display === "block";
+    if (!email) {
+      alert("請輸入電子郵件！");
+      return;
+    }
+    if (!password) {
+      alert("請輸入密碼！");
+      return;
+    }
     
-    if (!isPasswordVisible) {
-      // 1. Email check step
-      btnSubmit.disabled = true;
-      btnSubmit.textContent = "驗證中...";
+    btnSubmit.disabled = true;
+    btnSubmit.textContent = "驗證中...";
+    
+    try {
+      // Query database
+      const snapshot = await database.ref("users").orderByChild("email").equalTo(email).once("value");
+      const data = snapshot.val();
       
-      try {
-        const snapshot = await database.ref("users").orderByChild("email").equalTo(email).once("value");
-        const data = snapshot.val();
+      if (data) {
+        // User exists!
+        const matchedKey = Object.keys(data)[0];
+        const matchedUser = Object.values(data)[0];
         
-        if (data) {
-          // User exists! Show password field
-          passwordGroup.style.display = "block";
-          passwordInput.required = true;
-          passwordInput.value = "";
-          passwordInput.focus();
-          btnSubmit.textContent = "確認登入";
-          
-          // Disable email input to prevent changing email during password entry
-          document.getElementById("authEmail").readOnly = true;
-        } else {
-          // User does not exist, go to registration
-          document.getElementById("regName").value = "";
-          document.getElementById("regPhone").value = "";
-          document.getElementById("regPassword").value = "";
-          document.getElementById("regEmail").value = email;
-          document.getElementById("formRegisterProfile").dataset.tempEmail = email;
-          navigateTo("register");
+        // Migration strategy: if existing user doesn't have a password yet, save the entered password!
+        if (!matchedUser.password) {
+          matchedUser.password = password;
+          await database.ref(`users/${matchedKey}`).set(matchedUser);
         }
-      } catch (err) {
-        console.error("登入驗證錯誤:", err);
-        // Fallback for offline mode
-        const existing = users.find(u => u.email === email);
-        if (existing) {
-          passwordGroup.style.display = "block";
-          passwordInput.required = true;
-          passwordInput.value = "";
-          passwordInput.focus();
-          btnSubmit.textContent = "確認登入 (本地)";
-          document.getElementById("authEmail").readOnly = true;
-        } else {
-          // Go to registration
-          document.getElementById("regName").value = "";
-          document.getElementById("regPhone").value = "";
-          document.getElementById("regPassword").value = "";
-          document.getElementById("regEmail").value = email;
-          document.getElementById("formRegisterProfile").dataset.tempEmail = email;
-          navigateTo("register");
-        }
-      } finally {
-        btnSubmit.disabled = false;
-      }
-    } else {
-      // 2. Password verification step
-      const password = passwordInput.value.trim();
-      if (!password) {
-        alert("請輸入密碼！");
-        return;
-      }
-      
-      btnSubmit.disabled = true;
-      btnSubmit.textContent = "登入中...";
-      
-      try {
-        const snapshot = await database.ref("users").orderByChild("email").equalTo(email).once("value");
-        const data = snapshot.val();
         
-        if (data) {
-          const matchedKey = Object.keys(data)[0];
-          const matchedUser = Object.values(data)[0];
+        if (matchedUser.password === password) {
+          currentUser = matchedUser;
           
-          // Migration strategy: if existing user doesn't have a password yet, save the entered password!
-          if (!matchedUser.password) {
-            matchedUser.password = password;
-            await database.ref(`users/${matchedKey}`).set(matchedUser);
+          // Sync with local users cache
+          const idx = users.findIndex(u => u.id === currentUser.id);
+          if (idx !== -1) {
+            users[idx] = currentUser;
+          } else {
+            users.push(currentUser);
           }
+          dbSet("users", users, false);
           
-          if (matchedUser.password === password) {
-            currentUser = matchedUser;
-            
-            // Sync with local users cache
-            const idx = users.findIndex(u => u.id === currentUser.id);
-            if (idx !== -1) {
-              users[idx] = currentUser;
-            } else {
-              users.push(currentUser);
-            }
-            dbSet("users", users, false);
-            
-            localStorage.setItem("singbowl_current_user_id", currentUser.id);
-            onUserLoginSuccess();
-            alert(`歡迎回來，${currentUser.name}！`);
-            
-            // Reset auth form state
-            passwordGroup.style.display = "none";
-            passwordInput.required = false;
-            passwordInput.value = "";
-            document.getElementById("authEmail").readOnly = false;
-            btnSubmit.textContent = "下一步";
-          } else {
-            alert("密碼不正確，請重新輸入！");
-            passwordInput.focus();
-          }
+          localStorage.setItem("singbowl_current_user_id", currentUser.id);
+          onUserLoginSuccess();
+          alert(`歡迎回來，${currentUser.name}！`);
         } else {
-          alert("用戶不存在，請重新輸入。");
-          // reset form
-          passwordGroup.style.display = "none";
-          passwordInput.required = false;
-          document.getElementById("authEmail").readOnly = false;
-          btnSubmit.textContent = "下一步";
+          alert("密碼不正確，請重新輸入！");
+          passwordInput.focus();
         }
-      } catch (err) {
-        console.error("密碼驗證錯誤:", err);
-        // Fallback for offline mode
-        const existing = users.find(u => u.email === email);
-        if (existing) {
-          if (!existing.password) {
-            existing.password = password;
-            dbSet("users", users);
-          }
-          if (existing.password === password) {
-            currentUser = existing;
-            localStorage.setItem("singbowl_current_user_id", currentUser.id);
-            onUserLoginSuccess();
-            alert(`歡迎回來，${currentUser.name} (離線模式)！`);
-            
-            passwordGroup.style.display = "none";
-            passwordInput.required = false;
-            passwordInput.value = "";
-            document.getElementById("authEmail").readOnly = false;
-            btnSubmit.textContent = "下一步";
-          } else {
-            alert("密碼不正確，請重新輸入！");
-            passwordInput.focus();
-          }
-        } else {
-          alert("驗證失敗，請檢查網路連線或稍後再試。");
-        }
-      } finally {
-        btnSubmit.disabled = false;
+      } else {
+        // User does not exist, go to registration!
+        document.getElementById("regName").value = "";
+        document.getElementById("regPhone").value = "";
+        document.getElementById("regEmail").value = email;
+        document.getElementById("regPassword").value = password; // pre-fill password entered!
+        document.getElementById("formRegisterProfile").dataset.tempEmail = email;
+        navigateTo("register");
       }
+    } catch (err) {
+      console.error("登入驗證錯誤:", err);
+      // Fallback for offline mode
+      const existing = users.find(u => u.email === email);
+      if (existing) {
+        if (!existing.password) {
+          existing.password = password;
+          dbSet("users", users);
+        }
+        if (existing.password === password) {
+          currentUser = existing;
+          localStorage.setItem("singbowl_current_user_id", currentUser.id);
+          onUserLoginSuccess();
+          alert(`歡迎回來，${currentUser.name} (離線模式)！`);
+        } else {
+          alert("密碼不正確，請重新輸入！");
+          passwordInput.focus();
+        }
+      } else {
+        // Fallback registration in offline mode
+        document.getElementById("regName").value = "";
+        document.getElementById("regPhone").value = "";
+        document.getElementById("regEmail").value = email;
+        document.getElementById("regPassword").value = password;
+        document.getElementById("formRegisterProfile").dataset.tempEmail = email;
+        navigateTo("register");
+      }
+    } finally {
+      btnSubmit.disabled = false;
+      btnSubmit.textContent = "確認登入";
     }
   });
 
