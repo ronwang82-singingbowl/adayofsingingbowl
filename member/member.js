@@ -2388,6 +2388,64 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("btnAdminAddMember").addEventListener("click", () => navigateTo("admin-add-member"));
   document.getElementById("btnCancelAddMem").addEventListener("click", () => navigateTo("admin"));
   
+  // Admin Export Members Data to CSV
+  document.getElementById("btnExportMembers").addEventListener("click", () => {
+    const memberUsers = users.filter(u => u.role === "member");
+    if (memberUsers.length === 0) {
+      alert("目前沒有任何會員資料可供匯出！");
+      return;
+    }
+    
+    const headers = [
+      "會員ID", "姓名", "電子郵件", "手機號碼", "生理性別", 
+      "加入日期", "登入密碼", "通用點數", "贈送-1對1點數", "贈送-團體點數", "是否LINE帳號"
+    ];
+    
+    const csvRows = [headers.join(",")];
+    
+    const escapeCsv = (val) => {
+      if (val === undefined || val === null) return '""';
+      const str = String(val).replace(/"/g, '""');
+      return `"${str}"`;
+    };
+    
+    memberUsers.forEach(u => {
+      const isLineStr = u.lineUserId ? "是" : "否";
+      const row = [
+        escapeCsv(u.id),
+        escapeCsv(u.name),
+        escapeCsv(u.email),
+        escapeCsv(u.phone),
+        escapeCsv(u.gender),
+        escapeCsv(u.joinDate),
+        escapeCsv(u.lineUserId ? "LINE註冊" : (u.password || "未設定")),
+        escapeCsv(u.points || 0),
+        escapeCsv(u.giftedPoints || 0),
+        escapeCsv(u.giftedGroupPoints || 0),
+        escapeCsv(isLineStr)
+      ];
+      csvRows.push(row.join(","));
+    });
+    
+    const csvContent = csvRows.join("\r\n");
+    const BOM = "\uFEFF";
+    const blob = new Blob([BOM + csvContent], { type: "text/csv;charset=utf-8;" });
+    
+    const dateStr = new Date().toISOString().split("T")[0];
+    const fileName = `缽日會員資料_${dateStr}.csv`;
+    
+    const link = document.createElement("a");
+    if (link.download !== undefined) {
+      const url = URL.createObjectURL(blob);
+      link.setAttribute("href", url);
+      link.setAttribute("download", fileName);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+  });
+  
   // Admin Form Manual Add Member submit
   document.getElementById("formAdminAddMember").addEventListener("submit", (e) => {
     e.preventDefault();
