@@ -2388,7 +2388,7 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("btnAdminAddMember").addEventListener("click", () => navigateTo("admin-add-member"));
   document.getElementById("btnCancelAddMem").addEventListener("click", () => navigateTo("admin"));
   
-  // Admin Export Members Data to CSV
+  // Admin Export Members Data to Excel (.xls)
   document.getElementById("btnExportMembers").addEventListener("click", () => {
     const memberUsers = users.filter(u => u.role === "member");
     if (memberUsers.length === 0) {
@@ -2401,38 +2401,68 @@ document.addEventListener("DOMContentLoaded", () => {
       "加入日期", "登入密碼", "通用點數", "贈送-1對1點數", "贈送-團體點數", "是否LINE帳號"
     ];
     
-    const csvRows = [headers.join(",")];
-    
-    const escapeCsv = (val) => {
-      if (val === undefined || val === null) return '""';
-      const str = String(val).replace(/"/g, '""');
-      return `"${str}"`;
-    };
-    
+    let tableRows = "";
     memberUsers.forEach(u => {
       const isLineStr = u.lineUserId ? "是" : "否";
-      const row = [
-        escapeCsv(u.id),
-        escapeCsv(u.name),
-        escapeCsv(u.email),
-        escapeCsv(u.phone),
-        escapeCsv(u.gender),
-        escapeCsv(u.joinDate),
-        escapeCsv(u.lineUserId ? "LINE註冊" : (u.password || "未設定")),
-        escapeCsv(u.points || 0),
-        escapeCsv(u.giftedPoints || 0),
-        escapeCsv(u.giftedGroupPoints || 0),
-        escapeCsv(isLineStr)
-      ];
-      csvRows.push(row.join(","));
+      const pwdText = u.lineUserId ? "LINE註冊" : (u.password || "未設定");
+      tableRows += `
+        <tr>
+          <td>${u.id}</td>
+          <td>${u.name}</td>
+          <td>${u.email}</td>
+          <td>${u.phone}</td>
+          <td>${u.gender}</td>
+          <td>${u.joinDate}</td>
+          <td>${pwdText}</td>
+          <td>${u.points || 0}</td>
+          <td>${u.giftedPoints || 0}</td>
+          <td>${u.giftedGroupPoints || 0}</td>
+          <td>${isLineStr}</td>
+        </tr>`;
     });
     
-    const csvContent = csvRows.join("\r\n");
-    const BOM = "\uFEFF";
-    const blob = new Blob([BOM + csvContent], { type: "text/csv;charset=utf-8;" });
+    const excelTemplate = `
+      <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+      <head>
+        <meta charset="UTF-8">
+        <!--[if gte mso 9]>
+        <xml>
+          <x:ExcelWorkbook>
+            <x:ExcelWorksheets>
+              <x:ExcelWorksheet>
+                <x:Name>缽日會員資料</x:Name>
+                <x:WorksheetOptions>
+                  <x:DisplayGridlines/>
+                </x:WorksheetOptions>
+              </x:ExcelWorksheet>
+            </x:ExcelWorksheets>
+          </x:ExcelWorkbook>
+        </xml>
+        <![endif]-->
+        <style>
+          table { border-collapse: collapse; }
+          th { background-color: #C9A063; color: #FFFFFF; font-weight: bold; }
+          th, td { border: 1px solid #DDDDDD; padding: 8px; text-align: left; font-family: sans-serif; }
+        </style>
+      </head>
+      <body>
+        <table>
+          <thead>
+            <tr>
+              ${headers.map(h => `<th>${h}</th>`).join("")}
+            </tr>
+          </thead>
+          <tbody>
+            ${tableRows}
+          </tbody>
+        </table>
+      </body>
+      </html>
+    `;
     
+    const blob = new Blob([excelTemplate], { type: "application/vnd.ms-excel;charset=utf-8;" });
     const dateStr = new Date().toISOString().split("T")[0];
-    const fileName = `缽日會員資料_${dateStr}.csv`;
+    const fileName = `缽日會員資料_${dateStr}.xls`;
     
     const link = document.createElement("a");
     if (link.download !== undefined) {
