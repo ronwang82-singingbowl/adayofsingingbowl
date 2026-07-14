@@ -46,6 +46,15 @@ const DEFAULT_TRANSACTIONS = [
   { id: 5004, userId: 4, amount: 1, type: "add", reason: "手動充值次數", date: "2026-07-07 15:30", balance: 1 }
 ];
 
+// Secure SHA-256 Hashing helper
+async function hashPassword(password) {
+  if (!password) return "";
+  const msgBuffer = new TextEncoder().encode(password);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", msgBuffer);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
+}
+
 // Helper functions for LocalStorage persistence
 function dbGet(key, defaultData) {
   try {
@@ -928,7 +937,14 @@ function renderAdminMemberList() {
   } else {
     filteredMembers.forEach(u => {
       const row = document.createElement("tr");
-      const pwdText = u.lineUserId ? "LINE註冊" : (u.password || "未設定");
+      let pwdText = "未設定";
+      if (u.lineUserId) {
+        pwdText = "LINE註冊";
+      } else if (u.password) {
+        const isHashed = u.password.length === 64 && /^[0-9a-f]+$/.test(u.password);
+        pwdText = isHashed ? "已設定 (安全加密)" : u.password;
+      }
+      
       row.innerHTML = `
         <td><strong>${u.name}</strong></td>
         <td>${u.phone}<br><span style="font-size:11px;color:var(--mist);">${u.email}</span><br><span style="font-size:11px;color:var(--brass-soft);font-weight:500;">密碼: ${pwdText}</span></td>
@@ -1004,7 +1020,15 @@ window.openEditMember = function(memberId) {
   document.getElementById("editMemName").value = member.name;
   document.getElementById("editMemEmail").value = member.email;
   document.getElementById("editMemPhone").value = member.phone;
-  document.getElementById("editMemPassword").value = member.password || "";
+  if (member.lineUserId) {
+    document.getElementById("editMemPassword").value = "";
+    document.getElementById("editMemPassword").disabled = true;
+    document.getElementById("editMemPassword").placeholder = "LINE快速註冊用戶無法設定密碼";
+  } else {
+    document.getElementById("editMemPassword").value = "";
+    document.getElementById("editMemPassword").disabled = false;
+    document.getElementById("editMemPassword").placeholder = "留空代表不修改密碼，輸入以重設密碼";
+  }
   
   const genderRadios = document.getElementsByName("editMemGender");
   genderRadios.forEach(radio => {
@@ -2026,6 +2050,8 @@ document.addEventListener("DOMContentLoaded", () => {
     btnSubmit.disabled = true;
     btnSubmit.textContent = "驗證中...";
     
+    const enteredHash = await hashPassword(password);
+    
     try {
       // Query database
       const snapshot = await database.ref("users").orderByChild("email").equalTo(email).once("value");
@@ -2055,13 +2081,29 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         
         if (matchedUser) {
-          // Migration strategy: if existing user doesn't have a password yet, save the entered password!
+          const isAlreadyHashed = matchedUser.password && matchedUser.password.length === 64 && /^[0-9a-f]+$/.test(matchedUser.password);
+          let loginSuccess = false;
+          
           if (!matchedUser.password) {
-            matchedUser.password = password;
+            // Migration: Set password for first time
+            matchedUser.password = enteredHash;
             await database.ref(`users/${matchedKey}`).set(matchedUser);
+            loginSuccess = true;
+          } else if (!isAlreadyHashed) {
+            // Migration: Upgrade plain text password to SHA-256 hash
+            if (matchedUser.password === password) {
+              matchedUser.password = enteredHash;
+              await database.ref(`users/${matchedKey}`).set(matchedUser);
+              loginSuccess = true;
+            }
+          } else {
+            // Standard check: compare hashes
+            if (matchedUser.password === enteredHash) {
+              loginSuccess = true;
+            }
           }
           
-          if (matchedUser.password === password) {
+          if (loginSuccess) {
             currentUser = matchedUser;
             
             // Sync with local users cache
@@ -2103,11 +2145,26 @@ document.addEventListener("DOMContentLoaded", () => {
       // Fallback for offline mode
       const existing = users.find(u => u.email === email);
       if (existing) {
+        const isAlreadyHashedLocal = existing.password && existing.password.length === 64 && /^[0-9a-f]+$/.test(existing.password);
+        let localLoginSuccess = false;
+        
         if (!existing.password) {
-          existing.password = password;
+          existing.password = enteredHash;
           dbSet("users", users);
+          localLoginSuccess = true;
+        } else if (!isAlreadyHashedLocal) {
+          if (existing.password === password) {
+            existing.password = enteredHash;
+            dbSet("users", users);
+            localLoginSuccess = true;
+          }
+        } else {
+          if (existing.password === enteredHash) {
+            localLoginSuccess = true;
+          }
         }
-        if (existing.password === password) {
+        
+        if (localLoginSuccess) {
           currentUser = existing;
           localStorage.setItem("singbowl_current_user_id", currentUser.id);
           onUserLoginSuccess();
@@ -2132,7 +2189,7 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   // Form: Complete Profile submission (Registration)
-  document.getElementById("formRegisterProfile").addEventListener("submit", (e) => {
+  document.getElementById("formRegisterProfile").addEventListener("submit", async (e) => {
     e.preventDefault();
     
     const regForm = document.getElementById("formRegisterProfile");
@@ -2143,6 +2200,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const gender = document.querySelector('input[name="regGender"]:checked').value;
     
     const password = document.getElementById("regPassword").value.trim();
+    const hashedPassword = await hashPassword(password);
     
     // 驗證電子郵件是否已被註冊
     const existing = users.find(u => u.email === email);
@@ -2161,7 +2219,7 @@ document.addEventListener("DOMContentLoaded", () => {
       name: name,
       phone: phone,
       gender: gender,
-      password: password, // Store set login password
+      password: hashedPassword, // Store set login password (hashed)
       role: "member",
       points: 0, // 預設新註冊會員起步次數為 0
       joinDate: dateStr,
@@ -2350,7 +2408,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Admin Form Edit Member submit & cancel
   document.getElementById("btnCancelEditMember").addEventListener("click", () => navigateTo("admin"));
-  document.getElementById("formAdminEditMember").addEventListener("submit", (e) => {
+  document.getElementById("formAdminEditMember").addEventListener("submit", async (e) => {
     e.preventDefault();
     
     const memberId = parseInt(document.getElementById("editMemberId").value);
@@ -2374,8 +2432,12 @@ document.addEventListener("DOMContentLoaded", () => {
     users[memberIndex].name = newName;
     users[memberIndex].email = newEmail;
     users[memberIndex].phone = newPhone;
-    users[memberIndex].password = newPassword;
     users[memberIndex].gender = newGender;
+    
+    if (newPassword && !users[memberIndex].lineUserId) {
+      const hashedPassword = await hashPassword(newPassword);
+      users[memberIndex].password = hashedPassword;
+    }
     
     dbSet("users", users);
     
@@ -2477,7 +2539,7 @@ document.addEventListener("DOMContentLoaded", () => {
   });
   
   // Admin Form Manual Add Member submit
-  document.getElementById("formAdminAddMember").addEventListener("submit", (e) => {
+  document.getElementById("formAdminAddMember").addEventListener("submit", async (e) => {
     e.preventDefault();
     
     const name = document.getElementById("addMemName").value.trim();
@@ -2492,6 +2554,7 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
     
+    const hashedPassword = await hashPassword(password);
     const nextUserId = users.length > 0 ? users[users.length - 1].id + 1 : 1;
     const dateStr = new Date().toISOString().split("T")[0];
     
@@ -2501,7 +2564,7 @@ document.addEventListener("DOMContentLoaded", () => {
       name: name,
       phone: phone,
       gender: gender,
-      password: password, // Save initial password
+      password: hashedPassword, // Save initial password (hashed)
       role: "member",
       points: 0, // Starts at 0 points
       joinDate: dateStr
