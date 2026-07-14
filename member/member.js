@@ -2032,34 +2032,62 @@ document.addEventListener("DOMContentLoaded", () => {
       const data = snapshot.val();
       
       if (data) {
-        // User exists!
-        const matchedKey = Object.keys(data)[0];
-        const matchedUser = Object.values(data)[0];
+        // User exists! Find the non-null user matching the email
+        let matchedKey = null;
+        let matchedUser = null;
         
-        // Migration strategy: if existing user doesn't have a password yet, save the entered password!
-        if (!matchedUser.password) {
-          matchedUser.password = password;
-          await database.ref(`users/${matchedKey}`).set(matchedUser);
+        if (Array.isArray(data)) {
+          for (let i = 0; i < data.length; i++) {
+            if (data[i] && data[i].email === email) {
+              matchedUser = data[i];
+              matchedKey = i;
+              break;
+            }
+          }
+        } else {
+          for (const key in data) {
+            if (data[key] && data[key].email === email) {
+              matchedUser = data[key];
+              matchedKey = key;
+              break;
+            }
+          }
         }
         
-        if (matchedUser.password === password) {
-          currentUser = matchedUser;
-          
-          // Sync with local users cache
-          const idx = users.findIndex(u => u.id === currentUser.id);
-          if (idx !== -1) {
-            users[idx] = currentUser;
-          } else {
-            users.push(currentUser);
+        if (matchedUser) {
+          // Migration strategy: if existing user doesn't have a password yet, save the entered password!
+          if (!matchedUser.password) {
+            matchedUser.password = password;
+            await database.ref(`users/${matchedKey}`).set(matchedUser);
           }
-          dbSet("users", users, false);
           
-          localStorage.setItem("singbowl_current_user_id", currentUser.id);
-          onUserLoginSuccess();
-          alert(`歡迎回來，${currentUser.name}！`);
+          if (matchedUser.password === password) {
+            currentUser = matchedUser;
+            
+            // Sync with local users cache
+            const idx = users.findIndex(u => u.id === currentUser.id);
+            if (idx !== -1) {
+              users[idx] = currentUser;
+            } else {
+              users.push(currentUser);
+            }
+            dbSet("users", users, false);
+            
+            localStorage.setItem("singbowl_current_user_id", currentUser.id);
+            onUserLoginSuccess();
+            alert(`歡迎回來，${currentUser.name}！`);
+          } else {
+            alert("密碼不正確，請重新輸入！");
+            passwordInput.focus();
+          }
         } else {
-          alert("密碼不正確，請重新輸入！");
-          passwordInput.focus();
+          // User does not exist, go to registration!
+          document.getElementById("regName").value = "";
+          document.getElementById("regPhone").value = "";
+          document.getElementById("regEmail").value = email;
+          document.getElementById("regPassword").value = password; // pre-fill password entered!
+          document.getElementById("formRegisterProfile").dataset.tempEmail = email;
+          navigateTo("register");
         }
       } else {
         // User does not exist, go to registration!
