@@ -2948,6 +2948,9 @@ async function runMockLineLogin() {
   // 智慧型資料遷移 (自動將舊版 db_state 移至新分級節點，防止舊會員資料丟失)
   migrateDatabaseIfNecessary();
 
+  // Always initialize session and listen to Auth state changes on load
+  initSession();
+
   // Initialize Session (LINE LIFF 優先)
   if (typeof liff !== "undefined") {
     liff.init({ liffId: "2010665706-wxtkVO4B" })
@@ -2955,16 +2958,11 @@ async function runMockLineLogin() {
         console.log("LINE LIFF 初始化成功");
         if (liff.isLoggedIn()) {
           handleLiffLogin();
-        } else {
-          initSession();
         }
       })
       .catch(err => {
         console.error("LINE LIFF 初始化失敗:", err);
-        initSession();
       });
-  } else {
-    initSession();
   }
 });
 
