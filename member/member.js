@@ -1020,6 +1020,7 @@ function renderAdminDashboard(paneId) {
   // 4. Booking list (with Filter logic)
   if (paneId === "bookings") {
     renderAdminBookingList();
+    renderAdminCalendar();
   }
   
   // 5. Coupon management lists
@@ -1202,6 +1203,166 @@ window.openEditMember = function(memberId) {
 
 // 4.3 Booking List rendering with filter state
 let bookingFilter = "all";
+
+// Admin Booking Calendar Variables
+let adminCalendarCurrentYear = new Date().getFullYear();
+let adminCalendarCurrentMonth = new Date().getMonth(); // 0-indexed
+let adminCalendarSelectedDate = "";
+
+function renderAdminCalendar() {
+  const lblMonth = document.getElementById("lblAdminCalendarMonth");
+  const grid = document.getElementById("adminCalendarDaysGrid");
+  if (!lblMonth || !grid) return;
+  
+  lblMonth.textContent = `${adminCalendarCurrentYear} 年 ${adminCalendarCurrentMonth + 1} 月`;
+  grid.innerHTML = "";
+  
+  const firstDayIndex = new Date(adminCalendarCurrentYear, adminCalendarCurrentMonth, 1).getDay();
+  const totalDays = new Date(adminCalendarCurrentYear, adminCalendarCurrentMonth + 1, 0).getDate();
+  const prevMonthTotalDays = new Date(adminCalendarCurrentYear, adminCalendarCurrentMonth, 0).getDate();
+  
+  // 1. Prev Month padding days
+  for (let i = firstDayIndex - 1; i >= 0; i--) {
+    const dayVal = prevMonthTotalDays - i;
+    const cell = document.createElement("div");
+    cell.className = "calendar-day-cell empty-cell past-cell";
+    cell.style.opacity = "0.2";
+    cell.innerHTML = `<span>${dayVal}</span>`;
+    grid.appendChild(cell);
+  }
+  
+  // 2. Current Month days
+  for (let d = 1; d <= totalDays; d++) {
+    const cell = document.createElement("div");
+    cell.className = "calendar-day-cell";
+    
+    const dateStr = `${adminCalendarCurrentYear}-${String(adminCalendarCurrentMonth + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+    const activeBookings = bookings.filter(b => b.date === dateStr && b.status !== "已取消" && b.status !== "已拒絕");
+    const pendingCount = activeBookings.filter(b => b.status === "待確認").length;
+    
+    cell.innerHTML = `<span>${d}</span>`;
+    
+    if (activeBookings.length > 0) {
+      const badge = document.createElement("span");
+      badge.style.fontSize = "9px";
+      badge.style.marginTop = "2px";
+      badge.style.fontWeight = "600";
+      
+      if (pendingCount > 0) {
+        badge.style.color = "#ff9800";
+        badge.textContent = `${activeBookings.length}人 (待)`;
+      } else {
+        badge.style.color = "var(--brass-soft)";
+        badge.textContent = `${activeBookings.length}人`;
+      }
+      cell.appendChild(badge);
+      
+      const dot = document.createElement("span");
+      dot.className = "dot-indicator";
+      if (pendingCount > 0) {
+        dot.style.background = "#ff9800";
+      }
+      cell.appendChild(dot);
+    }
+    
+    if (adminCalendarSelectedDate === dateStr) {
+      cell.classList.add("active-selected");
+    }
+    
+    cell.addEventListener("click", () => {
+      document.querySelectorAll("#adminCalendarDaysGrid .calendar-day-cell").forEach(c => {
+        c.classList.remove("active-selected");
+      });
+      cell.classList.add("active-selected");
+      adminCalendarSelectedDate = dateStr;
+      showAdminCalendarDayDetail(dateStr);
+    });
+    
+    grid.appendChild(cell);
+  }
+  
+  // 3. Next Month padding days
+  const totalCellsUsed = firstDayIndex + totalDays;
+  const remainingCells = 42 - totalCellsUsed;
+  for (let i = 1; i <= remainingCells; i++) {
+    const cell = document.createElement("div");
+    cell.className = "calendar-day-cell empty-cell past-cell";
+    cell.style.opacity = "0.2";
+    cell.innerHTML = `<span>${i}</span>`;
+    grid.appendChild(cell);
+  }
+  
+  if (adminCalendarSelectedDate) {
+    showAdminCalendarDayDetail(adminCalendarSelectedDate);
+  } else {
+    document.getElementById("divAdminCalendarDayDetail").style.display = "none";
+  }
+}
+
+function showAdminCalendarDayDetail(dateStr) {
+  const panel = document.getElementById("divAdminCalendarDayDetail");
+  const title = document.getElementById("lblAdminCalendarSelectedDate");
+  const list = document.getElementById("adminCalendarDayBookingsList");
+  if (!panel || !title || !list) return;
+  
+  title.textContent = `📅 ${dateStr} 預約詳情`;
+  list.innerHTML = "";
+  
+  const dayBookings = bookings.filter(b => b.date === dateStr);
+  
+  if (dayBookings.length === 0) {
+    list.innerHTML = `<div style="font-size: 12px; color: var(--mist); text-align: center; padding: 10px 0;">當日無任何預約紀錄</div>`;
+  } else {
+    dayBookings.forEach(b => {
+      const item = document.createElement("div");
+      item.style.background = "rgba(255,255,255,0.03)";
+      item.style.padding = "10px";
+      item.style.borderRadius = "6px";
+      item.style.border = "1px solid var(--hairline)";
+      item.style.display = "flex";
+      item.style.justifyContent = "space-between";
+      item.style.alignItems = "center";
+      item.style.gap = "10px";
+      
+      const member = users.find(u => u.id === b.userId);
+      const name = member ? member.name : "未知";
+      const label = b.type === "1on1" ? "1對1 頌缽" : b.title;
+      
+      const statusClass = b.status === "待確認" ? "status-pending" : 
+                          b.status === "已確認" ? "status-confirmed" : 
+                          b.status === "已完成" ? "status-completed" : "status-cancelled";
+                          
+      let actionButtons = "";
+      if (b.status === "待確認") {
+        actionButtons = `
+          <div style="display: flex; gap: 4px;">
+            <button class="table-action-btn success" style="padding: 2px 6px; font-size: 11px; height: auto;" onclick="adminApproveBooking(${b.id}); event.stopPropagation();">確認</button>
+            <button class="table-action-btn danger" style="padding: 2px 6px; font-size: 11px; height: auto;" onclick="adminRejectBooking(${b.id}); event.stopPropagation();">拒絕</button>
+          </div>
+        `;
+      } else if (b.status === "已確認") {
+        actionButtons = `
+          <button class="table-action-btn danger" style="padding: 2px 6px; font-size: 11px; height: auto;" onclick="adminRejectBooking(${b.id}); event.stopPropagation();">取消並退次</button>
+        `;
+      }
+      
+      item.innerHTML = `
+        <div style="text-align: left;">
+          <div style="font-weight: 600; font-size: 13px; color: var(--paper);">${b.time} - ${name}</div>
+          <div style="font-size: 11px; color: var(--mist); margin-top: 2px;">項目: ${label} | #ID: ${b.id}</div>
+          ${b.notes ? `<div style="font-size: 11px; color: var(--brass-soft); margin-top: 4px; border-left: 2px solid var(--brass); padding-left: 6px;">備註: ${b.notes}</div>` : ''}
+        </div>
+        <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 6px;">
+          <span class="status-badge ${statusClass}" style="margin: 0; padding: 2px 6px; font-size: 10px;">${b.status}</span>
+          ${actionButtons}
+        </div>
+      `;
+      list.appendChild(item);
+    });
+  }
+  
+  panel.style.display = "block";
+}
 
 function renderAdminBookingList() {
   const container = document.getElementById("adminBookingList");
@@ -3041,6 +3202,24 @@ async function runMockLineLogin() {
         console.error("儲存 LINE 設定失敗:", err);
         alert("❌ 儲存 LINE 設定失敗，請確認網路連線。");
       });
+  });
+
+  document.getElementById("btnAdminPrevMonth")?.addEventListener("click", () => {
+    adminCalendarCurrentMonth--;
+    if (adminCalendarCurrentMonth < 0) {
+      adminCalendarCurrentMonth = 11;
+      adminCalendarCurrentYear--;
+    }
+    renderAdminCalendar();
+  });
+
+  document.getElementById("btnAdminNextMonth")?.addEventListener("click", () => {
+    adminCalendarCurrentMonth++;
+    if (adminCalendarCurrentMonth > 11) {
+      adminCalendarCurrentMonth = 0;
+      adminCalendarCurrentYear++;
+    }
+    renderAdminCalendar();
   });
 
   // Start Firebase Realtime Synchronization globally on load

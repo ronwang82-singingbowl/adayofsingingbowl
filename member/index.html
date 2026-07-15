@@ -59,7 +59,7 @@
           <img src="logo.jpg" class="logo-img" alt="缽日 Logo">
           <div class="logo-text-group">
             <span class="logo-text">缽日</span>
-            <span class="logo-sub">Singing Bowl <span style="font-size: 8px; opacity: 0.5;">v44</span></span>
+            <span class="logo-sub">Singing Bowl <span style="font-size: 8px; opacity: 0.5;">v45</span></span>
           </div>
         </a>
         <nav class="nav-links">
@@ -709,6 +709,44 @@
             <!-- 7.3 Booking Management Panel -->
             <div class="admin-pane-section" id="pane-admin-bookings">
               <h3>預約審核與列表</h3>
+
+              <!-- Admin Bookings Calendar View -->
+              <div class="coupon-log-card" style="margin-bottom: 24px; padding: 20px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                  <h4 style="margin: 0; color: var(--brass-soft); font-size: 15px; display: flex; align-items: center; gap: 6px;">
+                    <i data-lucide="calendar" style="width: 16px; height: 16px;"></i> 預約狀態日曆檢視
+                  </h4>
+                  <div style="display: flex; gap: 8px; align-items: center;">
+                    <button type="button" class="quick-slot-btn" id="btnAdminPrevMonth" style="padding: 2px 8px; font-size: 11px; height: auto;">◀</button>
+                    <span id="lblAdminCalendarMonth" style="font-weight: 600; font-size: 13px; min-width: 90px; text-align: center;">2026 年 7 月</span>
+                    <button type="button" class="quick-slot-btn" id="btnAdminNextMonth" style="padding: 2px 8px; font-size: 11px; height: auto;">▶</button>
+                  </div>
+                </div>
+                
+                <!-- Calendar grid structure -->
+                <div style="background: rgba(0,0,0,0.15); padding: 12px; border-radius: 8px; border: 1px solid var(--hairline);">
+                  <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; text-align: center; margin-bottom: 8px; border-bottom: 1px solid var(--hairline); padding-bottom: 6px;">
+                    <div style="font-weight: 600; font-size: 11px; color: var(--mist);">日</div>
+                    <div style="font-weight: 600; font-size: 11px; color: var(--paper);">一</div>
+                    <div style="font-weight: 600; font-size: 11px; color: var(--paper);">二</div>
+                    <div style="font-weight: 600; font-size: 11px; color: var(--paper);">三</div>
+                    <div style="font-weight: 600; font-size: 11px; color: var(--paper);">四</div>
+                    <div style="font-weight: 600; font-size: 11px; color: var(--paper);">五</div>
+                    <div style="font-weight: 600; font-size: 11px; color: var(--mist);">六</div>
+                  </div>
+                  <div id="adminCalendarDaysGrid" style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px;">
+                    <!-- Calendar days dynamically generated -->
+                  </div>
+                </div>
+
+                <!-- Day bookings details -->
+                <div id="divAdminCalendarDayDetail" style="margin-top: 15px; padding: 12px; background: rgba(255,255,255,0.02); border-radius: 6px; border: 1px dashed var(--hairline); display: none;">
+                  <h5 id="lblAdminCalendarSelectedDate" style="margin: 0 0 10px 0; font-size: 12px; color: var(--brass-soft); font-weight: 600;">2026-07-12 預約詳情</h5>
+                  <div id="adminCalendarDayBookingsList" style="display: flex; flex-direction: column; gap: 6px;">
+                    <!-- Booking details list -->
+                  </div>
+                </div>
+              </div>
               
               <div class="booking-filter-tabs">
                 <button class="filter-tab active" data-filter="all">所有預約</button>
@@ -1166,6 +1204,6 @@
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 
   <!-- JavaScript -->
-  <script src="member.js?v=44"></script>
+  <script src="member.js?v=45"></script>
 </body>
 </html>
