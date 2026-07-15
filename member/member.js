@@ -55,6 +55,11 @@ async function hashPassword(password) {
   return hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
 }
 
+function getNextId(array, startId) {
+  if (!Array.isArray(array)) return startId;
+  return array.reduce((max, item) => item && item.id ? Math.max(max, item.id) : max, startId - 1) + 1;
+}
+
 // Helper to get user Firebase path key (UID or manual_email or numeric_id)
 function getUserPathKey(user) {
   if (!user) return "";
@@ -398,10 +403,10 @@ function renderDashboard() {
       const sign = isAdd ? "+" : "-";
       
       row.innerHTML = `
-        <td>${t.date.split(" ")[0]}</td>
-        <td>${isAdd ? "額度增加" : "預約扣除"}</td>
-        <td class="${changeClass}">${sign}${t.amount}</td>
-        <td>${t.reason} (結餘: ${t.balance}次)</td>
+        <td style="white-space: nowrap !important; padding: 8px 10px !important; font-size: 12px !important; text-align: left !important; border-bottom: 1px solid var(--hairline) !important;">${t.date.split(" ")[0]}</td>
+        <td style="white-space: nowrap !important; padding: 8px 10px !important; font-size: 12px !important; text-align: left !important; border-bottom: 1px solid var(--hairline) !important;">${isAdd ? "額度增加" : "預約扣除"}</td>
+        <td class="${changeClass}" style="white-space: nowrap !important; padding: 8px 10px !important; font-size: 12px !important; text-align: left !important; border-bottom: 1px solid var(--hairline) !important;">${sign}${t.amount}</td>
+        <td style="white-space: normal !important; min-width: 180px !important; padding: 8px 10px !important; font-size: 12px !important; text-align: left !important; border-bottom: 1px solid var(--hairline) !important;">${t.reason} (結餘: ${t.balance}次)</td>
       `;
       txContainer.appendChild(row);
     });
@@ -524,7 +529,7 @@ window.cancelBooking = function(bookingId) {
       dbSet("users", users);
       
       // 3. Log point transaction
-      const newTxId = transactions.length > 0 ? transactions[transactions.length - 1].id + 1 : 5001;
+      const newTxId = getNextId(transactions, 5001);
       const nowStr = getNowDateTimeString();
       const typeNameStr = booking.type === "1on1" ? "1對1" : "團體";
       const targetNameStr = refundType === "gifted" ? "贈送" : "通用";
@@ -1266,7 +1271,7 @@ window.adminRejectBooking = function(bookingId) {
       dbSet("users", users);
       
       // 3. Log points
-      const newTxId = transactions.length > 0 ? transactions[transactions.length - 1].id + 1 : 5001;
+      const newTxId = getNextId(transactions, 5001);
       const nowStr = getNowDateTimeString();
       const typeNameStr = booking.type === "1on1" ? "1對1" : "團體";
       const targetNameStr = refundType === "gifted" ? "贈送" : "通用";
@@ -1361,7 +1366,7 @@ window.deleteAdminCoupon = function(couponId) {
     dbSet("users", users);
     
     const timestamp = getNowDateTimeString();
-    const newTxId = transactions.length > 0 ? transactions[transactions.length - 1].id + 1 : 5001;
+    const newTxId = getNextId(transactions, 5001);
     transactions.push({
       id: newTxId,
       userId: member.id,
@@ -1537,7 +1542,7 @@ function addAdminSlot(dateVal, timeVal) {
     return;
   }
   
-  const nextSlotId = slots.length > 0 ? slots[slots.length - 1].id + 1 : 1;
+  const nextSlotId = getNextId(slots, 1);
   const newSlot = {
     id: nextSlotId,
     date: dateVal,
@@ -1953,7 +1958,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     
     // 1. Create booking entry
-    const newBookingId = bookings.length > 0 ? bookings[bookings.length - 1].id + 1 : 1001;
+    const newBookingId = getNextId(bookings, 1001);
     const timestamp = getNowDateTimeString();
     
     const newBooking = {
@@ -1997,7 +2002,7 @@ document.addEventListener("DOMContentLoaded", () => {
     dbSet("bookings", bookings); // overwrite to save paidBy field
     
     // 4. Log point transaction
-    const newTxId = transactions.length > 0 ? transactions[transactions.length - 1].id + 1 : 5001;
+    const newTxId = getNextId(transactions, 5001);
     const targetNameStr = paidBy === "gifted" ? "贈送" : "通用";
     transactions.push({
       id: newTxId,
@@ -2039,7 +2044,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     
     // Create group booking
-    const newBookingId = bookings.length > 0 ? bookings[bookings.length - 1].id + 1 : 1001;
+    const newBookingId = getNextId(bookings, 1001);
     const timestamp = getNowDateTimeString();
     
     // Set date to next occurrence (just mock today + 2 days for simplified logic)
@@ -2089,7 +2094,7 @@ document.addEventListener("DOMContentLoaded", () => {
     dbSet("groupSessions", groupSessions);
     
     // Log transaction
-    const newTxId = transactions.length > 0 ? transactions[transactions.length - 1].id + 1 : 5001;
+    const newTxId = getNextId(transactions, 5001);
     const targetNameStr = paidBy === "gifted" ? "贈送" : "通用";
     transactions.push({
       id: newTxId,
@@ -2280,7 +2285,7 @@ document.addEventListener("DOMContentLoaded", () => {
         authUser = userCredential.user;
       }
       
-      const nextUserId = users.length > 0 ? users[users.length - 1].id + 1 : 1;
+      const nextUserId = getNextId(users, 1);
       const dateStr = new Date().toISOString().split("T")[0];
       
       const newUser = {
@@ -2426,7 +2431,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (member.giftedGroupPoints === undefined) member.giftedGroupPoints = 0;
     
     const timestamp = getNowDateTimeString();
-    const newTxId = transactions.length > 0 ? transactions[transactions.length - 1].id + 1 : 5001;
+    const newTxId = getNextId(transactions, 5001);
     
     let targetNameStr = "通用";
     if (targetType === "gifted_1on1") targetNameStr = "贈送-1對1";
@@ -2643,7 +2648,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     
     const hashedPassword = await hashPassword(password);
-    const nextUserId = users.length > 0 ? users[users.length - 1].id + 1 : 1;
+    const nextUserId = getNextId(users, 1);
     const dateStr = new Date().toISOString().split("T")[0];
     
     const newUser = {
@@ -2875,7 +2880,7 @@ async function runMockLineLogin() {
     
     // Log points transaction
     const timestamp = getNowDateTimeString();
-    const newTxId = transactions.length > 0 ? transactions[transactions.length - 1].id + 1 : 5001;
+    const newTxId = getNextId(transactions, 5001);
     const targetNameStr = is1on1 ? "贈送-1對1" : "贈送-團體";
     transactions.push({
       id: newTxId,
