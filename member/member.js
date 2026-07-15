@@ -2986,8 +2986,9 @@ function startRealtimeSync() {
   const savedUserId = localStorage.getItem("singbowl_current_user_id");
   const currentUserId = currentUser ? currentUser.id : (savedUserId ? parseInt(savedUserId) : null);
   const isAdmin = currentUser ? (currentUser.role === "admin") : false;
+  const userPathKey = (auth.currentUser && auth.currentUser.uid) ? auth.currentUser.uid : (currentUser ? getUserPathKey(currentUser) : currentUserId);
   
-  console.log(`啟動雲端即時同步監聽... (用戶ID: ${currentUserId}, 管理員權限: ${isAdmin})`);
+  console.log(`啟動雲端即時同步監聽... (用戶ID: ${currentUserId}, 路徑金鑰: ${userPathKey}, 管理員權限: ${isAdmin})`);
   
   // 1. 公共節點：所有人 (含未登入訪客) 皆監聽預約時段 slots 與團體課程 groupSessions
   const slotsRef = database.ref("slots");
@@ -3072,7 +3073,7 @@ function startRealtimeSync() {
       // 一般會員：只下載並監聽屬於自己的數據，保護隱私安全 (OrderByChild + EqualTo)
       
       // 監聽自己的用戶帳戶資料
-      const userRef = database.ref(`users/${currentUserId}`);
+      const userRef = database.ref(`users/${userPathKey}`);
       userRef.on("value", (snapshot) => {
         const val = snapshot.val();
         if (val) {
