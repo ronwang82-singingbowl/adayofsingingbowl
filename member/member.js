@@ -74,7 +74,7 @@ function getUserPathKey(user) {
   return String(user.id);
 }
 
-// LINE Push Notification Sender Helper
+// LINE Push Notification Sender Helper (含 API 密鑰驗證)
 function sendLineNotification(userId, message) {
   const member = users.find(u => u.id === userId);
   if (!member || !member.lineUserId) {
@@ -82,10 +82,15 @@ function sendLineNotification(userId, message) {
     return;
   }
   
-  database.ref("settings/lineWebhookUrl").once("value").then(snapshot => {
-    const webhookUrl = snapshot.val();
-    if (!webhookUrl) {
-      console.log("未設定 LINE Webhook 代理 URL，跳過 LINE 推播。");
+  // 同時讀取 Webhook URL 與 API 密鑰
+  Promise.all([
+    database.ref("settings/lineWebhookUrl").once("value"),
+    database.ref("settings/lineApiSecret").once("value")
+  ]).then(([urlSnap, secretSnap]) => {
+    const webhookUrl = urlSnap.val();
+    const apiSecret = secretSnap.val();
+    if (!webhookUrl || !apiSecret) {
+      console.log("未設定 LINE Webhook URL 或 API 密鑰，跳過 LINE 推播。");
       return;
     }
     
@@ -93,11 +98,12 @@ function sendLineNotification(userId, message) {
     fetch(webhookUrl, {
       method: "POST",
       headers: {
-        "Content-Type": "text/plain" // Avoid CORS preflight options checks
+        "Content-Type": "text/plain"
       },
       body: JSON.stringify({
         lineUserId: member.lineUserId,
-        message: message
+        message: message,
+        apiSecret: apiSecret
       })
     })
     .then(res => res.json())
