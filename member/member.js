@@ -2267,8 +2267,11 @@ document.addEventListener("DOMContentLoaded", () => {
       const finalEmail = lineUserId ? `line_${lineUserId}@singbowl.com` : email;
       const finalPassword = lineUserId ? `line_${lineUserId}_secure` : password;
       
-      const userCredential = await auth.createUserWithEmailAndPassword(finalEmail, finalPassword);
-      const authUser = userCredential.user;
+      let authUser = auth.currentUser;
+      if (!authUser || authUser.email !== finalEmail) {
+        const userCredential = await auth.createUserWithEmailAndPassword(finalEmail, finalPassword);
+        authUser = userCredential.user;
+      }
       
       const nextUserId = users.length > 0 ? users[users.length - 1].id + 1 : 1;
       const dateStr = new Date().toISOString().split("T")[0];
