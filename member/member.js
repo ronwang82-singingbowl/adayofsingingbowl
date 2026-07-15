@@ -1001,7 +1001,8 @@ function renderAdminMemberList() {
   container.innerHTML = "";
   
   const filteredMembers = users.filter(u => {
-    if (u.role === "admin") return false;
+    // 允許管理員在列表中看到自己，以便點選編輯修改密碼
+    if (u.role === "admin" && (!currentUser || u.email !== currentUser.email)) return false;
     if (memberSearchQuery === "") return true;
     return u.name.includes(memberSearchQuery) || 
            u.phone.includes(memberSearchQuery) || 
@@ -1023,18 +1024,29 @@ function renderAdminMemberList() {
         pwdText = isHashed ? "已設定 (安全加密)" : u.password;
       }
       
+      const isTargetAdmin = u.role === "admin";
+      const pointsText = isTargetAdmin ? `<span class="badge status-pending">管理員帳號</span>` : `通用: <strong class="text-brass">${u.points || 0}</strong> 次<br>贈送1對1: <strong class="text-brass">${u.giftedPoints || 0}</strong> 次<br>贈送團體: <strong class="text-brass">${u.giftedGroupPoints || 0}</strong> 次`;
+      
+      const actionsHtml = isTargetAdmin ? `
+        <div class="action-btn-group">
+          <button class="table-action-btn secondary" onclick="openEditMember(${u.id})">編輯資料/密碼</button>
+        </div>
+      ` : `
+        <div class="action-btn-group">
+          <button class="table-action-btn success" onclick="openAdjustPoints(${u.id})">調整次數</button>
+          <button class="table-action-btn secondary" onclick="openEditMember(${u.id})">編輯資料</button>
+          <button class="table-action-btn danger" onclick="deleteMember(${u.id})">刪除會員</button>
+        </div>
+      `;
+      
       row.innerHTML = `
-        <td><strong>${u.name}</strong></td>
+        <td><strong>${u.name}</strong> ${isTargetAdmin ? '<span class="status-badge status-approved" style="font-size:10px;padding:2px 4px;margin-left:4px;">管理員</span>' : ''}</td>
         <td>${u.phone}<br><span style="font-size:11px;color:var(--mist);">${u.email}</span><br><span style="font-size:11px;color:var(--brass-soft);font-weight:500;">密碼: ${pwdText}</span></td>
         <td>${u.gender}</td>
         <td>${u.joinDate}</td>
-        <td>通用: <strong class="text-brass">${u.points || 0}</strong> 次<br>贈送1對1: <strong class="text-brass">${u.giftedPoints || 0}</strong> 次<br>贈送團體: <strong class="text-brass">${u.giftedGroupPoints || 0}</strong> 次</td>
+        <td>${pointsText}</td>
         <td>
-          <div class="action-btn-group">
-            <button class="table-action-btn success" onclick="openAdjustPoints(${u.id})">調整次數</button>
-            <button class="table-action-btn secondary" onclick="openEditMember(${u.id})">編輯資料</button>
-            <button class="table-action-btn danger" onclick="deleteMember(${u.id})">刪除會員</button>
-          </div>
+          ${actionsHtml}
         </td>
       `;
       container.appendChild(row);
@@ -1107,9 +1119,19 @@ window.openEditMember = function(memberId) {
     document.getElementById("editMemPassword").disabled = true;
     document.getElementById("editMemPassword").placeholder = "LINE快速註冊用戶無法設定密碼";
   } else {
-    document.getElementById("editMemPassword").value = "";
-    document.getElementById("editMemPassword").disabled = false;
-    document.getElementById("editMemPassword").placeholder = "留空代表不修改密碼，輸入以重設密碼";
+    // 檢查是否正在編輯管理員自己
+    const isSelf = (currentUser && member.email === currentUser.email);
+    const isTargetAdmin = member.role === "admin";
+    
+    if (isTargetAdmin && !isSelf) {
+      document.getElementById("editMemPassword").value = "";
+      document.getElementById("editMemPassword").disabled = true;
+      document.getElementById("editMemPassword").placeholder = "您無法直接修改其他管理員的密碼";
+    } else {
+      document.getElementById("editMemPassword").value = "";
+      document.getElementById("editMemPassword").disabled = false;
+      document.getElementById("editMemPassword").placeholder = isSelf ? "輸入新密碼以重設您的管理員密碼" : "留空代表不修改密碼，輸入以重設密碼";
+    }
   }
   
   const genderRadios = document.getElementsByName("editMemGender");
@@ -2480,6 +2502,17 @@ document.addEventListener("DOMContentLoaded", () => {
     users[memberIndex].gender = newGender;
     
     if (newPassword && !users[memberIndex].lineUserId) {
+      const isSelf = (currentUser && users[memberIndex].email === currentUser.email);
+      if (isSelf && auth.currentUser) {
+        try {
+          await auth.currentUser.updatePassword(newPassword);
+          console.log("管理員自己更新 Firebase Auth 密碼成功");
+        } catch (authErr) {
+          console.error("更新 Firebase Auth 密碼失敗:", authErr);
+          alert("修改密碼失敗：基於 Firebase 安全限制，可能需要您登出重新登入以驗證身分，然後再試一次！\n錯誤原因：" + authErr.message);
+          return;
+        }
+      }
       const hashedPassword = await hashPassword(newPassword);
       users[memberIndex].password = hashedPassword;
     }
