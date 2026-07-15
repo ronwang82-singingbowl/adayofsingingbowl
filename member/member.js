@@ -55,6 +55,20 @@ async function hashPassword(password) {
   return hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
 }
 
+// Helper to get user Firebase path key (UID or manual_email or numeric_id)
+function getUserPathKey(user) {
+  if (!user) return "";
+  if (user.firebaseUid) return user.firebaseUid;
+  if (user.email) {
+    if (user.email === "admin@singbowl.com") return "0";
+    if (currentUser && currentUser.email === user.email && auth.currentUser) {
+      return auth.currentUser.uid;
+    }
+    return "manual_" + user.email.trim().toLowerCase().replace(/[@.]/g, "_");
+  }
+  return String(user.id);
+}
+
 // Helper functions for LocalStorage persistence
 function dbGet(key, defaultData) {
   try {
@@ -83,6 +97,7 @@ const firebaseConfig = {
 // Initialize Firebase
 firebase.initializeApp(firebaseConfig);
 const database = firebase.database();
+const auth = firebase.auth();
 let pushTimeout = null;
 
 function dbSet(key, data, syncToCloud = true) {
@@ -189,20 +204,78 @@ function updateNavState(viewId) {
   if (viewId === "admin") document.getElementById("btnNavAdmin")?.classList.add("active");
 }
 
-// Restore user session on load
+// Restore user session on load using Firebase Auth
 function initSession() {
-  // 1. 先用本地快取快速加載畫面，提升 UX 體驗
-  const savedUserId = localStorage.getItem("singbowl_current_user_id");
-  if (savedUserId) {
-    currentUser = users.find(u => u.id === parseInt(savedUserId));
-    if (currentUser) {
-      onUserLoginSuccess();
+  auth.onAuthStateChanged(async (user) => {
+    if (user) {
+      console.log("Firebase Auth 登入狀態變更: 已登入", user.email, user.uid);
+      try {
+        // 1. 讀取最新安全 UID 的用戶資料
+        const snapshot = await database.ref(`users/${user.uid}`).once("value");
+        const profile = snapshot.val();
+        
+        if (profile) {
+          currentUser = profile;
+          localStorage.setItem("singbowl_current_user_id", currentUser.id);
+          onUserLoginSuccess();
+        } else {
+          // 2. 找不到 UID 的資料，進行「舊帳號安全搬遷 (Migration)」檢查
+          const email = user.email ? user.email.toLowerCase() : "";
+          if (email) {
+            console.log("啟動帳號安全資料搬遷偵測: ", email);
+            const usersSnapshot = await database.ref("users").once("value");
+            const allUsers = usersSnapshot.val();
+            let foundOldUser = null;
+            let oldKey = null;
+            
+            if (allUsers) {
+              if (Array.isArray(allUsers)) {
+                for (let i = 0; i < allUsers.length; i++) {
+                  if (allUsers[i] && allUsers[i].email && allUsers[i].email.toLowerCase() === email) {
+                    foundOldUser = allUsers[i];
+                    oldKey = i;
+                    break;
+                  }
+                }
+              } else {
+                for (const key in allUsers) {
+                  if (allUsers[key] && allUsers[key].email && allUsers[key].email.toLowerCase() === email) {
+                    foundOldUser = allUsers[key];
+                    oldKey = key;
+                    break;
+                  }
+                }
+              }
+            }
+            
+            if (foundOldUser) {
+              console.log("找到符合遷移條件的舊帳號，搬遷中...", foundOldUser.name);
+              // 寫入新安全路徑，並標記與清除舊路徑
+              foundOldUser.firebaseUid = user.uid;
+              await database.ref(`users/${user.uid}`).set(foundOldUser);
+              
+              // 刪除舊路徑
+              await database.ref(`users/${oldKey}`).remove();
+              
+              currentUser = foundOldUser;
+              localStorage.setItem("singbowl_current_user_id", currentUser.id);
+              onUserLoginSuccess();
+              return;
+            }
+          }
+          
+          // 3. 全新註冊流程：若找不到舊帳號，待註冊寫入
+          console.log("未找到舊帳號資料，待註冊寫入");
+        }
+      } catch (err) {
+        console.error("載入使用者安全 Profile 失敗", err);
+        auth.signOut();
+      }
     } else {
+      console.log("Firebase Auth 登入狀態變更: 未登入");
       onUserLogoutSuccess();
     }
-  } else {
-    onUserLogoutSuccess();
-  }
+  });
 }
 
 function onUserLoginSuccess() {
@@ -248,7 +321,12 @@ function onUserLogoutSuccess() {
   // 重新註冊訪客級即時監聽器
   startRealtimeSync();
   
-  navigateTo("landing");
+  const activeSection = document.querySelector(".view-section.active");
+  const activeView = activeSection ? activeSection.id.replace("view-", "") : "landing";
+  const memberOnlyViews = ["member", "admin", "buy-points", "book-1on1", "book-group", "edit-profile", "admin-points", "admin-add-member", "admin-edit-member"];
+  if (memberOnlyViews.includes(activeView)) {
+    navigateTo("landing");
+  }
 }
 
 // ==========================================
@@ -969,6 +1047,10 @@ window.deleteMember = function(memberId) {
   if (!member) return;
   
   if (confirm(`確定要刪除會員「${member.name}」嗎？此動作將會清除該會員的所有資料且無法復原。`)) {
+    // 0. 從 Firebase 中移除使用者節點
+    const pathKey = getUserPathKey(member);
+    database.ref(`users/${pathKey}`).remove();
+    
     // 1. 從 users 陣列中移除
     users = users.filter(u => u.id !== memberId);
     
@@ -1675,7 +1757,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const showLogin = () => navigateTo("auth");
   document.getElementById("btnHeaderLogin").addEventListener("click", showLogin);
   document.getElementById("btnLandingCta").addEventListener("click", showLogin);
-  document.getElementById("btnHeaderLogout").addEventListener("click", onUserLogoutSuccess);
+  document.getElementById("btnHeaderLogout").addEventListener("click", () => auth.signOut());
   document.getElementById("btnAuthBack").addEventListener("click", () => navigateTo("landing"));
 
   // Dashboard shortcuts
@@ -2030,7 +2112,7 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("formEmailAuth").style.display = "none";
   });
 
-  // Mock Authentication: Email Auth Flow
+  // Firebase Authentication Email/Password Login & Migration Flow
   document.getElementById("formEmailAuth").addEventListener("submit", async (e) => {
     e.preventDefault();
     const email = document.getElementById("authEmail").value.trim().toLowerCase();
@@ -2050,137 +2132,87 @@ document.addEventListener("DOMContentLoaded", () => {
     btnSubmit.disabled = true;
     btnSubmit.textContent = "驗證中...";
     
-    const enteredHash = await hashPassword(password);
-    
     try {
-      // Query database
-      const snapshot = await database.ref("users").orderByChild("email").equalTo(email).once("value");
-      const data = snapshot.val();
-      
-      if (data) {
-        // User exists! Find the non-null user matching the email
-        let matchedKey = null;
-        let matchedUser = null;
-        
-        if (Array.isArray(data)) {
-          for (let i = 0; i < data.length; i++) {
-            if (data[i] && data[i].email === email) {
-              matchedUser = data[i];
-              matchedKey = i;
-              break;
-            }
-          }
-        } else {
-          for (const key in data) {
-            if (data[key] && data[key].email === email) {
-              matchedUser = data[key];
-              matchedKey = key;
-              break;
-            }
-          }
-        }
-        
-        if (matchedUser) {
-          const isAlreadyHashed = matchedUser.password && matchedUser.password.length === 64 && /^[0-9a-f]+$/.test(matchedUser.password);
-          let loginSuccess = false;
-          
-          if (!matchedUser.password) {
-            // Migration: Set password for first time
-            matchedUser.password = enteredHash;
-            await database.ref(`users/${matchedKey}`).set(matchedUser);
-            loginSuccess = true;
-          } else if (!isAlreadyHashed) {
-            // Migration: Upgrade plain text password to SHA-256 hash
-            if (matchedUser.password === password) {
-              matchedUser.password = enteredHash;
-              await database.ref(`users/${matchedKey}`).set(matchedUser);
-              loginSuccess = true;
-            }
-          } else {
-            // Standard check: compare hashes
-            if (matchedUser.password === enteredHash) {
-              loginSuccess = true;
-            }
-          }
-          
-          if (loginSuccess) {
-            currentUser = matchedUser;
-            
-            // Sync with local users cache
-            const idx = users.findIndex(u => u.id === currentUser.id);
-            if (idx !== -1) {
-              users[idx] = currentUser;
-            } else {
-              users.push(currentUser);
-            }
-            dbSet("users", users, false);
-            
-            localStorage.setItem("singbowl_current_user_id", currentUser.id);
-            onUserLoginSuccess();
-            alert(`歡迎回來，${currentUser.name}！`);
-          } else {
-            alert("密碼不正確，請重新輸入！");
-            passwordInput.focus();
-          }
-        } else {
-          // User does not exist, go to registration!
-          document.getElementById("regName").value = "";
-          document.getElementById("regPhone").value = "";
-          document.getElementById("regEmail").value = email;
-          document.getElementById("regPassword").value = password; // pre-fill password entered!
-          document.getElementById("formRegisterProfile").dataset.tempEmail = email;
-          navigateTo("register");
-        }
-      } else {
-        // User does not exist, go to registration!
-        document.getElementById("regName").value = "";
-        document.getElementById("regPhone").value = "";
-        document.getElementById("regEmail").value = email;
-        document.getElementById("regPassword").value = password; // pre-fill password entered!
-        document.getElementById("formRegisterProfile").dataset.tempEmail = email;
-        navigateTo("register");
-      }
+      // 1. 嘗試以 Firebase Auth 登入
+      await auth.signInWithEmailAndPassword(email, password);
+      // 成功登入後，onAuthStateChanged 會自動觸發 profile 載入與畫面渲染，不需手動呼叫 onUserLoginSuccess
     } catch (err) {
-      console.error("登入驗證錯誤:", err);
-      // Fallback for offline mode
-      const existing = users.find(u => u.email === email);
-      if (existing) {
-        const isAlreadyHashedLocal = existing.password && existing.password.length === 64 && /^[0-9a-f]+$/.test(existing.password);
-        let localLoginSuccess = false;
-        
-        if (!existing.password) {
-          existing.password = enteredHash;
-          dbSet("users", users);
-          localLoginSuccess = true;
-        } else if (!isAlreadyHashedLocal) {
-          if (existing.password === password) {
-            existing.password = enteredHash;
-            dbSet("users", users);
-            localLoginSuccess = true;
+      console.warn("Firebase Auth 登入失敗，檢查是否需要進行帳號安全遷移:", err.code);
+      
+      if (err.code === "auth/user-not-found" || err.code === "auth/invalid-credential") {
+        // 2. 帳號可能還沒建立在 Firebase Auth（但舊資料庫有），啟動遷移與驗證
+        try {
+          const snapshot = await database.ref("users").once("value");
+          const allUsers = snapshot.val();
+          let matchedKey = null;
+          let matchedUser = null;
+          
+          if (allUsers) {
+            if (Array.isArray(allUsers)) {
+              for (let i = 0; i < allUsers.length; i++) {
+                if (allUsers[i] && allUsers[i].email && allUsers[i].email.toLowerCase() === email) {
+                  matchedUser = allUsers[i];
+                  matchedKey = i;
+                  break;
+                }
+              }
+            } else {
+              for (const key in allUsers) {
+                if (allUsers[key] && allUsers[key].email && allUsers[key].email.toLowerCase() === email) {
+                  matchedUser = allUsers[key];
+                  matchedKey = key;
+                  break;
+                }
+              }
+            }
           }
-        } else {
-          if (existing.password === enteredHash) {
-            localLoginSuccess = true;
+          
+          if (matchedUser) {
+            // 驗證密碼是否正確 (比對舊有 SHA-256 雜湊或明文)
+            const enteredHash = await hashPassword(password);
+            const isPasswordCorrect = (matchedUser.password === enteredHash) || (matchedUser.password === password) || (!matchedUser.password);
+            
+            if (isPasswordCorrect) {
+              btnSubmit.textContent = "建立安全帳號中...";
+              // 在 Firebase Auth 建立該帳號
+              const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+              const newUser = userCredential.user;
+              
+              // 搬遷 Profile 資料到新的安全 UID 路徑下
+              matchedUser.firebaseUid = newUser.uid;
+              if (!matchedUser.password) {
+                matchedUser.password = enteredHash;
+              } else if (matchedUser.password !== enteredHash) {
+                matchedUser.password = enteredHash; // 確保儲存為雜湊
+              }
+              
+              await database.ref(`users/${newUser.uid}`).set(matchedUser);
+              
+              // 移除舊的路徑資料
+              await database.ref(`users/${matchedKey}`).remove();
+              
+              console.log("舊會員帳號遷移與驗證成功！", matchedUser.name);
+            } else {
+              alert("密碼不正確，請重新輸入！");
+              passwordInput.focus();
+            }
+          } else {
+            // 用戶不存在，引導至註冊頁面並預帶欄位
+            document.getElementById("regName").value = "";
+            document.getElementById("regPhone").value = "";
+            document.getElementById("regEmail").value = email;
+            document.getElementById("regPassword").value = password; // 預填密碼
+            document.getElementById("formRegisterProfile").dataset.tempEmail = email;
+            navigateTo("register");
           }
-        }
-        
-        if (localLoginSuccess) {
-          currentUser = existing;
-          localStorage.setItem("singbowl_current_user_id", currentUser.id);
-          onUserLoginSuccess();
-          alert(`歡迎回來，${currentUser.name} (離線模式)！`);
-        } else {
-          alert("密碼不正確，請重新輸入！");
-          passwordInput.focus();
+        } catch (dbErr) {
+          console.error("資料庫驗證遷移出錯", dbErr);
+          alert("登入驗證時出錯，請稍後再試！");
         }
       } else {
-        // Fallback registration in offline mode
-        document.getElementById("regName").value = "";
-        document.getElementById("regPhone").value = "";
-        document.getElementById("regEmail").value = email;
-        document.getElementById("regPassword").value = password;
-        document.getElementById("formRegisterProfile").dataset.tempEmail = email;
-        navigateTo("register");
+        // 其他驗證錯誤（例如密碼錯誤）
+        alert("登入驗證失敗：密碼不正確或帳號格式有誤！");
+        passwordInput.focus();
       }
     } finally {
       btnSubmit.disabled = false;
@@ -2209,32 +2241,45 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
     
-    // 1. Create User
-    const nextUserId = users.length > 0 ? users[users.length - 1].id + 1 : 1;
-    const dateStr = new Date().toISOString().split("T")[0];
-    
-    const newUser = {
-      id: nextUserId,
-      email: email,
-      name: name,
-      phone: phone,
-      gender: gender,
-      password: hashedPassword, // Store set login password (hashed)
-      role: "member",
-      points: 0, // 預設新註冊會員起步次數為 0
-      joinDate: dateStr,
-      lineUserId: lineUserId
-    };
-    
-    users.push(newUser);
-    dbSet("users", users);
-    
-    // Set Login state
-    currentUser = newUser;
-    localStorage.setItem("singbowl_current_user_id", currentUser.id);
-    onUserLoginSuccess();
-    
-    alert(`恭喜您註冊成功！🎵`);
+    try {
+      const finalEmail = lineUserId ? `line_${lineUserId}@singbowl.com` : email;
+      const finalPassword = lineUserId ? `line_${lineUserId}_secure` : password;
+      
+      const userCredential = await auth.createUserWithEmailAndPassword(finalEmail, finalPassword);
+      const authUser = userCredential.user;
+      
+      const nextUserId = users.length > 0 ? users[users.length - 1].id + 1 : 1;
+      const dateStr = new Date().toISOString().split("T")[0];
+      
+      const newUser = {
+        id: nextUserId,
+        email: email,
+        name: name,
+        phone: phone,
+        gender: gender,
+        password: hashedPassword, // Store set login password (hashed)
+        role: "member",
+        points: 0, // 預設新註冊會員起步次數為 0
+        joinDate: dateStr,
+        lineUserId: lineUserId,
+        firebaseUid: authUser.uid
+      };
+      
+      await database.ref(`users/${authUser.uid}`).set(newUser);
+      
+      // Update local cache
+      users.push(newUser);
+      dbSet("users", users, false);
+      
+      currentUser = newUser;
+      localStorage.setItem("singbowl_current_user_id", currentUser.id);
+      onUserLoginSuccess();
+      
+      alert(`恭喜您註冊成功！🎵`);
+    } catch (err) {
+      console.error("註冊失敗:", err);
+      alert(`註冊失敗：${err.message}`);
+    }
   });
 
   // Admin Sidebar Nav bindings
@@ -2583,6 +2628,164 @@ document.addEventListener("DOMContentLoaded", () => {
     renderAdminDashboard("members");
   });
 
+// LINE 官方授權登入處理
+function handleLiffLogin() {
+  if (typeof liff === "undefined") return;
+
+  Promise.all([
+    liff.getProfile(),
+    liff.getDecodedIDToken()
+  ]).then(async ([profile, idToken]) => {
+    const lineUserId = profile.userId;
+    const lineName = profile.displayName;
+    
+    const finalEmail = `line_${lineUserId}@singbowl.com`;
+    const finalPassword = `line_${lineUserId}_secure`;
+
+    try {
+      // 1. 嘗試以該 LINE 虛擬帳密登入 Firebase Auth
+      await auth.signInWithEmailAndPassword(finalEmail, finalPassword);
+      alert(`歡迎回來，${lineName}！ (LINE 登入)`);
+    } catch (err) {
+      console.warn("LINE Firebase Auth 登入失敗，檢查是否需要註冊或遷移:", err.code);
+      if (err.code === "auth/user-not-found" || err.code === "auth/invalid-credential") {
+        // 檢查舊資料庫是否已有此 LINE 用戶明細，有的話進行遷移
+        try {
+          const snapshot = await database.ref("users").once("value");
+          const allUsers = snapshot.val();
+          let matchedKey = null;
+          let matchedUser = null;
+          
+          if (allUsers) {
+            if (Array.isArray(allUsers)) {
+              for (let i = 0; i < allUsers.length; i++) {
+                if (allUsers[i] && (allUsers[i].lineUserId === lineUserId || allUsers[i].email === `line_${lineUserId}@line.com`)) {
+                  matchedUser = allUsers[i];
+                  matchedKey = i;
+                  break;
+                }
+              }
+            } else {
+              for (const key in allUsers) {
+                if (allUsers[key] && (allUsers[key].lineUserId === lineUserId || allUsers[key].email === `line_${lineUserId}@line.com`)) {
+                  matchedUser = allUsers[key];
+                  matchedKey = key;
+                  break;
+                }
+              }
+            }
+          }
+          
+          if (matchedUser) {
+            // 進行遷移：在 Auth 建立此帳號並寫入安全路徑
+            const userCredential = await auth.createUserWithEmailAndPassword(finalEmail, finalPassword);
+            const newUser = userCredential.user;
+            
+            matchedUser.firebaseUid = newUser.uid;
+            matchedUser.lineUserId = lineUserId;
+            
+            await database.ref(`users/${newUser.uid}`).set(matchedUser);
+            await database.ref(`users/${matchedKey}`).remove();
+            
+            console.log("LINE 用戶資料安全遷移成功！", matchedUser.name);
+            alert(`歡迎回來，${matchedUser.name}！ (LINE 登入)`);
+          } else {
+            // 引導新註冊
+            document.getElementById("regName").value = lineName;
+            document.getElementById("regPhone").value = "";
+            document.getElementById("regEmail").value = "";
+            
+            const regForm = document.getElementById("formRegisterProfile");
+            regForm.dataset.tempEmail = "";
+            regForm.dataset.lineUserId = lineUserId;
+            regForm.dataset.lineName = lineName;
+            
+            navigateTo("register");
+            alert("請填寫您的基本聯絡資料，即可完成 LINE 帳號綁定！");
+          }
+        } catch (dbErr) {
+          console.error("LINE 會員資料庫驗證出錯:", dbErr);
+          alert("LINE 驗證登入出錯，請稍後再試！");
+        }
+      } else {
+        alert(`LINE 認證登入失敗：${err.message}`);
+      }
+    }
+  }).catch(err => {
+    console.error("取得 LINE 個人資料失敗", err);
+    initSession();
+  });
+}
+
+// 本地模擬登入的 Fallback 邏輯
+async function runMockLineLogin() {
+  window.open("https://line.me/R/ti/p/%40197nfdme", "_blank");
+
+  const mockLineUserId = "U_mock_line_user_99999";
+  const mockName = "LINE 測試訪客";
+  
+  const finalEmail = `line_${mockLineUserId}@singbowl.com`;
+  const finalPassword = `line_${mockLineUserId}_secure`;
+  
+  try {
+    await auth.signInWithEmailAndPassword(finalEmail, finalPassword);
+    alert("測試：模擬 LINE 登入成功！");
+  } catch (err) {
+    if (err.code === "auth/user-not-found" || err.code === "auth/invalid-credential") {
+      try {
+        const snapshot = await database.ref("users").once("value");
+        const allUsers = snapshot.val();
+        let matchedKey = null;
+        let matchedUser = null;
+        
+        if (allUsers) {
+          if (Array.isArray(allUsers)) {
+            for (let i = 0; i < allUsers.length; i++) {
+              if (allUsers[i] && allUsers[i].lineUserId === mockLineUserId) {
+                matchedUser = allUsers[i];
+                matchedKey = i;
+                break;
+              }
+            }
+          } else {
+            for (const key in allUsers) {
+              if (allUsers[key] && allUsers[key].lineUserId === mockLineUserId) {
+                matchedUser = allUsers[key];
+                matchedKey = key;
+                break;
+              }
+            }
+          }
+        }
+        
+        if (matchedUser) {
+          const userCredential = await auth.createUserWithEmailAndPassword(finalEmail, finalPassword);
+          const newUser = userCredential.user;
+          matchedUser.firebaseUid = newUser.uid;
+          await database.ref(`users/${newUser.uid}`).set(matchedUser);
+          await database.ref(`users/${matchedKey}`).remove();
+          alert(`測試：模擬 LINE 舊會員遷移成功！`);
+        } else {
+          document.getElementById("regName").value = mockName;
+          document.getElementById("regPhone").value = "";
+          document.getElementById("regEmail").value = "";
+          
+          const regForm = document.getElementById("formRegisterProfile");
+          regForm.dataset.tempEmail = "";
+          regForm.dataset.lineUserId = mockLineUserId;
+          regForm.dataset.lineName = mockName;
+          
+          navigateTo("register");
+        }
+      } catch (dbErr) {
+        console.error("模擬 LINE 登入資料庫出錯:", dbErr);
+      }
+    } else {
+      alert(`模擬 LINE 登入失敗：${err.message}`);
+    }
+  }
+}
+
   // Admin Form Issue Coupon submit
   document.getElementById("formAdminIssueCoupon").addEventListener("submit", (e) => {
     e.preventDefault();
@@ -2722,79 +2925,6 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 });
 
-// ==========================================
-// 6. LINE LIFF 登入處理與輔助函數
-// ==========================================
-
-// LINE 官方授權登入處理
-function handleLiffLogin() {
-  if (typeof liff === "undefined") return;
-
-  Promise.all([
-    liff.getProfile(),
-    liff.getDecodedIDToken()
-  ]).then(([profile, idToken]) => {
-    const lineUserId = profile.userId;
-    const lineName = profile.displayName;
-    
-    // 優先取得 LINE 綁定的 Email，若無授權則使用專屬的虛擬 LINE 信箱
-    const lineEmail = (idToken && idToken.email) ? idToken.email : `line_${lineUserId}@line.com`;
-
-    // 在模擬資料庫中尋找是否已有此 LINE 帳號
-    let existing = users.find(u => u.lineUserId === lineUserId || u.email === lineEmail);
-
-    if (existing) {
-      // 帳號已存在，直接自動登入
-      if (!existing.lineUserId) {
-        existing.lineUserId = lineUserId;
-        dbSet("users", users);
-      }
-      currentUser = existing;
-      localStorage.setItem("singbowl_current_user_id", currentUser.id);
-      onUserLoginSuccess();
-      alert(`歡迎回來，${currentUser.name}！ (LINE 登入)`);
-    } else {
-      // 帳號不存在，導向填寫個人資料頁面完成註冊
-      document.getElementById("regName").value = lineName;
-      document.getElementById("regPhone").value = "";
-      document.getElementById("regEmail").value = "";
-      
-      const regForm = document.getElementById("formRegisterProfile");
-      regForm.dataset.tempEmail = "";
-      regForm.dataset.lineUserId = lineUserId;
-      regForm.dataset.lineName = lineName;
-      
-      navigateTo("register");
-      alert("請填寫您的基本聯絡資料，即可完成 LINE 帳號綁定！");
-    }
-  }).catch(err => {
-    console.error("取得 LINE 個人資料失敗", err);
-    initSession();
-  });
-}
-
-// 本地模擬登入的 Fallback 邏輯
-function runMockLineLogin() {
-  window.open("https://line.me/R/ti/p/%40197nfdme", "_blank");
-
-  const mockEmail = `line_user_${Math.floor(Math.random() * 90000 + 10000)}@line.com`;
-  const existing = users.find(u => u.email === mockEmail);
-  if (existing) {
-    currentUser = existing;
-    localStorage.setItem("singbowl_current_user_id", currentUser.id);
-    onUserLoginSuccess();
-  } else {
-    document.getElementById("regName").value = "LINE 用戶";
-    document.getElementById("regPhone").value = "";
-    document.getElementById("regEmail").value = "";
-    
-    const regForm = document.getElementById("formRegisterProfile");
-    regForm.dataset.tempEmail = "";
-    regForm.dataset.lineUserId = "";
-    
-    navigateTo("register");
-  }
-}
 
 // 從雲端資料庫 (Firebase) 監聽最新狀態並即時同步 (智慧型角色分權隔離與全域防重聽)
 let activeListeners = [];
@@ -2981,8 +3111,25 @@ function triggerViewRender() {
 
 // 雲端增量/段點寫入 (防止會員端覆蓋其他會員的資料)
 function pushNode(key, data) {
-  // 管理員：直接寫入全量 node 陣列
-  if (currentUser && currentUser.role === "admin") {
+  const isAdmin = currentUser && currentUser.role === "admin";
+  const currentUserId = currentUser ? currentUser.id : null;
+  
+  if (key === "users") {
+    if (Array.isArray(data)) {
+      data.forEach(item => {
+        if (item) {
+          const pathKey = getUserPathKey(item);
+          if (isAdmin || item.id === currentUserId) {
+            database.ref(`users/${pathKey}`).set(item);
+          }
+        }
+      });
+    }
+    return;
+  }
+  
+  // 管理員：直接寫入其他節點的全量 node 陣列
+  if (isAdmin) {
     database.ref(key).set(data);
     // 智慧清除：當陣列長度縮減時，主動刪除後面殘留的 Firebase 尾端節點
     if (Array.isArray(data)) {
@@ -2996,25 +3143,19 @@ function pushNode(key, data) {
   // 一般會員：採用增量寫入 (個別 ID 的段點寫入)，保護其他使用者記錄不被複寫
   if (key === "bookings") {
     data.forEach(item => {
-      if (item && item.userId === currentUser.id) {
+      if (item && item.userId === currentUserId) {
         database.ref(`bookings/${item.id}`).set(item);
       }
     });
   } else if (key === "remittances") {
     data.forEach(item => {
-      if (item && item.userId === currentUser.id) {
+      if (item && item.userId === currentUserId) {
         database.ref(`remittances/${item.id}`).set(item);
-      }
-    });
-  } else if (key === "users") {
-    data.forEach(item => {
-      if (item && item.id === currentUser.id) {
-        database.ref(`users/${item.id}`).set(item);
       }
     });
   } else if (key === "transactions") {
     data.forEach(item => {
-      if (item && item.userId === currentUser.id) {
+      if (item && item.userId === currentUserId) {
         database.ref(`transactions/${item.id}`).set(item);
       }
     });
