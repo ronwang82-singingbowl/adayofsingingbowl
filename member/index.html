@@ -836,6 +836,21 @@
                       </div>
                       <button type="button" class="cta-btn primary-btn small-btn w-100" id="btnSaveGoogleConfig" style="font-size: 11px; height: 28px;">儲存設定</button>
                     </div>
+
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px;">
+                      <button type="button" class="back-link small-text" id="btnToggleLineConfig" style="font-size: 11px; padding: 0; background: none; border: none; color: var(--brass-soft); cursor: pointer; text-decoration: underline;">
+                        <i data-lucide="message-square" style="width: 11px; height: 11px; vertical-align: middle;"></i> 展開 LINE 通知設定
+                      </button>
+                    </div>
+                    
+                    <!-- LINE Config Form (Collapsible) -->
+                    <div id="divLineConfigForm" style="display: none; margin-top: 10px; padding: 12px; background: rgba(0,0,0,0.2); border-radius: 6px; border: 1px dashed var(--hairline);">
+                      <div class="form-group" style="margin-bottom: 8px;">
+                        <label class="form-label" style="font-size: 11px; margin-bottom: 4px;">LINE Webhook 代理 URL *</label>
+                        <input type="text" class="form-input text-input" id="txtLineWebhookUrl" placeholder="請貼上 Google Apps Script 部署網址" style="font-size:11px; padding: 6px 8px; height: auto; background: var(--ink-2); color: #fff;">
+                      </div>
+                      <button type="button" class="cta-btn primary-btn small-btn w-100" id="btnSaveLineConfig" style="font-size: 11px; height: 28px;">儲存設定</button>
+                    </div>
                   </div>
                 </div>
 

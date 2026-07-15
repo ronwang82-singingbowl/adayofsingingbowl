@@ -74,6 +74,42 @@ function getUserPathKey(user) {
   return String(user.id);
 }
 
+// LINE Push Notification Sender Helper
+function sendLineNotification(userId, message) {
+  const member = users.find(u => u.id === userId);
+  if (!member || !member.lineUserId) {
+    console.log("此會員無 LINE User ID，跳過 LINE 推播通知。");
+    return;
+  }
+  
+  database.ref("settings/lineWebhookUrl").once("value").then(snapshot => {
+    const webhookUrl = snapshot.val();
+    if (!webhookUrl) {
+      console.log("未設定 LINE Webhook 代理 URL，跳過 LINE 推播。");
+      return;
+    }
+    
+    console.log(`發送 LINE 推播給會員 ${member.name} (${member.lineUserId})...`);
+    fetch(webhookUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "text/plain" // Avoid CORS preflight options checks
+      },
+      body: JSON.stringify({
+        lineUserId: member.lineUserId,
+        message: message
+      })
+    })
+    .then(res => res.json())
+    .then(data => {
+      console.log("LINE 推播成功回應:", data);
+    })
+    .catch(err => {
+      console.error("LINE 推播失敗:", err);
+    });
+  });
+}
+
 // Helper functions for LocalStorage persistence
 function dbGet(key, defaultData) {
   try {
@@ -545,6 +581,9 @@ window.cancelBooking = function(bookingId) {
       dbSet("transactions", transactions);
     }
     
+    const typeName = booking.type === "1on1" ? "1對1 頌缽療癒" : booking.title;
+    sendLineNotification(booking.userId, `⚠️ 預約取消通知\n\n親愛的會員，您已成功取消原定於 ${booking.date} ${booking.time} 的【${typeName}】。\n\n您的預約次數已全額退還，期待您的下一次預約！`);
+
     alert("預約已取消，額度已全額退還！");
     renderDashboard();
   }
@@ -1227,6 +1266,9 @@ window.adminApproveBooking = function(bookingId) {
     }
   }
   
+  const typeName = booking.type === "1on1" ? "1對1 頌缽療癒" : booking.title;
+  sendLineNotification(booking.userId, `🔔 預約確認通知\n\n親愛的會員，您的預約已被確認！\n\n📅 日期：${booking.date}\n⏰ 時間：${booking.time}\n✨ 項目：${typeName}\n\n期待與您相見！`);
+
   alert("預約已確認！");
   renderAdminDashboard(activeAdminPane);
 };
@@ -1287,6 +1329,10 @@ window.adminRejectBooking = function(bookingId) {
       dbSet("transactions", transactions);
     }
     
+    const typeName = booking.type === "1on1" ? "1對1 頌缽療癒" : booking.title;
+    const notificationText = booking.status === "已確認" ? "已取消" : "已被拒絕";
+    sendLineNotification(booking.userId, `⚠️ 預約取消/拒絕通知\n\n親愛的會員，您於 ${booking.date} ${booking.time} 預約的【${typeName}】${notificationText}。\n\n您的預約次數已全額退還至帳戶，如有疑問請私訊與我們聯絡。`);
+
     alert("已成功處理，次數已全額退還給會員。");
     renderAdminDashboard(activeAdminPane);
   }
@@ -2015,6 +2061,8 @@ document.addEventListener("DOMContentLoaded", () => {
     });
     dbSet("transactions", transactions);
     
+    sendLineNotification(currentUser.id, `✉️ 預約申請已提交\n\n親愛的會員，您的預約申請已成功送出！\n\n📅 日期：${newBooking.date}\n⏰ 時間：${newBooking.time}\n✨ 項目：1對1 頌缽療癒\n\n請等待管理員審核確認，確認後將會發送通知通知您！`);
+
     alert("預約申請已提交，預約額度已暫扣，請等待管理員確認。");
     navigateTo("member");
   });
@@ -2947,6 +2995,41 @@ async function runMockLineLogin() {
       });
   });
 
+  document.getElementById("btnToggleLineConfig")?.addEventListener("click", (e) => {
+    const form = document.getElementById("divLineConfigForm");
+    const btn = document.getElementById("btnToggleLineConfig");
+    if (!form || !btn) return;
+    
+    if (form.style.display === "none") {
+      form.style.display = "block";
+      btn.innerHTML = '<i data-lucide="message-square"></i> 收合 LINE 通知設定';
+    } else {
+      form.style.display = "none";
+      btn.innerHTML = '<i data-lucide="message-square"></i> 展開 LINE 通知設定';
+    }
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+  });
+
+  document.getElementById("btnSaveLineConfig")?.addEventListener("click", () => {
+    const webhookUrl = document.getElementById("txtLineWebhookUrl").value.trim();
+    if (!webhookUrl) {
+      alert("請輸入有效的 LINE Webhook 代理 URL！");
+      return;
+    }
+    database.ref("settings/lineWebhookUrl").set(webhookUrl)
+      .then(() => {
+        alert("🎉 LINE Webhook 代理 URL 設定已成功儲存！");
+        document.getElementById("divLineConfigForm").style.display = "none";
+        const btn = document.getElementById("btnToggleLineConfig");
+        if (btn) btn.innerHTML = '<i data-lucide="message-square"></i> 展開 LINE 通知設定';
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+      })
+      .catch(err => {
+        console.error("儲存 LINE 設定失敗:", err);
+        alert("❌ 儲存 LINE 設定失敗，請確認網路連線。");
+      });
+  });
+
   // Start Firebase Realtime Synchronization globally on load
   startRealtimeSync();
 
@@ -3018,6 +3101,15 @@ function startRealtimeSync() {
     initGoogleGis();
   });
   activeListeners.push(googleClientIdRef);
+
+  // 1.2 監聽 LINE Webhook Proxy URL 設定
+  const lineWebhookUrlRef = database.ref("settings/lineWebhookUrl");
+  lineWebhookUrlRef.on("value", (snapshot) => {
+    const lineWebhookUrl = snapshot.val() || "";
+    const input = document.getElementById("txtLineWebhookUrl");
+    if (input) input.value = lineWebhookUrl;
+  });
+  activeListeners.push(lineWebhookUrlRef);
   
   // 2. 角色權限隔離節點監聽
   if (currentUserId) {
