@@ -83,8 +83,8 @@
 
   <div class="app-container">
     <!-- Navigation Bar -->
-    <header class="main-header">
-      <div class="header-wrap">
+    <header class="main-header" style="width: 100% !important; left: 0 !important; right: 0 !important; box-sizing: border-box !important; position: sticky !important; top: 0 !important; z-index: 1000 !important; display: block !important;">
+      <div class="header-wrap" style="width: 100% !important; max-width: 1200px !important; margin: 0 auto !important; box-sizing: border-box !important; padding: 0 12px !important; display: flex !important; align-items: center !important; justify-content: space-between !important; height: 100% !important;">
         <a href="#" class="logo" id="navLogo">
           <img src="logo.jpg" class="logo-img" alt="缽日 Logo">
           <div class="logo-text-group">
@@ -92,15 +92,15 @@
             <span class="logo-sub">Singing Bowl</span>
           </div>
         </a>
-        <nav class="nav-links">
-          <a href="#landing" class="nav-item active" id="btnNavHome">首頁</a>
-          <a href="#member" class="nav-item" id="btnNavMember" style="display: none;">會員中心</a>
-          <a href="#buy-points" class="nav-item" id="btnNavBuyPoints" style="display: none;">購買點數</a>
-          <a href="#admin" class="nav-item" id="btnNavAdmin" style="display: none;">管理後台</a>
-          <button class="nav-btn primary" id="btnHeaderLogin">登入 / 註冊</button>
-          <div class="user-menu" id="headerUserMenu" style="display: none;">
-            <span class="user-name-display" id="headerUserName">會員</span>
-            <button class="nav-btn secondary-small" id="btnHeaderLogout">登出</button>
+        <nav class="nav-links" style="display: flex !important; align-items: center !important; gap: 8px !important; flex-wrap: nowrap !important; white-space: nowrap !important;">
+          <a href="#landing" class="nav-item active" id="btnNavHome" style="white-space: nowrap !important;">首頁</a>
+          <a href="#member" class="nav-item" id="btnNavMember" style="display: none; white-space: nowrap !important;">會員中心</a>
+          <a href="#buy-points" class="nav-item" id="btnNavBuyPoints" style="display: none; white-space: nowrap !important;">購買點數</a>
+          <a href="#admin" class="nav-item" id="btnNavAdmin" style="display: none; white-space: nowrap !important;">管理後台</a>
+          <button class="nav-btn primary" id="btnHeaderLogin" style="white-space: nowrap !important;">登入 / 註冊</button>
+          <div class="user-menu" id="headerUserMenu" style="display: none; white-space: nowrap !important; align-items: center !important; gap: 6px !important;">
+            <span class="user-name-display" id="headerUserName" style="white-space: nowrap !important;">會員</span>
+            <button class="nav-btn secondary-small" id="btnHeaderLogout" style="white-space: nowrap !important;">登出</button>
           </div>
         </nav>
       </div>
@@ -1181,6 +1181,6 @@
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 
   <!-- JavaScript -->
-  <script src="member.js?v=37"></script>
+  <script src="member.js?v=38"></script>
 </body>
 </html>
