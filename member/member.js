@@ -2194,14 +2194,16 @@ document.addEventListener("DOMContentLoaded", () => {
   // General Email Login UI Navigation
   document.getElementById("btnGeneralLogin").addEventListener("click", () => {
     document.getElementById("authOptionsContainer").style.display = "none";
-    document.getElementById("btnAuthBack").style.display = "none";
+    const bottomLinks = document.getElementById("divAuthBottomLinks");
+    if (bottomLinks) bottomLinks.style.display = "none";
     document.getElementById("formEmailAuth").style.display = "block";
     document.getElementById("authEmail").focus();
   });
   
   document.getElementById("btnBackToAuthOptions").addEventListener("click", () => {
     document.getElementById("authOptionsContainer").style.display = "block";
-    document.getElementById("btnAuthBack").style.display = "block";
+    const bottomLinks = document.getElementById("divAuthBottomLinks");
+    if (bottomLinks) bottomLinks.style.display = "flex";
     document.getElementById("formEmailAuth").style.display = "none";
   });
 

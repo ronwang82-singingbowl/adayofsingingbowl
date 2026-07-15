@@ -59,7 +59,7 @@
           <img src="logo.jpg" class="logo-img" alt="缽日 Logo">
           <div class="logo-text-group">
             <span class="logo-text">缽日</span>
-            <span class="logo-sub">Singing Bowl <span style="font-size: 8px; opacity: 0.5;">v43</span></span>
+            <span class="logo-sub">Singing Bowl <span style="font-size: 8px; opacity: 0.5;">v44</span></span>
           </div>
         </a>
         <nav class="nav-links">
@@ -117,7 +117,7 @@
 
       <!-- 2. Auth / Login View -->
       <section id="view-auth" class="view-section">
-        <div class="auth-card">
+        <div class="auth-card" style="position: relative;">
           <h2>登入 / 註冊</h2>
           <p class="auth-subtitle">歡迎來到缽日，請選擇登入方式</p>
           
@@ -126,13 +126,10 @@
               <span class="line-icon"><i data-lucide="message-square"></i></span>
               <span>LINE 帳號快速登入 / 註冊</span>
             </button>
-            <button class="auth-btn email-btn" id="btnGeneralLogin">
-              <span class="line-icon"><i data-lucide="mail"></i></span>
-              <span>一般登入 / 註冊</span>
-            </button>
           </div>
           
           <form id="formEmailAuth" style="display: none;">
+            <h3 style="font-size: 15px; margin-bottom: 15px; color: var(--brass-soft); text-align: left;">管理員登入</h3>
             <div class="form-group">
               <label class="form-label" for="authEmail">電子郵件 *</label>
               <input type="email" class="form-input" id="authEmail" required placeholder="example@email.com">
@@ -145,7 +142,10 @@
             <button type="button" class="back-link w-100" id="btnBackToAuthOptions" style="margin-top: 15px; display: flex; align-items: center; justify-content: center; gap: 4px; background: none; border: none; color: var(--mist); cursor: pointer; font-size: 13.5px;"><i data-lucide="arrow-left" style="width: 14px; height: 14px;"></i> 返回選擇登入方式</button>
           </form>
           
-          <button class="back-link" id="btnAuthBack"><i data-lucide="arrow-left"></i> 返回首頁</button>
+          <div id="divAuthBottomLinks" style="display: flex; justify-content: space-between; align-items: center; margin-top: 20px; border-top: 1px solid var(--hairline); padding-top: 15px;">
+            <button class="back-link" id="btnAuthBack" style="margin: 0; padding: 0;"><i data-lucide="arrow-left"></i> 返回首頁</button>
+            <button class="back-link" id="btnGeneralLogin" style="margin: 0; padding: 0; font-size: 12px; opacity: 0.7; cursor: pointer; border: none; background: none; color: var(--mist); text-decoration: underline;">管理員登入</button>
+          </div>
         </div>
       </section>
 
@@ -1166,6 +1166,6 @@
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 
   <!-- JavaScript -->
-  <script src="member.js?v=43"></script>
+  <script src="member.js?v=44"></script>
 </body>
 </html>
