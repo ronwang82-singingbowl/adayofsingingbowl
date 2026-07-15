@@ -578,6 +578,7 @@ window.cancelBooking = function(bookingId) {
       transactions.push({
         id: newTxId,
         userId: member.id,
+        firebaseUid: auth.currentUser ? auth.currentUser.uid : null,
         amount: booking.cost,
         type: "add",
         reason: `取消預約退還(${typeNameStr})：ID ${booking.id} - 退回${targetNameStr}額度`,
@@ -2016,6 +2017,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const newBooking = {
       id: newBookingId,
       userId: currentUser.id,
+      firebaseUid: auth.currentUser ? auth.currentUser.uid : null,
       type: "1on1",
       slotId: slot.id,
       date: slot.date,
@@ -2059,6 +2061,7 @@ document.addEventListener("DOMContentLoaded", () => {
     transactions.push({
       id: newTxId,
       userId: currentUser.id,
+      firebaseUid: auth.currentUser ? auth.currentUser.uid : null,
       amount: cost,
       type: "deduct",
       reason: `預約 1 對 1 頌缽療癒 (${newBooking.duration}分鐘) - 扣除${targetNameStr}額度`,
@@ -2111,6 +2114,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const newBooking = {
       id: newBookingId,
       userId: currentUser.id,
+      firebaseUid: auth.currentUser ? auth.currentUser.uid : null,
       type: "group",
       sessionId: session.id,
       title: session.title,
