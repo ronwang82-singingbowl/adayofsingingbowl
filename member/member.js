@@ -1960,6 +1960,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const newRemit = {
       id: remittances.length + 1,
       userId: currentUser.id,
+      firebaseUid: auth.currentUser ? auth.currentUser.uid : null,
       userName: currentUser.name,
       userPhone: currentUser.phone,
       packageId: parseInt(packageId),
