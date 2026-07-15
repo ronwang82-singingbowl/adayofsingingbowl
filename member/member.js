@@ -403,10 +403,10 @@ function renderDashboard() {
       const sign = isAdd ? "+" : "-";
       
       row.innerHTML = `
-        <td style="white-space: nowrap !important; padding: 8px 10px !important; font-size: 12px !important; text-align: left !important; border-bottom: 1px solid var(--hairline) !important;">${t.date.split(" ")[0]}</td>
-        <td style="white-space: nowrap !important; padding: 8px 10px !important; font-size: 12px !important; text-align: left !important; border-bottom: 1px solid var(--hairline) !important;">${isAdd ? "額度增加" : "預約扣除"}</td>
-        <td class="${changeClass}" style="white-space: nowrap !important; padding: 8px 10px !important; font-size: 12px !important; text-align: left !important; border-bottom: 1px solid var(--hairline) !important;">${sign}${t.amount}</td>
-        <td style="white-space: normal !important; min-width: 180px !important; padding: 8px 10px !important; font-size: 12px !important; text-align: left !important; border-bottom: 1px solid var(--hairline) !important;">${t.reason} (結餘: ${t.balance}次)</td>
+        <td>${t.date.split(" ")[0]}</td>
+        <td>${isAdd ? "額度增加" : "預約扣除"}</td>
+        <td class="${changeClass}">${sign}${t.amount}</td>
+        <td>${t.reason} (結餘: ${t.balance}次)</td>
       `;
       txContainer.appendChild(row);
     });

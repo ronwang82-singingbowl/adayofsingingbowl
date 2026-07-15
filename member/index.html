@@ -12,37 +12,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;500;600;700&family=Noto+Sans+TC:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   
   <!-- CSS -->
-  <link rel="stylesheet" href="member.css?v=37">
-  <style>
-    /* Force table formatting to prevent wrapping on mobile */
-    .transaction-table-wrap {
-      max-height: 160px;
-      overflow-y: auto !important;
-      overflow-x: auto !important;
-      border: 1px solid var(--hairline) !important;
-      border-radius: var(--border-radius-sm) !important;
-      -webkit-overflow-scrolling: touch !important;
-    }
-    .transaction-table-wrap::-webkit-scrollbar {
-      width: 4px !important;
-      height: 4px !important;
-    }
-    .transaction-table {
-      width: 100% !important;
-      min-width: 450px !important;
-      border-collapse: collapse !important;
-      font-size: 12.5px !important;
-      text-align: left !important;
-    }
-    .transaction-table th, .transaction-table td {
-      padding: 8px 12px !important;
-      white-space: nowrap !important;
-    }
-    .transaction-table th:last-child, .transaction-table td:last-child {
-      white-space: normal !important;
-      min-width: 250px !important;
-    }
-  </style>
+  <link rel="stylesheet" href="member.css?v=40">
   
   <!-- Lucide Icons (CDN) -->
   <script src="https://unpkg.com/lucide@latest"></script>
@@ -83,8 +53,8 @@
 
   <div class="app-container">
     <!-- Navigation Bar -->
-    <header class="main-header" style="width: 100% !important; left: 0 !important; right: 0 !important; box-sizing: border-box !important; position: sticky !important; top: 0 !important; z-index: 1000 !important; display: block !important;">
-      <div class="header-wrap" style="width: 100% !important; max-width: 1200px !important; margin: 0 auto !important; box-sizing: border-box !important; padding: 0 12px !important; display: flex !important; align-items: center !important; justify-content: space-between !important; height: 100% !important;">
+    <header class="main-header">
+      <div class="header-wrap">
         <a href="#" class="logo" id="navLogo">
           <img src="logo.jpg" class="logo-img" alt="缽日 Logo">
           <div class="logo-text-group">
@@ -92,15 +62,15 @@
             <span class="logo-sub">Singing Bowl</span>
           </div>
         </a>
-        <nav class="nav-links" style="display: flex !important; align-items: center !important; gap: 8px !important; flex-wrap: nowrap !important; white-space: nowrap !important;">
-          <a href="#landing" class="nav-item active" id="btnNavHome" style="white-space: nowrap !important;">首頁</a>
-          <a href="#member" class="nav-item" id="btnNavMember" style="display: none; white-space: nowrap !important;">會員中心</a>
-          <a href="#buy-points" class="nav-item" id="btnNavBuyPoints" style="display: none; white-space: nowrap !important;">購買點數</a>
-          <a href="#admin" class="nav-item" id="btnNavAdmin" style="display: none; white-space: nowrap !important;">管理後台</a>
-          <button class="nav-btn primary" id="btnHeaderLogin" style="white-space: nowrap !important;">登入 / 註冊</button>
-          <div class="user-menu" id="headerUserMenu" style="display: none; white-space: nowrap !important; align-items: center !important; gap: 6px !important;">
-            <span class="user-name-display" id="headerUserName" style="white-space: nowrap !important;">會員</span>
-            <button class="nav-btn secondary-small" id="btnHeaderLogout" style="white-space: nowrap !important;">登出</button>
+        <nav class="nav-links">
+          <a href="#landing" class="nav-item active" id="btnNavHome">首頁</a>
+          <a href="#member" class="nav-item" id="btnNavMember" style="display: none;">會員中心</a>
+          <a href="#buy-points" class="nav-item" id="btnNavBuyPoints" style="display: none;">購買點數</a>
+          <a href="#admin" class="nav-item" id="btnNavAdmin" style="display: none;">管理後台</a>
+          <button class="nav-btn primary" id="btnHeaderLogin">登入 / 註冊</button>
+          <div class="user-menu" id="headerUserMenu" style="display: none;">
+            <span class="user-name-display" id="headerUserName">會員</span>
+            <button class="nav-btn secondary-small" id="btnHeaderLogout">登出</button>
           </div>
         </nav>
       </div>
@@ -317,13 +287,13 @@
             <div class="transactions-section">
               <h3>預約次數增減紀錄</h3>
               <div class="transaction-table-wrap">
-                <table class="transaction-table" style="width: 100% !important; min-width: 450px !important; border-collapse: collapse !important;">
+                <table class="transaction-table">
                   <thead>
                     <tr>
-                      <th style="white-space: nowrap !important; background: var(--ink-3) !important; color: var(--brass-soft) !important; font-weight: 400 !important; padding: 8px 10px !important;">日期</th>
-                      <th style="white-space: nowrap !important; background: var(--ink-3) !important; color: var(--brass-soft) !important; font-weight: 400 !important; padding: 8px 10px !important;">類型</th>
-                      <th style="white-space: nowrap !important; background: var(--ink-3) !important; color: var(--brass-soft) !important; font-weight: 400 !important; padding: 8px 10px !important;">變動</th>
-                      <th style="white-space: normal !important; min-width: 180px !important; background: var(--ink-3) !important; color: var(--brass-soft) !important; font-weight: 400 !important; padding: 8px 10px !important;">說明/結餘</th>
+                      <th>日期</th>
+                      <th>類型</th>
+                      <th>變動</th>
+                      <th>說明/結餘</th>
                     </tr>
                   </thead>
                   <tbody id="memberTxList">
@@ -1181,6 +1151,6 @@
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 
   <!-- JavaScript -->
-  <script src="member.js?v=38"></script>
+  <script src="member.js?v=40"></script>
 </body>
 </html>
