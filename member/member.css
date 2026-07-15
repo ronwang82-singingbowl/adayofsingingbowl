@@ -926,6 +926,12 @@ button {
 
 .transaction-table th, .transaction-table td {
   padding: 8px 12px;
+  white-space: nowrap;
+}
+
+.transaction-table th:last-child, .transaction-table td:last-child {
+  white-space: normal;
+  min-width: 250px;
 }
 
 .transaction-table th {
