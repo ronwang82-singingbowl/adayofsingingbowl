@@ -902,12 +902,15 @@ button {
 .transaction-table-wrap {
   max-height: 160px;
   overflow-y: auto;
+  overflow-x: auto;
   border: 1px solid var(--hairline);
   border-radius: var(--border-radius-sm);
+  -webkit-overflow-scrolling: touch;
 }
 
 .transaction-table-wrap::-webkit-scrollbar {
   width: 4px;
+  height: 4px;
 }
 .transaction-table-wrap::-webkit-scrollbar-thumb {
   background: var(--hairline);
@@ -915,6 +918,7 @@ button {
 
 .transaction-table {
   width: 100%;
+  min-width: 450px;
   border-collapse: collapse;
   font-size: 12.5px;
   text-align: left;
