@@ -2215,7 +2215,7 @@ document.addEventListener("DOMContentLoaded", () => {
               
               console.log("舊會員帳號遷移與驗證成功！", matchedUser.name);
             } else {
-              alert("密碼不正確，請重新輸入！");
+              alert("密碼不正確！\n輸入雜湊: " + enteredHash + "\n資料庫密碼: " + (matchedUser ? matchedUser.password : "未找到"));
               passwordInput.focus();
             }
           } else {
