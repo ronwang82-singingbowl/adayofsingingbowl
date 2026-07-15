@@ -2229,7 +2229,7 @@ document.addEventListener("DOMContentLoaded", () => {
           }
         } catch (dbErr) {
           console.error("資料庫驗證遷移出錯", dbErr);
-          alert("登入驗證時出錯，請稍後再試！");
+          alert("登入驗證時出錯，原因：" + dbErr.message);
         }
       } else {
         // 其他驗證錯誤（例如密碼錯誤）
