@@ -125,6 +125,8 @@ button {
   position: sticky;
   top: 0;
   z-index: 100;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .header-wrap {
@@ -2028,6 +2030,10 @@ button {
 @media (max-width: 600px) {
   .main-header {
     height: 60px !important;
+    width: 100% !important;
+    left: 0 !important;
+    right: 0 !important;
+    box-sizing: border-box !important;
   }
   .header-wrap {
     flex-direction: row !important;
