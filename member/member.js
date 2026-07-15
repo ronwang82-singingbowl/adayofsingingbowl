@@ -223,7 +223,7 @@ function initSession() {
           const email = user.email ? user.email.toLowerCase() : "";
           if (email) {
             console.log("啟動帳號安全資料搬遷偵測: ", email);
-            const usersSnapshot = await database.ref("users").once("value");
+            const usersSnapshot = await database.ref("users").orderByChild("email").equalTo(email).once("value");
             const allUsers = usersSnapshot.val();
             let foundOldUser = null;
             let oldKey = null;
@@ -2164,7 +2164,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (err.code === "auth/user-not-found" || err.code === "auth/invalid-credential") {
         // 2. 帳號可能還沒建立在 Firebase Auth（但舊資料庫有），啟動遷移與驗證
         try {
-          const snapshot = await database.ref("users").once("value");
+          const snapshot = await database.ref("users").orderByChild("email").equalTo(email).once("value");
           const allUsers = snapshot.val();
           let matchedKey = null;
           let matchedUser = null;
@@ -2684,7 +2684,7 @@ function handleLiffLogin() {
       if (err.code === "auth/user-not-found" || err.code === "auth/invalid-credential") {
         // 檢查舊資料庫是否已有此 LINE 用戶明細，有的話進行遷移
         try {
-          const snapshot = await database.ref("users").once("value");
+          const snapshot = await database.ref("users").orderByChild("lineUserId").equalTo(lineUserId).once("value");
           const allUsers = snapshot.val();
           let matchedKey = null;
           let matchedUser = null;
@@ -2766,7 +2766,7 @@ async function runMockLineLogin() {
   } catch (err) {
     if (err.code === "auth/user-not-found" || err.code === "auth/invalid-credential") {
       try {
-        const snapshot = await database.ref("users").once("value");
+        const snapshot = await database.ref("users").orderByChild("lineUserId").equalTo(mockLineUserId).once("value");
         const allUsers = snapshot.val();
         let matchedKey = null;
         let matchedUser = null;
