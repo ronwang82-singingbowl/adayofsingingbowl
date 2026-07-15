@@ -1009,6 +1009,13 @@ function renderAdminMemberList() {
            u.email.includes(memberSearchQuery);
   });
   
+  // 置頂管理員帳號
+  filteredMembers.sort((a, b) => {
+    if (a.role === "admin" && b.role !== "admin") return -1;
+    if (a.role !== "admin" && b.role === "admin") return 1;
+    return 0;
+  });
+  
   document.getElementById("lblAdminMemberCount").textContent = filteredMembers.length;
   
   if (filteredMembers.length === 0) {
