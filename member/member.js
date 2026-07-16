@@ -1014,7 +1014,7 @@ function renderAdminDashboard(paneId) {
   // 1. Calculate General Stats
   const totalMembers = users.filter(u => u.role !== "admin").length;
   const pendingBookings = bookings.filter(b => b.status === "待確認").length;
-  const monthlyBookings = bookings.length; // Simple count for mock dataset
+  const monthlyBookings = bookings.filter(b => b.status === "已確認" || b.status === "已完成").length; // Only count confirmed/completed bookings
   const totalCouponsIssued = vouchers.length;
   
   document.getElementById("lblAdminStatMembers").textContent = totalMembers;
