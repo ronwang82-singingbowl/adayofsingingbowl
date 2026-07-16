@@ -75,7 +75,8 @@ function getUserPathKey(user) {
 }
 
 // LINE Push Notification Sender Helper (含 API 密鑰驗證)
-function sendLineNotification(userId, message) {
+// calendarUrl: 可選參數，若提供則 GAS 會在伺服器端自動縮短後嵌入訊息
+function sendLineNotification(userId, message, calendarUrl) {
   const member = users.find(u => u.id === userId);
   if (!member || !member.lineUserId) {
     console.warn("[LINE通知] 此會員無 LINE User ID，userId:", userId);
@@ -107,17 +108,23 @@ function sendLineNotification(userId, message) {
     }
     
     console.log(`[LINE通知] 正在發送至 GAS Webhook...`);
+    const payload = {
+      lineUserId: member.lineUserId,
+      message: message,
+      apiSecret: apiSecret
+    };
+    // 若有 calendarUrl，傳給 GAS 讓其在伺服器端縮短
+    if (calendarUrl) {
+      payload.calendarUrl = calendarUrl;
+    }
+    
     fetch(webhookUrl, {
       method: "POST",
       mode: "no-cors",
       headers: {
         "Content-Type": "text/plain"
       },
-      body: JSON.stringify({
-        lineUserId: member.lineUserId,
-        message: message,
-        apiSecret: apiSecret
-      })
+      body: JSON.stringify(payload)
     })
     .then(res => {
       console.log("[LINE通知] ✅ 請求已成功送出（no-cors 模式，回應類型:", res.type, "）");
@@ -1489,7 +1496,7 @@ window.adminApproveBooking = function(bookingId) {
   
   const typeName = booking.type === "1on1" ? "1對1 頌缽療癒" : booking.title;
   const calendarUrl = generateGoogleCalendarUrl(booking);
-  sendLineNotification(booking.userId, `🔔 預約確認通知\n\n親愛的會員，您的預約已被確認！\n\n📅 日期：${booking.date}\n⏰ 時間：${booking.time}\n✨ 項目：${typeName}\n\n📌 一鍵加入 Google 日曆：\n${calendarUrl}\n\n期待與您相見！`);
+  sendLineNotification(booking.userId, `🔔 預約確認通知\n\n親愛的會員，您的預約已被確認！\n\n📅 日期：${booking.date}\n⏰ 時間：${booking.time}\n✨ 項目：${typeName}\n\n📌 一鍵加入 Google 日曆：\n{{CALENDAR_LINK}}\n\n期待與您相見！`, calendarUrl);
 
   alert("預約已確認！");
   renderAdminDashboard(activeAdminPane);
