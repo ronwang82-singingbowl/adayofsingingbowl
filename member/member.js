@@ -142,33 +142,25 @@ function sendLineNotification(userId, message, calendarUrl) {
 // Google Calendar URL Generator
 function generateGoogleCalendarUrl(booking) {
   const typeName = booking.type === "1on1" ? "1對1 頌缽療癒" : (booking.title || "團體頌缽");
-  const title = `缽日 - ${typeName}`;
   
   // Parse date and time
-  const dateParts = booking.date.split('-');
+  const dateParts = booking.date.split('-'); // e.g. 2026-07-20
+  const dateStr = dateParts.join(''); // e.g. 20260720
+  
   const timeParts = (booking.time || "10:00").split(':');
-  const year = dateParts[0];
-  const month = dateParts[1];
-  const day = dateParts[2];
   const hour = timeParts[0];
   const minute = timeParts[1] || '00';
+  const timeStr = hour + minute; // e.g. 1600
   
-  // Format: 20260720T100000 (assume 1 hour duration)
-  const startStr = `${year}${month}${day}T${hour}${minute}00`;
-  const endHour = String(parseInt(hour) + 1).padStart(2, '0');
-  const endStr = `${year}${month}${day}T${endHour}${minute}00`;
+  const typeFlag = booking.type === "1on1" ? "1" : "2";
   
-  const details = `預約確認通知\n項目：${typeName}\n日期：${booking.date}\n時間：${booking.time}`;
+  // Format: YYYYMMDD|HHMM|type|title
+  const rawString = `${dateStr}|${timeStr}|${typeFlag}|${typeName}`;
+  // Encode in UTF-8 base64
+  const base64 = btoa(unescape(encodeURIComponent(rawString)));
   
-  const params = new URLSearchParams({
-    action: 'TEMPLATE',
-    text: title,
-    dates: `${startStr}/${endStr}`,
-    details: details,
-    location: '缽日工作室'
-  });
-  
-  return `https://calendar.google.com/calendar/render?${params.toString()}`;
+  // Return redirector URL
+  return `https://ronwang82-singingbowl.github.io/adayofsingingbowl/member/r.html?c=${base64}`;
 }
 
 // Helper functions for LocalStorage persistence

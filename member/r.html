@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>正在開啟行事曆...</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      background: #141414;
+      color: #eaeaea;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+    }
+    .spinner {
+      border: 3px solid rgba(255,255,255,0.1);
+      border-radius: 50%;
+      border-top: 3px solid #c5a880;
+      width: 28px;
+      height: 28px;
+      animation: spin 1s linear infinite;
+      margin-bottom: 16px;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    .text {
+      font-size: 14px;
+      font-weight: 500;
+      letter-spacing: 0.5px;
+    }
+  </style>
+</head>
+<body>
+  <div class="spinner"></div>
+  <div class="text">正在開啟 Google 行事曆...</div>
+  
+  <script>
+    (function() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const c = urlParams.get('c');
+      if (!c) {
+        document.body.innerHTML = "無效的連結";
+        return;
+      }
+      
+      try {
+        // Decode base64 UTF-8
+        const decoded = decodeURIComponent(escape(atob(c)));
+        const parts = decoded.split('|');
+        if (parts.length < 4) {
+          document.body.innerHTML = "連結格式錯誤";
+          return;
+        }
+        
+        const dateStr = parts[0]; // YYYYMMDD
+        const timeStr = parts[1]; // HHMM
+        const type = parts[2]; // 1 or 2
+        const title = parts[3]; // Event title
+        
+        const year = dateStr.substring(0, 4);
+        const month = dateStr.substring(4, 6);
+        const day = dateStr.substring(6, 8);
+        const hour = timeStr.substring(0, 2);
+        const minute = timeStr.substring(2, 4);
+        
+        const startStr = year + month + day + "T" + hour + minute + "00";
+        const endHour = String(parseInt(hour) + 1).padStart(2, '0');
+        const endStr = year + month + day + "T" + endHour + minute + "00";
+        
+        const details = "預約確認通知\n項目：" + title + "\n日期：" + year + "-" + month + "-" + day + "\n時間：" + hour + ":" + minute;
+        
+        const params = new URLSearchParams({
+          action: 'TEMPLATE',
+          text: "缽日 - " + title,
+          dates: startStr + "/" + endStr,
+          details: details,
+          location: '缽日工作室'
+        });
+        
+        const gcalUrl = "https://calendar.google.com/calendar/render?" + params.toString();
+        window.location.href = gcalUrl;
+      } catch (e) {
+        document.body.innerHTML = "解析連結失敗：" + e.message;
+      }
+    })();
+  </script>
+</body>
+</html>
