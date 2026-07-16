@@ -82,6 +82,7 @@ function sendLineNotification(userId, message) {
     return;
   }
   
+  const isAdmin = currentUser && currentUser.role === "admin";
   console.log(`[LINE通知] 準備發送給 ${member.name} (lineUserId: ${member.lineUserId})...`);
   
   // 同時讀取 Webhook URL 與 API 密鑰
@@ -95,11 +96,13 @@ function sendLineNotification(userId, message) {
     console.log(`[LINE通知] webhookUrl: ${webhookUrl ? '已設定' : '❌ 未設定'}, apiSecret: ${apiSecret ? '已設定' : '❌ 未設定'}`);
     
     if (!webhookUrl) {
-      alert("⚠️ LINE 通知發送失敗：尚未設定 LINE Webhook 代理 URL。\n\n請至管理後台 > 時段開放設定 > 展開 LINE 通知設定，貼上您的 Google Apps Script 部署網址。");
+      console.warn("[LINE通知] 未設定 LINE Webhook URL，跳過通知。");
+      if (isAdmin) alert("⚠️ LINE 通知發送失敗：尚未設定 LINE Webhook 代理 URL。\n\n請至管理後台 > 時段開放設定 > 展開 LINE 通知設定，貼上您的 Google Apps Script 部署網址。");
       return;
     }
     if (!apiSecret) {
-      alert("⚠️ LINE 通知發送失敗：Firebase 資料庫中尚未設定 lineApiSecret。\n\n請至 Firebase Console > Realtime Database > Data，在 settings 節點下新增 lineApiSecret，值為：4f6996c01dc91d3fbcd9c925aa75f68f");
+      console.warn("[LINE通知] 未設定 lineApiSecret，跳過通知。");
+      if (isAdmin) alert("⚠️ LINE 通知發送失敗：Firebase 資料庫中尚未設定 lineApiSecret。\n\n請至 Firebase Console > Realtime Database > Data，在 settings 節點下新增 lineApiSecret，值為：4f6996c01dc91d3fbcd9c925aa75f68f");
       return;
     }
     
@@ -117,16 +120,15 @@ function sendLineNotification(userId, message) {
       })
     })
     .then(res => {
-      // mode: no-cors 回應為 opaque，無法讀取內容，但請求已成功送出
       console.log("[LINE通知] ✅ 請求已成功送出（no-cors 模式，回應類型:", res.type, "）");
     })
     .catch(err => {
       console.error("[LINE通知] ❌ 網路請求失敗:", err);
-      alert("⚠️ LINE 通知發送失敗：網路請求錯誤。請確認 GAS 部署網址是否正確。");
+      if (isAdmin) alert("⚠️ LINE 通知發送失敗：網路請求錯誤。請確認 GAS 部署網址是否正確。");
     });
   }).catch(err => {
     console.error("[LINE通知] ❌ 無法讀取 Firebase settings:", err);
-    alert("⚠️ 無法讀取 LINE 通知設定。請確認 Firebase 安全規則已正確部署（settings 節點需允許 auth != null 讀取）。");
+    if (isAdmin) alert("⚠️ 無法讀取 LINE 通知設定。請確認 Firebase 安全規則已正確部署（settings 節點需允許 auth != null 讀取）。");
   });
 }
 
