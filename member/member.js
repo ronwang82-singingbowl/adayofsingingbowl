@@ -106,6 +106,7 @@ function sendLineNotification(userId, message) {
     console.log(`[LINE通知] 正在發送至 GAS Webhook...`);
     fetch(webhookUrl, {
       method: "POST",
+      mode: "no-cors",
       headers: {
         "Content-Type": "text/plain"
       },
@@ -115,20 +116,9 @@ function sendLineNotification(userId, message) {
         apiSecret: apiSecret
       })
     })
-    .then(res => res.text())
-    .then(text => {
-      console.log("[LINE通知] GAS 回應原始文字:", text);
-      try {
-        const data = JSON.parse(text);
-        if (data.success) {
-          console.log("[LINE通知] ✅ 推播成功！");
-        } else {
-          console.error("[LINE通知] ❌ GAS 回傳錯誤:", data.error);
-          alert(`⚠️ LINE 通知發送失敗，GAS 回傳錯誤：${data.error}`);
-        }
-      } catch (e) {
-        console.log("[LINE通知] GAS 回應非 JSON:", text);
-      }
+    .then(res => {
+      // mode: no-cors 回應為 opaque，無法讀取內容，但請求已成功送出
+      console.log("[LINE通知] ✅ 請求已成功送出（no-cors 模式，回應類型:", res.type, "）");
     })
     .catch(err => {
       console.error("[LINE通知] ❌ 網路請求失敗:", err);
