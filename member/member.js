@@ -78,9 +78,11 @@ function getUserPathKey(user) {
 function sendLineNotification(userId, message) {
   const member = users.find(u => u.id === userId);
   if (!member || !member.lineUserId) {
-    console.log("此會員無 LINE User ID，跳過 LINE 推播通知。");
+    console.warn("[LINE通知] 此會員無 LINE User ID，userId:", userId);
     return;
   }
+  
+  console.log(`[LINE通知] 準備發送給 ${member.name} (lineUserId: ${member.lineUserId})...`);
   
   // 同時讀取 Webhook URL 與 API 密鑰
   Promise.all([
@@ -89,12 +91,19 @@ function sendLineNotification(userId, message) {
   ]).then(([urlSnap, secretSnap]) => {
     const webhookUrl = urlSnap.val();
     const apiSecret = secretSnap.val();
-    if (!webhookUrl || !apiSecret) {
-      console.log("未設定 LINE Webhook URL 或 API 密鑰，跳過 LINE 推播。");
+    
+    console.log(`[LINE通知] webhookUrl: ${webhookUrl ? '已設定' : '❌ 未設定'}, apiSecret: ${apiSecret ? '已設定' : '❌ 未設定'}`);
+    
+    if (!webhookUrl) {
+      alert("⚠️ LINE 通知發送失敗：尚未設定 LINE Webhook 代理 URL。\n\n請至管理後台 > 時段開放設定 > 展開 LINE 通知設定，貼上您的 Google Apps Script 部署網址。");
+      return;
+    }
+    if (!apiSecret) {
+      alert("⚠️ LINE 通知發送失敗：Firebase 資料庫中尚未設定 lineApiSecret。\n\n請至 Firebase Console > Realtime Database > Data，在 settings 節點下新增 lineApiSecret，值為：4f6996c01dc91d3fbcd9c925aa75f68f");
       return;
     }
     
-    console.log(`發送 LINE 推播給會員 ${member.name} (${member.lineUserId})...`);
+    console.log(`[LINE通知] 正在發送至 GAS Webhook...`);
     fetch(webhookUrl, {
       method: "POST",
       headers: {
@@ -106,14 +115,61 @@ function sendLineNotification(userId, message) {
         apiSecret: apiSecret
       })
     })
-    .then(res => res.json())
-    .then(data => {
-      console.log("LINE 推播成功回應:", data);
+    .then(res => res.text())
+    .then(text => {
+      console.log("[LINE通知] GAS 回應原始文字:", text);
+      try {
+        const data = JSON.parse(text);
+        if (data.success) {
+          console.log("[LINE通知] ✅ 推播成功！");
+        } else {
+          console.error("[LINE通知] ❌ GAS 回傳錯誤:", data.error);
+          alert(`⚠️ LINE 通知發送失敗，GAS 回傳錯誤：${data.error}`);
+        }
+      } catch (e) {
+        console.log("[LINE通知] GAS 回應非 JSON:", text);
+      }
     })
     .catch(err => {
-      console.error("LINE 推播失敗:", err);
+      console.error("[LINE通知] ❌ 網路請求失敗:", err);
+      alert("⚠️ LINE 通知發送失敗：網路請求錯誤。請確認 GAS 部署網址是否正確。");
     });
+  }).catch(err => {
+    console.error("[LINE通知] ❌ 無法讀取 Firebase settings:", err);
+    alert("⚠️ 無法讀取 LINE 通知設定。請確認 Firebase 安全規則已正確部署（settings 節點需允許 auth != null 讀取）。");
   });
+}
+
+// Google Calendar URL Generator
+function generateGoogleCalendarUrl(booking) {
+  const typeName = booking.type === "1on1" ? "1對1 頌缽療癒" : (booking.title || "團體頌缽");
+  const title = `缽日 - ${typeName}`;
+  
+  // Parse date and time
+  const dateParts = booking.date.split('-');
+  const timeParts = (booking.time || "10:00").split(':');
+  const year = dateParts[0];
+  const month = dateParts[1];
+  const day = dateParts[2];
+  const hour = timeParts[0];
+  const minute = timeParts[1] || '00';
+  
+  // Format: 20260720T100000 (assume 1 hour duration)
+  const startStr = `${year}${month}${day}T${hour}${minute}00`;
+  const endHour = String(parseInt(hour) + 1).padStart(2, '0');
+  const endStr = `${year}${month}${day}T${endHour}${minute}00`;
+  
+  const details = `預約確認通知\n項目：${typeName}\n日期：${booking.date}\n時間：${booking.time}`;
+  
+  const params = new URLSearchParams({
+    action: 'TEMPLATE',
+    text: title,
+    dates: `${startStr}/${endStr}`,
+    details: details,
+    location: '缽日工作室'
+  });
+  
+  return `https://calendar.google.com/calendar/render?${params.toString()}`;
 }
 
 // Helper functions for LocalStorage persistence
@@ -956,6 +1012,7 @@ function renderAdminDashboard(paneId) {
     "overview": "btnAdminMenuOverview",
     "members": "btnAdminMenuMembers",
     "bookings": "btnAdminMenuBookings",
+    "schedule": "btnAdminMenuSchedule",
     "coupons": "btnAdminMenuCoupons",
     "slots": "btnAdminMenuSlots",
     "remittances": "btnAdminMenuRemittances"
@@ -1020,6 +1077,10 @@ function renderAdminDashboard(paneId) {
   // 4. Booking list (with Filter logic)
   if (paneId === "bookings") {
     renderAdminBookingList();
+  }
+  
+  // 4b. Schedule calendar pane
+  if (paneId === "schedule") {
     renderAdminCalendar();
   }
   
@@ -1435,7 +1496,8 @@ window.adminApproveBooking = function(bookingId) {
   }
   
   const typeName = booking.type === "1on1" ? "1對1 頌缽療癒" : booking.title;
-  sendLineNotification(booking.userId, `🔔 預約確認通知\n\n親愛的會員，您的預約已被確認！\n\n📅 日期：${booking.date}\n⏰ 時間：${booking.time}\n✨ 項目：${typeName}\n\n期待與您相見！`);
+  const calendarUrl = generateGoogleCalendarUrl(booking);
+  sendLineNotification(booking.userId, `🔔 預約確認通知\n\n親愛的會員，您的預約已被確認！\n\n📅 日期：${booking.date}\n⏰ 時間：${booking.time}\n✨ 項目：${typeName}\n\n📌 一鍵加入 Google 日曆：\n${calendarUrl}\n\n期待與您相見！`);
 
   alert("預約已確認！");
   renderAdminDashboard(activeAdminPane);
@@ -2545,6 +2607,7 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("btnAdminMenuOverview").addEventListener("click", () => renderAdminDashboard("overview"));
   document.getElementById("btnAdminMenuMembers").addEventListener("click", () => renderAdminDashboard("members"));
   document.getElementById("btnAdminMenuBookings").addEventListener("click", () => renderAdminDashboard("bookings"));
+  document.getElementById("btnAdminMenuSchedule")?.addEventListener("click", () => renderAdminDashboard("schedule"));
   document.getElementById("btnAdminMenuCoupons").addEventListener("click", () => renderAdminDashboard("coupons"));
   document.getElementById("btnAdminMenuSlots").addEventListener("click", () => renderAdminDashboard("slots"));
   document.getElementById("btnAdminMenuRemittances")?.addEventListener("click", () => renderAdminDashboard("remittances"));

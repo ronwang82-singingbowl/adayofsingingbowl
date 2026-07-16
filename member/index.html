@@ -59,7 +59,7 @@
           <img src="logo.jpg" class="logo-img" alt="缽日 Logo">
           <div class="logo-text-group">
             <span class="logo-text">缽日</span>
-            <span class="logo-sub">Singing Bowl <span style="font-size: 8px; opacity: 0.5;">v45</span></span>
+            <span class="logo-sub">Singing Bowl <span style="font-size: 8px; opacity: 0.5;">v46</span></span>
           </div>
         </a>
         <nav class="nav-links">
@@ -618,6 +618,7 @@
               <button class="sidebar-item active" id="btnAdminMenuOverview"><i data-lucide="layout-dashboard"></i> 數據總覽</button>
               <button class="sidebar-item" id="btnAdminMenuMembers"><i data-lucide="users-2"></i> 會員管理</button>
               <button class="sidebar-item" id="btnAdminMenuBookings"><i data-lucide="calendar-days"></i> 預約審核</button>
+              <button class="sidebar-item" id="btnAdminMenuSchedule"><i data-lucide="calendar-clock"></i> 預約排程</button>
               <button class="sidebar-item" id="btnAdminMenuCoupons"><i data-lucide="ticket"></i> 票券發放</button>
               <button class="sidebar-item" id="btnAdminMenuSlots"><i data-lucide="clock"></i> 時段開放設定</button>
               <button class="sidebar-item" id="btnAdminMenuRemittances"><i data-lucide="wallet"></i> 匯款對帳審核</button>
@@ -709,12 +710,42 @@
             <!-- 7.3 Booking Management Panel -->
             <div class="admin-pane-section" id="pane-admin-bookings">
               <h3>預約審核與列表</h3>
+              
+              <div class="booking-filter-tabs">
+                <button class="filter-tab active" data-filter="all">所有預約</button>
+                <button class="filter-tab" data-filter="待確認">待確認</button>
+                <button class="filter-tab" data-filter="已確認">已確認</button>
+                <button class="filter-tab" data-filter="已取消">已取消 / 拒絕</button>
+              </div>
 
-              <!-- Admin Bookings Calendar View -->
-              <div class="coupon-log-card" style="margin-bottom: 24px; padding: 20px;">
+              <div class="table-wrap">
+                <table class="admin-table">
+                  <thead>
+                    <tr>
+                      <th>預約 ID</th>
+                      <th>會員大名</th>
+                      <th>預約項目</th>
+                      <th>預約時間 / 課程</th>
+                      <th>所需次數</th>
+                      <th>狀態</th>
+                      <th>操作</th>
+                    </tr>
+                  </thead>
+                  <tbody id="adminBookingList">
+                    <!-- Bookings will be injected here -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- 7.3b Booking Schedule Calendar Panel -->
+            <div class="admin-pane-section" id="pane-admin-schedule">
+              <h3>預約排程日曆</h3>
+
+              <div class="coupon-log-card" style="padding: 20px;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
                   <h4 style="margin: 0; color: var(--brass-soft); font-size: 15px; display: flex; align-items: center; gap: 6px;">
-                    <i data-lucide="calendar" style="width: 16px; height: 16px;"></i> 預約狀態日曆檢視
+                    <i data-lucide="calendar-clock" style="width: 16px; height: 16px;"></i> 預約狀態總覽
                   </h4>
                   <div style="display: flex; gap: 8px; align-items: center;">
                     <button type="button" class="quick-slot-btn" id="btnAdminPrevMonth" style="padding: 2px 8px; font-size: 11px; height: auto;">◀</button>
@@ -741,37 +772,11 @@
 
                 <!-- Day bookings details -->
                 <div id="divAdminCalendarDayDetail" style="margin-top: 15px; padding: 12px; background: rgba(255,255,255,0.02); border-radius: 6px; border: 1px dashed var(--hairline); display: none;">
-                  <h5 id="lblAdminCalendarSelectedDate" style="margin: 0 0 10px 0; font-size: 12px; color: var(--brass-soft); font-weight: 600;">2026-07-12 預約詳情</h5>
+                  <h5 id="lblAdminCalendarSelectedDate" style="margin: 0 0 10px 0; font-size: 12px; color: var(--brass-soft); font-weight: 600;">預約詳情</h5>
                   <div id="adminCalendarDayBookingsList" style="display: flex; flex-direction: column; gap: 6px;">
                     <!-- Booking details list -->
                   </div>
                 </div>
-              </div>
-              
-              <div class="booking-filter-tabs">
-                <button class="filter-tab active" data-filter="all">所有預約</button>
-                <button class="filter-tab" data-filter="待確認">待確認</button>
-                <button class="filter-tab" data-filter="已確認">已確認</button>
-                <button class="filter-tab" data-filter="已取消">已取消 / 拒絕</button>
-              </div>
-
-              <div class="table-wrap">
-                <table class="admin-table">
-                  <thead>
-                    <tr>
-                      <th>預約 ID</th>
-                      <th>會員大名</th>
-                      <th>預約項目</th>
-                      <th>預約時間 / 課程</th>
-                      <th>所需次數</th>
-                      <th>狀態</th>
-                      <th>操作</th>
-                    </tr>
-                  </thead>
-                  <tbody id="adminBookingList">
-                    <!-- Bookings will be injected here -->
-                  </tbody>
-                </table>
               </div>
             </div>
 
@@ -1204,6 +1209,6 @@
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 
   <!-- JavaScript -->
-  <script src="member.js?v=45"></script>
+  <script src="member.js?v=46"></script>
 </body>
 </html>
