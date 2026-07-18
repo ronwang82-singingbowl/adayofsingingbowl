@@ -12,7 +12,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;500;600;700&family=Noto+Sans+TC:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   
   <!-- CSS -->
-  <link rel="stylesheet" href="member.css?v=59">
+  <link rel="stylesheet" href="member.css?v=60">
   
   <!-- Lucide Icons (CDN) -->
   <script src="https://unpkg.com/lucide@latest"></script>
@@ -59,7 +59,7 @@
           <img src="logo.jpg" class="logo-img" alt="缽日 Logo">
           <div class="logo-text-group">
             <span class="logo-text">缽日</span>
-            <span class="logo-sub">Singing Bowl <span style="font-size: 8px; opacity: 0.5;">v59</span></span>
+            <span class="logo-sub">Singing Bowl <span style="font-size: 8px; opacity: 0.5;">v60</span></span>
           </div>
         </a>
         <nav class="nav-links">
@@ -1283,40 +1283,15 @@
         </div>
       </section>
 
-    </main>
-
-    <!-- Global Footer -->
-    <footer class="main-footer">
-      <div class="footer-wrap">
-        <div class="foot-links">
-          <a href="https://line.me/R/ti/p/%40197nfdme" target="_blank">聯絡我們 (LINE)</a>
-          <span>·</span>
-          <a href="#">預約須知</a>
-        </div>
-        <p class="copyright">© 2026 缽日 (Singing Bowl Healing). All rights reserved.</p>
-      </div>
-    </footer>
-  </div>
-
-  <!-- Firebase SDK (Compat Version for simple global initialization) -->
-  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
-  
-  <!-- Google API and Identity Services GIS Client -->
-  <script src="https://accounts.google.com/gsi/client" async defer></script>
-
-  <!-- JavaScript -->
-  <script src="member.js?v=59"></script>
       <!-- 7.8.2 Add/Edit Course Dialog (Modal View) -->
       <section id="view-admin-edit-course" class="view-section">
         <div class="booking-card" style="max-width: 650px;">
           <h2 id="lblAdminEditCourseTitle">新增/編輯課程</h2>
           <p class="booking-subtitle">設定課程基本資訊，並新增/刪除單元影片</p>
-          
+
           <form id="formAdminEditCourse">
             <input type="hidden" id="editCourseId" value="">
-            
+
             <div class="form-group">
               <label class="form-label" for="txtCourseTitle">課程標題 *</label>
               <input type="text" class="form-input" id="txtCourseTitle" required placeholder="例：第九屆設計風火輪">
@@ -1348,7 +1323,7 @@
                 <h4 style="margin:0; color:var(--paper); font-weight:600;">課程單元編輯</h4>
                 <button type="button" class="quick-slot-btn" id="btnAdminAddLessonToForm" style="padding: 2px 8px; font-size: 11px; height: auto;">＋新增單元</button>
               </div>
-              
+
               <div id="adminFormLessonsList" style="max-height: 250px; overflow-y: auto; padding-right: 4px;">
                 <!-- Lesson items dynamically generated with remove buttons -->
               </div>
@@ -1361,6 +1336,32 @@
           </form>
         </div>
       </section>
+
+    </main>
+
+    <!-- Global Footer -->
+    <footer class="main-footer">
+      <div class="footer-wrap">
+        <div class="foot-links">
+          <a href="https://line.me/R/ti/p/%40197nfdme" target="_blank">聯絡我們 (LINE)</a>
+          <span>·</span>
+          <a href="#">預約須知</a>
+        </div>
+        <p class="copyright">© 2026 缽日 (Singing Bowl Healing). All rights reserved.</p>
+      </div>
+    </footer>
+  </div>
+
+  <!-- Firebase SDK (Compat Version for simple global initialization) -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+  
+  <!-- Google API and Identity Services GIS Client -->
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+
+  <!-- JavaScript -->
+  <script src="member.js?v=60"></script>
 
 </body>
 </html>
