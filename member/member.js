@@ -102,7 +102,7 @@ function sendLineNotification(userId, message) {
     }
     if (!apiSecret) {
       console.warn("[LINE通知] 未設定 lineApiSecret，跳過通知。");
-      if (isAdmin) alert("⚠️ LINE 通知發送失敗：Firebase 資料庫中尚未設定 lineApiSecret。\n\n請至 Firebase Console > Realtime Database > Data，在 settings 節點下新增 lineApiSecret，值為：4f6996c01dc91d3fbcd9c925aa75f68f");
+      if (isAdmin) alert("⚠️ LINE 通知發送失敗：Firebase 資料庫中尚未設定 lineApiSecret。\n\n請至 Firebase Console > Realtime Database > Data，在 settings 節點下新增 lineApiSecret（值需與 GAS 後端設定的密鑰一致）。");
       return;
     }
     
@@ -392,9 +392,11 @@ function onUserLoginSuccess() {
   document.getElementById("btnNavCourses").style.display = "block";
   if (currentUser.role === "admin") {
     document.getElementById("btnNavAdmin").style.display = "block";
+    localStorage.setItem("singbowl_debug_banner", "1"); // 管理員登入後才顯示除錯錯誤橫幅
     navigateTo("admin");
   } else {
     document.getElementById("btnNavAdmin").style.display = "none";
+    localStorage.removeItem("singbowl_debug_banner");
     navigateTo("member");
   }
 
@@ -405,6 +407,7 @@ function onUserLoginSuccess() {
 function onUserLogoutSuccess() {
   currentUser = null;
   localStorage.removeItem("singbowl_current_user_id");
+  localStorage.removeItem("singbowl_debug_banner");
   
   // Hide headers
   document.getElementById("btnHeaderLogin").style.display = "block";
@@ -2564,7 +2567,7 @@ document.addEventListener("DOMContentLoaded", () => {
               
               console.log("舊會員帳號遷移與驗證成功！", matchedUser.name);
             } else {
-              alert("密碼不正確！\n輸入雜湊: " + enteredHash + "\n資料庫密碼: " + (matchedUser ? matchedUser.password : "未找到"));
+              alert("密碼不正確，請重新輸入。");
               passwordInput.focus();
             }
           } else {

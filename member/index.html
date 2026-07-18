@@ -12,7 +12,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;500;600;700&family=Noto+Sans+TC:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   
   <!-- CSS -->
-  <link rel="stylesheet" href="member.css?v=60">
+  <link rel="stylesheet" href="member.css?v=61">
   
   <!-- Lucide Icons (CDN) -->
   <script src="https://unpkg.com/lucide@latest"></script>
@@ -23,6 +23,8 @@
 <body>
   <script>
     window.onerror = function(msg, url, line, col, error) {
+      // 錯誤橫幅僅供管理員除錯，一般會員與訪客不顯示（避免誤以為網站故障）
+      if (localStorage.getItem('singbowl_debug_banner') !== '1') { return false; }
       var div = document.createElement('div');
       div.style.position = 'fixed';
       div.style.top = '0';
@@ -59,7 +61,7 @@
           <img src="logo.jpg" class="logo-img" alt="缽日 Logo">
           <div class="logo-text-group">
             <span class="logo-text">缽日</span>
-            <span class="logo-sub">Singing Bowl <span style="font-size: 8px; opacity: 0.5;">v60</span></span>
+            <span class="logo-sub">Singing Bowl</span>
           </div>
         </a>
         <nav class="nav-links">
@@ -1361,7 +1363,7 @@
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 
   <!-- JavaScript -->
-  <script src="member.js?v=60"></script>
+  <script src="member.js?v=61"></script>
 
 </body>
 </html>
