@@ -3369,7 +3369,7 @@ function startRealtimeSync() {
       const bookingsRef = database.ref("bookings");
       bookingsRef.on("value", (snapshot) => {
         const val = snapshot.val();
-        bookings = val ? (Array.isArray(val) ? val.filter(Boolean) : Object.values(val)) : [];
+        bookings = val ? (Array.isArray(val) ? val.filter(Boolean) : Object.values(val)).sort((a,b) => a.id - b.id) : [];
         dbSet("bookings", bookings, false);
         triggerViewRender();
       });
@@ -3378,7 +3378,7 @@ function startRealtimeSync() {
       const vouchersRef = database.ref("vouchers");
       vouchersRef.on("value", (snapshot) => {
         const val = snapshot.val();
-        vouchers = val ? (Array.isArray(val) ? val.filter(Boolean) : Object.values(val)) : [];
+        vouchers = val ? (Array.isArray(val) ? val.filter(Boolean) : Object.values(val)).sort((a,b) => a.id - b.id) : [];
         dbSet("vouchers", vouchers, false);
         triggerViewRender();
       });
@@ -3387,7 +3387,7 @@ function startRealtimeSync() {
       const transactionsRef = database.ref("transactions");
       transactionsRef.on("value", (snapshot) => {
         const val = snapshot.val();
-        transactions = val ? (Array.isArray(val) ? val.filter(Boolean) : Object.values(val)) : [];
+        transactions = val ? (Array.isArray(val) ? val.filter(Boolean) : Object.values(val)).sort((a,b) => a.id - b.id) : [];
         dbSet("transactions", transactions, false);
         triggerViewRender();
       });
@@ -3396,7 +3396,7 @@ function startRealtimeSync() {
       const remittancesRef = database.ref("remittances");
       remittancesRef.on("value", (snapshot) => {
         const val = snapshot.val();
-        remittances = val ? (Array.isArray(val) ? val.filter(Boolean) : Object.values(val)) : [];
+        remittances = val ? (Array.isArray(val) ? val.filter(Boolean) : Object.values(val)).sort((a,b) => a.id - b.id) : [];
         dbSet("remittances", remittances, false);
         triggerViewRender();
       });
@@ -3428,7 +3428,7 @@ function startRealtimeSync() {
       const myBookingsRef = database.ref("bookings").orderByChild("userId").equalTo(currentUserId);
       myBookingsRef.on("value", (snapshot) => {
         const val = snapshot.val();
-        bookings = val ? (Array.isArray(val) ? val.filter(Boolean) : Object.values(val)) : [];
+        bookings = val ? (Array.isArray(val) ? val.filter(Boolean) : Object.values(val)).sort((a,b) => a.id - b.id) : [];
         dbSet("bookings", bookings, false);
         triggerViewRender();
       });
@@ -3438,7 +3438,7 @@ function startRealtimeSync() {
       const myVouchersRef = database.ref("vouchers").orderByChild("userId").equalTo(currentUserId);
       myVouchersRef.on("value", (snapshot) => {
         const val = snapshot.val();
-        vouchers = val ? (Array.isArray(val) ? val.filter(Boolean) : Object.values(val)) : [];
+        vouchers = val ? (Array.isArray(val) ? val.filter(Boolean) : Object.values(val)).sort((a,b) => a.id - b.id) : [];
         dbSet("vouchers", vouchers, false);
         triggerViewRender();
       });
@@ -3448,7 +3448,7 @@ function startRealtimeSync() {
       const myTransactionsRef = database.ref("transactions").orderByChild("userId").equalTo(currentUserId);
       myTransactionsRef.on("value", (snapshot) => {
         const val = snapshot.val();
-        transactions = val ? (Array.isArray(val) ? val.filter(Boolean) : Object.values(val)) : [];
+        transactions = val ? (Array.isArray(val) ? val.filter(Boolean) : Object.values(val)).sort((a,b) => a.id - b.id) : [];
         dbSet("transactions", transactions, false);
         triggerViewRender();
       });
@@ -3458,7 +3458,7 @@ function startRealtimeSync() {
       const myRemittancesRef = database.ref("remittances").orderByChild("userId").equalTo(currentUserId);
       myRemittancesRef.on("value", (snapshot) => {
         const val = snapshot.val();
-        remittances = val ? (Array.isArray(val) ? val.filter(Boolean) : Object.values(val)) : [];
+        remittances = val ? (Array.isArray(val) ? val.filter(Boolean) : Object.values(val)).sort((a,b) => a.id - b.id) : [];
         dbSet("remittances", remittances, false);
         triggerViewRender();
       });
@@ -3508,14 +3508,25 @@ function pushNode(key, data) {
     return;
   }
   
-  // 管理員：直接寫入其他節點的全量 node 陣列
+  // Helper to convert array to map
+  function arrayToMap(arr) {
+    const map = {};
+    if (Array.isArray(arr)) {
+      arr.forEach(item => {
+        if (item && item.id) {
+          map[item.id] = item;
+        }
+      });
+    }
+    return map;
+  }
+
+  // 管理員：直接寫入其他節點的全量 node
   if (isAdmin) {
-    database.ref(key).set(data);
-    // 智慧清除：當陣列長度縮減時，主動刪除後面殘留的 Firebase 尾端節點
-    if (Array.isArray(data)) {
-      for (let i = data.length; i < data.length + 15; i++) {
-        database.ref(`${key}/${i}`).remove();
-      }
+    if (["bookings", "vouchers", "transactions", "remittances", "groupSessions", "slots"].includes(key) && Array.isArray(data)) {
+      database.ref(key).set(arrayToMap(data));
+    } else {
+      database.ref(key).set(data);
     }
     return;
   }
@@ -3541,7 +3552,11 @@ function pushNode(key, data) {
     });
   } else {
     // slots, groupSessions, vouchers 等公共節點 (唯讀)
-    database.ref(key).set(data);
+    if (["bookings", "vouchers", "transactions", "remittances", "groupSessions", "slots"].includes(key) && Array.isArray(data)) {
+      database.ref(key).set(arrayToMap(data));
+    } else {
+      database.ref(key).set(data);
+    }
   }
 }
 
@@ -3550,13 +3565,32 @@ function pushCloudData() {
   if (pushTimeout) clearTimeout(pushTimeout);
   pushTimeout = setTimeout(async () => {
     try {
-      await database.ref("users").set(users);
-      await database.ref("bookings").set(bookings);
-      await database.ref("vouchers").set(vouchers);
-      await database.ref("groupSessions").set(groupSessions);
-      await database.ref("transactions").set(transactions);
-      await database.ref("slots").set(slots);
-      await database.ref("remittances").set(remittances);
+      function arrayToMap(arr) {
+        const map = {};
+        if (Array.isArray(arr)) {
+          arr.forEach(item => {
+            if (item && item.id) {
+              map[item.id] = item;
+            }
+          });
+        }
+        return map;
+      }
+      
+      const usersMap = {};
+      users.forEach(u => {
+        if (u) {
+          usersMap[getUserPathKey(u)] = u;
+        }
+      });
+
+      await database.ref("users").set(usersMap);
+      await database.ref("bookings").set(arrayToMap(bookings));
+      await database.ref("vouchers").set(arrayToMap(vouchers));
+      await database.ref("groupSessions").set(arrayToMap(groupSessions));
+      await database.ref("transactions").set(arrayToMap(transactions));
+      await database.ref("slots").set(arrayToMap(slots));
+      await database.ref("remittances").set(arrayToMap(remittances));
       console.log("雲端全量資料同步寫入成功！");
     } catch (err) {
       console.error("雲端全量寫入錯誤:", err);
