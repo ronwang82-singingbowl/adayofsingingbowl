@@ -12,7 +12,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;500;600;700&family=Noto+Sans+TC:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   
   <!-- CSS -->
-  <link rel="stylesheet" href="member.css?v=57">
+  <link rel="stylesheet" href="member.css?v=58">
   
   <!-- Lucide Icons (CDN) -->
   <script src="https://unpkg.com/lucide@latest"></script>
@@ -59,7 +59,7 @@
           <img src="logo.jpg" class="logo-img" alt="缽日 Logo">
           <div class="logo-text-group">
             <span class="logo-text">缽日</span>
-            <span class="logo-sub">Singing Bowl <span style="font-size: 8px; opacity: 0.5;">v57</span></span>
+            <span class="logo-sub">Singing Bowl <span style="font-size: 8px; opacity: 0.5;">v58</span></span>
           </div>
         </a>
         <nav class="nav-links">
@@ -1307,7 +1307,7 @@
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 
   <!-- JavaScript -->
-  <script src="member.js?v=57"></script>
+  <script src="member.js?v=58"></script>
       <!-- 7.8.2 Add/Edit Course Dialog (Modal View) -->
       <section id="view-admin-edit-course" class="view-section">
         <div class="booking-card" style="max-width: 650px;">
@@ -1335,6 +1335,12 @@
             <div class="form-group">
               <label class="form-label" for="txtCourseDesc">課程簡介</label>
               <textarea class="form-input textarea-input" id="txtCourseDesc" rows="3" placeholder="簡短介紹此課程..."></textarea>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="txtCourseQuickVideoUrl">單支影片連結 (選填)</label>
+              <input type="url" class="form-input" id="txtCourseQuickVideoUrl" placeholder="若這堂課只有一支影片，可直接貼 YouTube 連結在這裡">
+              <p style="font-size: 11px; color: var(--mist); margin-top: 6px;">儲存後會自動建立為「單元1」。若下方已手動新增單元，此欄位將被忽略——多支影片的系列課請直接用下方「＋新增單元」逐一新增。</p>
             </div>
 
             <div style="border-top: 1px solid var(--hairline); padding-top: 16px; margin-top: 16px;">

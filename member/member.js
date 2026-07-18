@@ -3648,7 +3648,8 @@ function renderAdminCoursesPanel() {
 window.renderAdminEditCourseForm = function(courseId = null) {
   const formList = document.getElementById("adminFormLessonsList");
   formList.innerHTML = "";
-  
+  document.getElementById("txtCourseQuickVideoUrl").value = "";
+
   if (courseId) {
     const courseObj = courses.find(c => c.id === courseId);
     if (!courseObj) return;
@@ -3659,7 +3660,7 @@ window.renderAdminEditCourseForm = function(courseId = null) {
     document.getElementById("txtCourseLecturer").value = courseObj.lecturer || "";
     document.getElementById("txtCourseCoverUrl").value = courseObj.coverUrl || "";
     document.getElementById("txtCourseDesc").value = courseObj.description || "";
-    
+
     if (courseObj.lessons && courseObj.lessons.length > 0) {
       courseObj.lessons.forEach(l => adminFormAddLessonRow(l));
     }
@@ -3671,7 +3672,7 @@ window.renderAdminEditCourseForm = function(courseId = null) {
     document.getElementById("txtCourseCoverUrl").value = "";
     document.getElementById("txtCourseDesc").value = "";
   }
-  
+
   navigateTo("admin-edit-course");
 };
 
@@ -3725,6 +3726,18 @@ async function adminSaveCourse() {
       duration: lDuration,
       videoUrl: parseYoutubeEmbedUrl(lVideoUrl),
       description: lDesc
+    });
+  }
+
+  // Quick single-video shortcut: only applies when no lesson units were manually added.
+  const quickVideoUrl = document.getElementById("txtCourseQuickVideoUrl")?.value.trim();
+  if (lessons.length === 0 && quickVideoUrl) {
+    lessons.push({
+      id: 1,
+      title: title || "課程影片",
+      duration: "00:00",
+      videoUrl: parseYoutubeEmbedUrl(quickVideoUrl),
+      description: description
     });
   }
 
