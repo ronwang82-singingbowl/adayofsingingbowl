@@ -59,7 +59,7 @@
           <img src="logo.jpg" class="logo-img" alt="缽日 Logo">
           <div class="logo-text-group">
             <span class="logo-text">缽日</span>
-            <span class="logo-sub">Singing Bowl <span style="font-size: 8px; opacity: 0.5;">v53</span></span>
+            <span class="logo-sub">Singing Bowl <span style="font-size: 8px; opacity: 0.5;">v54</span></span>
           </div>
         </a>
         <nav class="nav-links">
@@ -711,11 +711,18 @@
             <div class="admin-pane-section" id="pane-admin-bookings">
               <h3>預約審核與列表</h3>
               
-              <div class="booking-filter-tabs">
-                <button class="filter-tab active" data-filter="all">所有預約</button>
-                <button class="filter-tab" data-filter="待確認">待確認</button>
-                <button class="filter-tab" data-filter="已確認">已確認</button>
-                <button class="filter-tab" data-filter="已取消">已取消 / 拒絕</button>
+              <div style="display: flex; justify-content: space-between; align-items: center; gap: 15px; margin-bottom: 15px; flex-wrap: wrap;">
+                <div class="booking-filter-tabs" style="margin-bottom: 0;">
+                  <button class="filter-tab active" data-filter="all">所有預約</button>
+                  <button class="filter-tab" data-filter="待確認">待確認</button>
+                  <button class="filter-tab" data-filter="已確認">已確認</button>
+                  <button class="filter-tab" data-filter="已取消">已取消 / 拒絕</button>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <label style="font-size: 13px; color: var(--brass-soft); font-weight: 500;">📅 日期篩選：</label>
+                  <input type="date" id="adminBookingDateFilter" style="background: var(--ink-2); color: #fff; border: 1px solid var(--hairline); border-radius: 4px; padding: 4px 8px; font-size: 12px; outline: none; height: auto; width: 140px;">
+                  <button type="button" class="quick-slot-btn" id="btnClearAdminBookingDateFilter" style="padding: 2px 6px; font-size: 11px; height: auto;">清除</button>
+                </div>
               </div>
 
               <div class="table-wrap">
@@ -1209,6 +1216,6 @@
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 
   <!-- JavaScript -->
-  <script src="member.js?v=53"></script>
+  <script src="member.js?v=54"></script>
 </body>
 </html>

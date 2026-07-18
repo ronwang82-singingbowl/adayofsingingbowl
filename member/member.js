@@ -1062,6 +1062,8 @@ function renderAdminDashboard(paneId) {
   
   // 4. Booking list (with Filter logic)
   if (paneId === "bookings") {
+    const inputDate = document.getElementById("adminBookingDateFilter");
+    if (inputDate) inputDate.value = adminBookingDateFilterValue || "";
     renderAdminBookingList();
   }
   
@@ -1250,6 +1252,7 @@ window.openEditMember = function(memberId) {
 
 // 4.3 Booking List rendering with filter state
 let bookingFilter = "all";
+let adminBookingDateFilterValue = "";
 
 // Admin Booking Calendar Variables
 let adminCalendarCurrentYear = new Date().getFullYear();
@@ -1415,9 +1418,30 @@ function renderAdminBookingList() {
   const container = document.getElementById("adminBookingList");
   container.innerHTML = "";
   
+  // 1. Filter bookings
   const filteredBookings = bookings.filter(b => {
-    if (bookingFilter === "all") return true;
-    return b.status === bookingFilter;
+    // Status filter
+    if (bookingFilter !== "all" && b.status !== bookingFilter) return false;
+    
+    // Date filter
+    if (adminBookingDateFilterValue && b.date !== adminBookingDateFilterValue) return false;
+    
+    return true;
+  });
+  
+  // 2. Sort: Cancelled/Rejected go to bottom
+  filteredBookings.sort((a, b) => {
+    const isACancelled = (a.status === "已取消" || a.status === "已拒絕");
+    const isBCancelled = (b.status === "已取消" || b.status === "已拒絕");
+    
+    if (isACancelled && !isBCancelled) return 1;
+    if (!isACancelled && isBCancelled) return -1;
+    
+    // Fallback: sort by date descending (latest first)
+    if (a.date !== b.date) {
+      return b.date.localeCompare(a.date);
+    }
+    return (b.time || "").localeCompare(a.time || "");
   });
   
   if (filteredBookings.length === 0) {
@@ -2598,6 +2622,18 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("btnAdminMenuSlots").addEventListener("click", () => renderAdminDashboard("slots"));
   document.getElementById("btnAdminMenuRemittances")?.addEventListener("click", () => renderAdminDashboard("remittances"));
   document.getElementById("btnAdminBackToMember").addEventListener("click", () => navigateTo("member"));
+
+  // Booking date filter listeners
+  document.getElementById("adminBookingDateFilter")?.addEventListener("change", (e) => {
+    adminBookingDateFilterValue = e.target.value;
+    renderAdminBookingList();
+  });
+  document.getElementById("btnClearAdminBookingDateFilter")?.addEventListener("click", () => {
+    adminBookingDateFilterValue = "";
+    const inputDate = document.getElementById("adminBookingDateFilter");
+    if (inputDate) inputDate.value = "";
+    renderAdminBookingList();
+  });
 
   // Submit: Admin reject remittance slip
   document.getElementById("formAdminRejectRemittance")?.addEventListener("submit", (e) => {
