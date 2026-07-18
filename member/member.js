@@ -3687,11 +3687,23 @@ function adminFormAddLessonRow(lesson = null) {
     <button type="button" class="admin-lesson-remove-btn" onclick="this.parentNode.remove()">✕ 刪除</button>
     <div style="font-size:11px; font-weight:600; color:var(--paper); margin-bottom:8px;">單元 ${count}</div>
     <div style="display:grid; grid-template-columns: 1fr 120px; gap:10px; margin-bottom:8px;">
-      <input type="text" class="form-input" name="formLessonTitle" placeholder="單元影片標題 *" required value="${lesson ? lesson.title : ''}">
-      <input type="text" class="form-input" name="formLessonDuration" placeholder="時長 (如 40:00) *" required value="${lesson ? lesson.duration : ''}">
+      <div>
+        <label style="font-size:11px; color:var(--brass-soft); display:block; margin-bottom:4px;">單元影片標題 *</label>
+        <input type="text" class="form-input" name="formLessonTitle" placeholder="例：第1堂 基礎入門" required value="${lesson ? lesson.title : ''}">
+      </div>
+      <div>
+        <label style="font-size:11px; color:var(--brass-soft); display:block; margin-bottom:4px;">時長 *</label>
+        <input type="text" class="form-input" name="formLessonDuration" placeholder="例：40:00" required value="${lesson ? lesson.duration : ''}">
+      </div>
     </div>
-    <input type="url" class="form-input" name="formLessonVideoUrl" placeholder="YouTube 影片連結 *" required style="margin-bottom:8px;" value="${lesson ? lesson.videoUrl : ''}">
-    <textarea class="form-input textarea-input" name="formLessonDesc" rows="2" placeholder="單元簡介... (選填)">${lesson ? (lesson.description || '') : ''}</textarea>
+    <div style="margin-bottom:8px;">
+      <label style="font-size:11px; color:var(--brass-soft); display:block; margin-bottom:4px;">YouTube 影片連結 *</label>
+      <input type="url" class="form-input" name="formLessonVideoUrl" placeholder="貼上 YouTube 影片網址" required value="${lesson ? lesson.videoUrl : ''}">
+    </div>
+    <div>
+      <label style="font-size:11px; color:var(--brass-soft); display:block; margin-bottom:4px;">單元簡介 (選填)</label>
+      <textarea class="form-input textarea-input" name="formLessonDesc" rows="2" placeholder="這堂單元的簡短介紹...">${lesson ? (lesson.description || '') : ''}</textarea>
+    </div>
   `;
   container.appendChild(div);
   container.scrollTop = container.scrollHeight;
