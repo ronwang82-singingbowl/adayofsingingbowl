@@ -12,7 +12,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;500;600;700&family=Noto+Sans+TC:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   
   <!-- CSS -->
-  <link rel="stylesheet" href="member.css?v=40">
+  <link rel="stylesheet" href="member.css?v=57">
   
   <!-- Lucide Icons (CDN) -->
   <script src="https://unpkg.com/lucide@latest"></script>
@@ -59,13 +59,14 @@
           <img src="logo.jpg" class="logo-img" alt="缽日 Logo">
           <div class="logo-text-group">
             <span class="logo-text">缽日</span>
-            <span class="logo-sub">Singing Bowl <span style="font-size: 8px; opacity: 0.5;">v54</span></span>
+            <span class="logo-sub">Singing Bowl <span style="font-size: 8px; opacity: 0.5;">v57</span></span>
           </div>
         </a>
         <nav class="nav-links">
           <a href="#landing" class="nav-item active" id="btnNavHome">首頁</a>
           <a href="#member" class="nav-item" id="btnNavMember" style="display: none;">會員中心</a>
           <a href="#buy-points" class="nav-item" id="btnNavBuyPoints" style="display: none;">購買點數</a>
+          <a href="#courses" class="nav-item" id="btnNavCourses" style="display: none;">線上課程</a>
           <a href="#admin" class="nav-item" id="btnNavAdmin" style="display: none;">管理後台</a>
           <button class="nav-btn primary" id="btnHeaderLogin">登入 / 註冊</button>
           <div class="user-menu" id="headerUserMenu" style="display: none;">
@@ -608,6 +609,60 @@
         </div>
       </section>
 
+      <!-- 6.2 Online Courses View -->
+      <section id="view-courses" class="view-section">
+        <div class="coupon-header">
+          <h2>學習中心</h2>
+          <p class="coupon-subtitle">選擇您要學習的影音課程，開啟您的聲音學習之旅</p>
+        </div>
+        <div class="course-grid" id="courseGridContainer">
+          <!-- Course cards dynamically generated -->
+        </div>
+      </section>
+
+      <!-- 6.3 Course Details View -->
+      <section id="view-course-detail" class="view-section">
+        <div class="back-btn-row">
+          <span class="back-link" id="btnBackToCourses"><i data-lucide="arrow-left"></i> 返回線上課程</span>
+        </div>
+        
+        <div class="course-header">
+          <img id="detailCourseCover" src="" class="course-header-cover" alt="課程封面">
+          <div class="course-header-info">
+            <h2 id="detailCourseTitle" style="font-family:'Noto Serif TC',serif; margin-bottom:8px; color:var(--paper);">課程名稱</h2>
+            <div id="detailCourseLecturer" style="font-size:13px; color:var(--brass); margin-bottom:12px; font-weight:500;">講師：講師姓名</div>
+            <p id="detailCourseDesc" style="font-size:13px; color:var(--mist); line-height:1.6; margin:0;">課程詳細介紹內容...</p>
+          </div>
+        </div>
+
+        <h3 style="font-family:'Noto Serif TC',serif; margin-bottom:16px; color:var(--paper); border-bottom:1px solid var(--hairline); padding-bottom:8px;">課程內容單元</h3>
+        <div class="lesson-grid" id="lessonGridContainer">
+          <!-- Lesson cards dynamically generated -->
+        </div>
+      </section>
+
+      <!-- 6.4 Lesson Player View -->
+      <section id="view-lesson-player" class="view-section">
+        <div class="back-btn-row">
+          <span class="back-link" id="btnBackToCourseDetail"><i data-lucide="arrow-left"></i> 返回課程大綱</span>
+        </div>
+
+        <div class="video-player-container">
+          <div class="video-player-wrapper">
+            <iframe id="lessonVideoIframe" src="" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+          </div>
+          
+          <div class="video-player-info">
+            <div class="lesson-badge" id="playerLessonBadge">第 1 堂</div>
+            <h2 id="playerLessonTitle" style="font-family:'Noto Serif TC',serif; margin-bottom:8px; color:var(--paper);">單元標題</h2>
+            <div style="font-size:12px; color:var(--brass); margin-bottom:16px; display:flex; align-items:center; gap:4px;">
+              <i data-lucide="clock" style="width:14px; height:14px;"></i> 時長：<span id="playerLessonDuration">00:00</span>
+            </div>
+            <p id="playerLessonDesc" style="font-size:13px; color:var(--mist); line-height:1.7; white-space:pre-line;">單元詳細簡介及講義教材連結...</p>
+          </div>
+        </div>
+      </section>
+
       <!-- 7. Admin Dashboard View -->
       <section id="view-admin" class="view-section">
         <div class="admin-grid">
@@ -622,6 +677,7 @@
               <button class="sidebar-item" id="btnAdminMenuCoupons"><i data-lucide="ticket"></i> 票券發放</button>
               <button class="sidebar-item" id="btnAdminMenuSlots"><i data-lucide="clock"></i> 時段開放設定</button>
               <button class="sidebar-item" id="btnAdminMenuRemittances"><i data-lucide="wallet"></i> 匯款對帳審核</button>
+              <button class="sidebar-item" id="btnAdminMenuCourses"><i data-lucide="book-open"></i> 課程管理</button>
             </div>
             <button class="cta-btn secondary-btn w-100 mt-auto" id="btnAdminBackToMember"><i data-lucide="arrow-left"></i> 返回會員中心</button>
           </div>
@@ -1021,6 +1077,34 @@
               </div>
             </div>
 
+            <!-- 7.8 Course Management Panel -->
+            <div class="admin-pane-section" id="pane-admin-courses">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <h3 style="margin:0;">課程管理</h3>
+                <button type="button" class="cta-btn primary-btn" id="btnAdminAddCourse" style="padding: 6px 14px; font-size: 13px; height: auto; margin:0;"><i data-lucide="plus" style="width:14px; height:14px; display:inline-block; vertical-align:middle; margin-right:4px;"></i>新增課程</button>
+              </div>
+              <p class="section-subtitle">建立與修改線上影音課程，並設定各課程的影片單元。</p>
+
+              <div class="table-wrap mt-3">
+                <table class="admin-table">
+                  <thead>
+                    <tr>
+                      <th>課程 ID</th>
+                      <th>封面</th>
+                      <th>課程標題</th>
+                      <th>授課講師</th>
+                      <th>單元數量</th>
+                      <th>課程簡介</th>
+                      <th>操作</th>
+                    </tr>
+                  </thead>
+                  <tbody id="adminCourseList">
+                    <!-- Course list rows dynamically generated -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
           </div>
         </div>
       </section>
@@ -1135,6 +1219,13 @@
               </div>
             </div>
             
+            <div class="form-group">
+              <label class="form-label">課程開通授權</label>
+              <div id="editMemCoursesContainer" style="display: flex; flex-direction: column; gap: 8px; background: var(--ink-3); padding: 12px; border-radius: 6px; border: 1px solid var(--hairline); max-height: 150px; overflow-y: auto;">
+                <!-- Checkboxes dynamically generated -->
+              </div>
+            </div>
+            
             <div class="btn-row">
               <button type="button" class="cta-btn secondary-btn" id="btnCancelEditMember">取消</button>
               <button type="submit" class="cta-btn primary-btn">確認儲存</button>
@@ -1216,6 +1307,54 @@
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 
   <!-- JavaScript -->
-  <script src="member.js?v=54"></script>
+  <script src="member.js?v=57"></script>
+      <!-- 7.8.2 Add/Edit Course Dialog (Modal View) -->
+      <section id="view-admin-edit-course" class="view-section">
+        <div class="booking-card" style="max-width: 650px;">
+          <h2 id="lblAdminEditCourseTitle">新增/編輯課程</h2>
+          <p class="booking-subtitle">設定課程基本資訊，並新增/刪除單元影片</p>
+          
+          <form id="formAdminEditCourse">
+            <input type="hidden" id="editCourseId" value="">
+            
+            <div class="form-group">
+              <label class="form-label" for="txtCourseTitle">課程標題 *</label>
+              <input type="text" class="form-input" id="txtCourseTitle" required placeholder="例：第九屆設計風火輪">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="txtCourseLecturer">授課講師 *</label>
+              <input type="text" class="form-input" id="txtCourseLecturer" required placeholder="例：王慈惠">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="txtCourseCoverUrl">封面圖片連結 (選填)</label>
+              <input type="url" class="form-input" id="txtCourseCoverUrl" placeholder="不填寫則自動套用預設封面圖">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="txtCourseDesc">課程簡介</label>
+              <textarea class="form-input textarea-input" id="txtCourseDesc" rows="3" placeholder="簡短介紹此課程..."></textarea>
+            </div>
+
+            <div style="border-top: 1px solid var(--hairline); padding-top: 16px; margin-top: 16px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                <h4 style="margin:0; color:var(--paper); font-weight:600;">課程單元編輯</h4>
+                <button type="button" class="quick-slot-btn" id="btnAdminAddLessonToForm" style="padding: 2px 8px; font-size: 11px; height: auto;">＋新增單元</button>
+              </div>
+              
+              <div id="adminFormLessonsList" style="max-height: 250px; overflow-y: auto; padding-right: 4px;">
+                <!-- Lesson items dynamically generated with remove buttons -->
+              </div>
+            </div>
+
+            <div class="btn-row" style="margin-top:20px;">
+              <button type="button" class="cta-btn secondary-btn" id="btnCancelEditCourse">取消</button>
+              <button type="submit" class="cta-btn primary-btn">確認儲存</button>
+            </div>
+          </form>
+        </div>
+      </section>
+
 </body>
 </html>

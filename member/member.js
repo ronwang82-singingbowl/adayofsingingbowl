@@ -209,6 +209,9 @@ let groupSessions = dbGet("groupSessions", DEFAULT_GROUP_SESSIONS);
 let transactions = dbGet("transactions", DEFAULT_TRANSACTIONS);
 let slots = dbGet("slots", DEFAULT_SLOTS);
 let remittances = dbGet("remittances", []);
+let courses = dbGet("courses", []);
+let activeCourse = null;
+let activeLesson = null;
 let currentUser = null;
 
 // Save initial database state (local-only, do not write to cloud on load)
@@ -219,6 +222,7 @@ dbSet("groupSessions", groupSessions, false);
 dbSet("transactions", transactions, false);
 dbSet("slots", slots, false);
 dbSet("remittances", remittances, false);
+dbSet("courses", courses, false);
 
 // ==========================================
 // 2. 視圖切換與路由 (Router)
@@ -226,7 +230,8 @@ dbSet("remittances", remittances, false);
 
 const VIEWS = [
   "landing", "auth", "register", "member", "edit-profile", "book-1on1", "book-group", 
-  "admin", "admin-points", "admin-add-member", "admin-edit-member", "buy-points", "admin-reject-remittance"
+  "admin", "admin-points", "admin-add-member", "admin-edit-member", "buy-points", "admin-reject-remittance",
+  "courses", "course-detail", "lesson-player", "admin-edit-course"
 ];
 
 function navigateTo(viewId) {
@@ -281,6 +286,9 @@ function navigateTo(viewId) {
   if (viewId === "book-1on1") render1on1Form();
   if (viewId === "book-group") renderGroupForm();
   if (viewId === "buy-points") renderBuyPointsPage();
+  if (viewId === "courses") renderCoursesPage();
+  if (viewId === "course-detail") renderCourseDetailPage();
+  if (viewId === "lesson-player") renderLessonPlayerPage();
   if (viewId === "admin") renderAdminDashboard("overview");
 }
 
@@ -290,6 +298,7 @@ function updateNavState(viewId) {
   if (viewId === "landing") document.getElementById("btnNavHome")?.classList.add("active");
   if (viewId === "member") document.getElementById("btnNavMember")?.classList.add("active");
   if (viewId === "buy-points") document.getElementById("btnNavBuyPoints")?.classList.add("active");
+  if (viewId === "courses") document.getElementById("btnNavCourses")?.classList.add("active");
   if (viewId === "admin") document.getElementById("btnNavAdmin")?.classList.add("active");
 }
 
@@ -380,6 +389,7 @@ function onUserLoginSuccess() {
   document.getElementById("btnNavMember").style.display = "block";
   const navBuyPoints = document.getElementById("btnNavBuyPoints");
   if (navBuyPoints) navBuyPoints.style.display = "block";
+  document.getElementById("btnNavCourses").style.display = "block";
   if (currentUser.role === "admin") {
     document.getElementById("btnNavAdmin").style.display = "block";
     navigateTo("admin");
@@ -402,6 +412,7 @@ function onUserLogoutSuccess() {
   document.getElementById("btnNavMember").style.display = "none";
   const navBuyPoints = document.getElementById("btnNavBuyPoints");
   if (navBuyPoints) navBuyPoints.style.display = "none";
+  document.getElementById("btnNavCourses").style.display = "none";
   document.getElementById("btnNavAdmin").style.display = "none";
   
   // Show Home button when logged out
@@ -412,7 +423,7 @@ function onUserLogoutSuccess() {
   
   const activeSection = document.querySelector(".view-section.active");
   const activeView = activeSection ? activeSection.id.replace("view-", "") : "landing";
-  const memberOnlyViews = ["member", "admin", "buy-points", "book-1on1", "book-group", "edit-profile", "admin-points", "admin-add-member", "admin-edit-member"];
+  const memberOnlyViews = ["member", "admin", "buy-points", "book-1on1", "book-group", "edit-profile", "admin-points", "admin-add-member", "admin-edit-member", "courses", "course-detail", "lesson-player", "admin-edit-course"];
   if (memberOnlyViews.includes(activeView)) {
     navigateTo("landing");
   }
@@ -1001,7 +1012,8 @@ function renderAdminDashboard(paneId) {
     "schedule": "btnAdminMenuSchedule",
     "coupons": "btnAdminMenuCoupons",
     "slots": "btnAdminMenuSlots",
-    "remittances": "btnAdminMenuRemittances"
+    "remittances": "btnAdminMenuRemittances",
+    "courses": "btnAdminMenuCourses"
   };
   document.getElementById(paneToMenuMap[paneId])?.classList.add("active");
   
@@ -1086,6 +1098,11 @@ function renderAdminDashboard(paneId) {
   // 7. Remittance management lists
   if (paneId === "remittances") {
     renderAdminRemittancesPanel();
+  }
+  
+  // 8. Courses management lists
+  if (paneId === "courses") {
+    renderAdminCoursesPanel();
   }
   
   // Refresh icons
@@ -1247,6 +1264,32 @@ window.openEditMember = function(memberId) {
     radio.checked = (radio.value === member.gender);
   });
   
+  // 動態加載課程開通授權 Checkbox
+  const coursesContainer = document.getElementById("editMemCoursesContainer");
+  if (coursesContainer) {
+    coursesContainer.innerHTML = "";
+    if (!courses || courses.length === 0) {
+      coursesContainer.innerHTML = `<div style="font-size: 12px; color: var(--mist);">尚未建立任何課程</div>`;
+    } else {
+      courses.forEach(c => {
+        const hasAccess = member.unlockedCourses && member.unlockedCourses[c.id] === true;
+        const div = document.createElement("div");
+        div.style.display = "flex";
+        div.style.alignItems = "center";
+        div.style.gap = "8px";
+        div.innerHTML = `
+          <input type="checkbox" name="editMemCourseGrant" value="${c.id}" ${hasAccess ? "checked" : ""} style="cursor: pointer; width: auto; height: auto;">
+          <label style="font-size: 13px; color: var(--paper); cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
+            ${c.title} <span style="font-size: 11px; color: var(--brass); font-weight:500;">(${c.lecturer})</span>
+          </label>
+        `;
+        const checkbox = div.querySelector('input');
+        div.querySelector('label').addEventListener('click', () => { checkbox.click(); });
+        coursesContainer.appendChild(div);
+      });
+    }
+  }
+  
   navigateTo("admin-edit-member");
 };
 
@@ -1294,15 +1337,15 @@ function renderAdminCalendar() {
     
     if (activeBookings.length > 0) {
       const badge = document.createElement("span");
-      badge.style.fontSize = "9px";
+      badge.style.fontSize = "15px";
       badge.style.marginTop = "2px";
-      badge.style.fontWeight = "600";
-      
+      badge.style.fontWeight = "700";
+      badge.style.color = "#ffffff";
+      badge.style.textShadow = "0 1px 2px rgba(0,0,0,0.4)";
+
       if (pendingCount > 0) {
-        badge.style.color = "#ff9800";
         badge.textContent = `${activeBookings.length}人 (待)`;
       } else {
-        badge.style.color = "var(--brass-soft)";
         badge.textContent = `${activeBookings.length}人`;
       }
       cell.appendChild(badge);
@@ -2839,6 +2882,14 @@ document.addEventListener("DOMContentLoaded", () => {
       users[memberIndex].password = hashedPassword;
     }
     
+    // 收集開通的課程 ID
+    const unlockedCourses = {};
+    const checkedBoxes = document.querySelectorAll('input[name="editMemCourseGrant"]:checked');
+    checkedBoxes.forEach(box => {
+      unlockedCourses[box.value] = true;
+    });
+    users[memberIndex].unlockedCourses = unlockedCourses;
+    
     dbSet("users", users);
     
     alert("會員資料已更新成功！");
@@ -3329,7 +3380,398 @@ async function runMockLineLogin() {
         console.error("LINE LIFF 初始化失敗:", err);
       });
   }
+
+  // --- E-Learning / Course System Event Listeners ---
+  document.getElementById("btnNavCourses")?.addEventListener("click", () => navigateTo("courses"));
+  document.getElementById("btnBackToCourses")?.addEventListener("click", () => navigateTo("courses"));
+  document.getElementById("btnBackToCourseDetail")?.addEventListener("click", () => navigateTo("course-detail"));
+  
+  // Admin course panel triggers
+  document.getElementById("btnAdminMenuCourses")?.addEventListener("click", () => renderAdminDashboard("courses"));
+  document.getElementById("btnAdminAddCourse")?.addEventListener("click", () => renderAdminEditCourseForm());
+  document.getElementById("btnCancelEditCourse")?.addEventListener("click", () => renderAdminDashboard("courses"));
+  document.getElementById("btnAdminAddLessonToForm")?.addEventListener("click", () => adminFormAddLessonRow());
+  
+  // Form Submit Edit Course
+  document.getElementById("formAdminEditCourse")?.addEventListener("submit", (e) => {
+    e.preventDefault();
+    adminSaveCourse();
+  });
 });
+
+
+// ==========================================
+// E-Learning / Video Course System Logic
+// ==========================================
+
+function parseYoutubeEmbedUrl(url) {
+  if (!url) return "";
+  let videoId = "";
+  
+  // Mobile short URL style: https://youtu.be/dQw4w9WgXcQ
+  if (url.indexOf("youtu.be/") !== -1) {
+    videoId = url.split("youtu.be/")[1].split(/[?#]/)[0];
+  }
+  // Standard watch style: https://www.youtube.com/watch?v=dQw4w9WgXcQ
+  else if (url.indexOf("v=") !== -1) {
+    videoId = url.split("v=")[1].split("&")[0].split(/[?#]/)[0];
+  }
+  // Embed style: https://www.youtube.com/embed/dQw4w9WgXcQ
+  else if (url.indexOf("embed/") !== -1) {
+    videoId = url.split("embed/")[1].split(/[?#]/)[0];
+  }
+  
+  if (videoId) {
+    return `https://www.youtube.com/embed/${videoId}`;
+  }
+  return url;
+}
+
+function renderCoursesPage() {
+  const container = document.getElementById("courseGridContainer");
+  if (!container) return;
+  container.innerHTML = "";
+
+  if (!courses || courses.length === 0) {
+    container.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--mist); font-size: 14px;">目前尚無任何線上影音課程。</div>`;
+    return;
+  }
+
+  courses.forEach(c => {
+    const hasAccess = (currentUser && currentUser.unlockedCourses && currentUser.unlockedCourses[c.id] === true) || (currentUser && currentUser.role === "admin");
+    const totalLessons = c.lessons ? c.lessons.length : 0;
+    
+    // 計算學習進度
+    let completedCount = 0;
+    if (c.lessons && currentUser && currentUser.completedLessons) {
+      c.lessons.forEach(l => {
+        if (currentUser.completedLessons[`${c.id}_${l.id}`]) {
+          completedCount++;
+        }
+      });
+    }
+    const percent = totalLessons > 0 ? Math.round((completedCount / totalLessons) * 100) : 0;
+
+    const card = document.createElement("div");
+    card.className = `course-card ${hasAccess ? "" : "locked"}`;
+    
+    const coverImage = c.coverUrl || "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&q=80&w=600";
+    
+    if (hasAccess) {
+      card.innerHTML = `
+        <div class="course-cover-wrap">
+          <img src="${coverImage}" class="course-cover" alt="${c.title}">
+        </div>
+        <div class="course-body">
+          <h3 class="course-title">${c.title}</h3>
+          <div class="course-lecturer">講師：${c.lecturer || "匿名"} | 共 ${totalLessons} 堂課</div>
+          <p class="course-desc">${c.description || "尚無簡介"}</p>
+          <div class="course-progress-bar-container">
+            <div class="course-progress-bar" style="width: ${percent}%;"></div>
+          </div>
+          <div class="course-progress-text">學習進度 ${completedCount}/${totalLessons} 堂 (${percent}%)</div>
+          <button class="course-card-btn">開始學習 →</button>
+        </div>
+      `;
+      card.addEventListener("click", () => {
+        activeCourse = c;
+        navigateTo("course-detail");
+      });
+    } else {
+      card.innerHTML = `
+        <div class="course-cover-wrap">
+          <img src="${coverImage}" class="course-cover" alt="${c.title}">
+          <div class="course-locked-overlay">
+            <i data-lucide="lock"></i>
+            <span class="course-locked-badge">尚未開通</span>
+          </div>
+        </div>
+        <div class="course-body">
+          <h3 class="course-title">${c.title}</h3>
+          <div class="course-lecturer">講師：${c.lecturer || "匿名"} | 共 ${totalLessons} 堂課</div>
+          <p class="course-desc">${c.description || "尚無簡介"}</p>
+          <div class="course-locked-note">
+            <i data-lucide="lock"></i> 此為付費課程，請聯絡管理員開通
+          </div>
+        </div>
+      `;
+      card.addEventListener("click", () => {
+        alert("此為付費課程，請先聯絡療癒師開通課程權限喔！🎵");
+      });
+    }
+    container.appendChild(card);
+  });
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function renderCourseDetailPage() {
+  if (!activeCourse) {
+    navigateTo("courses");
+    return;
+  }
+  
+  document.getElementById("detailCourseCover").src = activeCourse.coverUrl || "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&q=80&w=600";
+  document.getElementById("detailCourseTitle").textContent = activeCourse.title;
+  document.getElementById("detailCourseLecturer").textContent = `講師：${activeCourse.lecturer || "匿名"}`;
+  document.getElementById("detailCourseDesc").textContent = activeCourse.description || "尚無簡介。";
+
+  const container = document.getElementById("lessonGridContainer");
+  container.innerHTML = "";
+
+  const lessonsList = activeCourse.lessons || [];
+  if (lessonsList.length === 0) {
+    container.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 20px; color: var(--mist);">本課程目前尚無任何單元影片。</div>`;
+    return;
+  }
+
+  lessonsList.forEach((lesson, index) => {
+    const isCompleted = currentUser && currentUser.completedLessons && currentUser.completedLessons[`${activeCourse.id}_${lesson.id}`];
+    const card = document.createElement("div");
+    card.className = "lesson-card";
+    
+    card.innerHTML = `
+      <div class="lesson-badge">第 ${index + 1} 堂</div>
+      <h4 class="lesson-title">${lesson.title}</h4>
+      <p class="lesson-desc">${lesson.description || "尚無單元簡介。"}</p>
+      <div class="lesson-footer">
+        <div class="lesson-duration">
+          <i data-lucide="play" style="width:12px; height:12px;"></i>
+          <span>${lesson.duration || "00:00"}</span>
+        </div>
+        <span class="lesson-btn-start" style="color: ${isCompleted ? 'var(--success)' : 'var(--brass-soft)'};">
+          ${isCompleted ? '已完成 ✓' : '開始上課 →'}
+        </span>
+      </div>
+    `;
+    card.addEventListener("click", () => {
+      activeLesson = lesson;
+      navigateTo("lesson-player");
+    });
+    container.appendChild(card);
+  });
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function renderLessonPlayerPage() {
+  if (!activeCourse || !activeLesson) {
+    navigateTo("courses");
+    return;
+  }
+
+  const badgeEl = document.getElementById("playerLessonBadge");
+  const titleEl = document.getElementById("playerLessonTitle");
+  const durationEl = document.getElementById("playerLessonDuration");
+  const descEl = document.getElementById("playerLessonDesc");
+  const iframeEl = document.getElementById("lessonVideoIframe");
+
+  badgeEl.textContent = `第 ${activeLesson.id} 堂`;
+  titleEl.textContent = activeLesson.title;
+  durationEl.textContent = activeLesson.duration || "00:00";
+  descEl.textContent = activeLesson.description || "無單元說明。";
+
+  // Checkbox / button for completion state
+  const isCompleted = currentUser && currentUser.completedLessons && currentUser.completedLessons[`${activeCourse.id}_${activeLesson.id}`];
+  
+  // Clear old completion button if any
+  const oldBtn = document.getElementById("btnToggleLessonCompletion");
+  if (oldBtn) oldBtn.remove();
+  
+  const toggleBtn = document.createElement("button");
+  toggleBtn.id = "btnToggleLessonCompletion";
+  toggleBtn.className = `cta-btn ${isCompleted ? 'secondary-btn' : 'primary-btn'}`;
+  toggleBtn.style.marginTop = "20px";
+  toggleBtn.style.width = "auto";
+  toggleBtn.textContent = isCompleted ? "標記為未完成" : "✓ 標記本堂為已完成";
+  toggleBtn.addEventListener("click", async () => {
+    if (!currentUser) return;
+    if (!currentUser.completedLessons) currentUser.completedLessons = {};
+    
+    const key = `${activeCourse.id}_${activeLesson.id}`;
+    if (isCompleted) {
+      delete currentUser.completedLessons[key];
+    } else {
+      currentUser.completedLessons[key] = true;
+    }
+    
+    // Sync to Firebase
+    const pathKey = getUserPathKey(currentUser);
+    await database.ref(`users/${pathKey}/completedLessons`).set(currentUser.completedLessons || null);
+    
+    // Update local data copy
+    const idx = users.findIndex(u => u.id === currentUser.id);
+    if (idx !== -1) {
+      users[idx].completedLessons = currentUser.completedLessons;
+      dbSet("users", users, false);
+    }
+    
+    renderLessonPlayerPage();
+  });
+  descEl.parentNode.appendChild(toggleBtn);
+
+  // Set Video Src
+  iframeEl.src = parseYoutubeEmbedUrl(activeLesson.videoUrl);
+}
+
+function renderAdminCoursesPanel() {
+  const container = document.getElementById("adminCourseList");
+  if (!container) return;
+  container.innerHTML = "";
+
+  if (!courses || courses.length === 0) {
+    container.innerHTML = `<tr><td colspan="7" class="tx-empty" style="text-align:center;">目前無課程資料，請點選「新增課程」</td></tr>`;
+    return;
+  }
+
+  courses.forEach(c => {
+    const totalLessons = c.lessons ? c.lessons.length : 0;
+    const coverImage = c.coverUrl || "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&q=80&w=600";
+    
+    const row = document.createElement("tr");
+    row.innerHTML = `
+      <td><span style="font-family:'JetBrains Mono';font-size:11px;">#${c.id}</span></td>
+      <td><img src="${coverImage}" style="width: 50px; height: 30px; object-fit: cover; border-radius: 4px; border:1px solid var(--hairline);" alt="封面"></td>
+      <td><strong>${c.title}</strong></td>
+      <td>${c.lecturer || "無講師"}</td>
+      <td>${totalLessons} 堂</td>
+      <td><span style="font-size:12px; color:var(--mist); display:inline-block; max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${c.description || "無簡介"}</span></td>
+      <td>
+        <div class="action-btn-group">
+          <button class="table-action-btn success" onclick="renderAdminEditCourseForm(${c.id})">編輯</button>
+          <button class="table-action-btn danger" onclick="adminDeleteCourse(${c.id})">刪除</button>
+        </div>
+      </td>
+    `;
+    container.appendChild(row);
+  });
+}
+
+window.renderAdminEditCourseForm = function(courseId = null) {
+  const formList = document.getElementById("adminFormLessonsList");
+  formList.innerHTML = "";
+  
+  if (courseId) {
+    const courseObj = courses.find(c => c.id === courseId);
+    if (!courseObj) return;
+
+    document.getElementById("lblAdminEditCourseTitle").textContent = "編輯課程資訊";
+    document.getElementById("editCourseId").value = courseObj.id;
+    document.getElementById("txtCourseTitle").value = courseObj.title;
+    document.getElementById("txtCourseLecturer").value = courseObj.lecturer || "";
+    document.getElementById("txtCourseCoverUrl").value = courseObj.coverUrl || "";
+    document.getElementById("txtCourseDesc").value = courseObj.description || "";
+    
+    if (courseObj.lessons && courseObj.lessons.length > 0) {
+      courseObj.lessons.forEach(l => adminFormAddLessonRow(l));
+    }
+  } else {
+    document.getElementById("lblAdminEditCourseTitle").textContent = "新增課程";
+    document.getElementById("editCourseId").value = "";
+    document.getElementById("txtCourseTitle").value = "";
+    document.getElementById("txtCourseLecturer").value = "";
+    document.getElementById("txtCourseCoverUrl").value = "";
+    document.getElementById("txtCourseDesc").value = "";
+  }
+  
+  navigateTo("admin-edit-course");
+};
+
+function adminFormAddLessonRow(lesson = null) {
+  const container = document.getElementById("adminFormLessonsList");
+  if (!container) return;
+
+  const count = container.children.length + 1;
+  const div = document.createElement("div");
+  div.className = "admin-lesson-item";
+  div.innerHTML = `
+    <button type="button" class="admin-lesson-remove-btn" onclick="this.parentNode.remove()">✕ 刪除</button>
+    <div style="font-size:11px; font-weight:600; color:var(--paper); margin-bottom:8px;">單元 ${count}</div>
+    <div style="display:grid; grid-template-columns: 1fr 120px; gap:10px; margin-bottom:8px;">
+      <input type="text" class="form-input" name="formLessonTitle" placeholder="單元影片標題 *" required value="${lesson ? lesson.title : ''}">
+      <input type="text" class="form-input" name="formLessonDuration" placeholder="時長 (如 40:00) *" required value="${lesson ? lesson.duration : ''}">
+    </div>
+    <input type="url" class="form-input" name="formLessonVideoUrl" placeholder="YouTube 影片連結 *" required style="margin-bottom:8px;" value="${lesson ? lesson.videoUrl : ''}">
+    <textarea class="form-input textarea-input" name="formLessonDesc" rows="2" placeholder="單元簡介... (選填)">${lesson ? (lesson.description || '') : ''}</textarea>
+  `;
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+}
+
+async function adminSaveCourse() {
+  const courseIdInput = document.getElementById("editCourseId").value;
+  const title = document.getElementById("txtCourseTitle").value.trim();
+  const lecturer = document.getElementById("txtCourseLecturer").value.trim();
+  const coverUrl = document.getElementById("txtCourseCoverUrl").value.trim();
+  const description = document.getElementById("txtCourseDesc").value.trim();
+
+  // Validate & build lessons list
+  const lessonItems = document.querySelectorAll("#adminFormLessonsList .admin-lesson-item");
+  const lessons = [];
+  
+  for (let i = 0; i < lessonItems.length; i++) {
+    const item = lessonItems[i];
+    const lTitle = item.querySelector('input[name="formLessonTitle"]').value.trim();
+    const lDuration = item.querySelector('input[name="formLessonDuration"]').value.trim();
+    const lVideoUrl = item.querySelector('input[name="formLessonVideoUrl"]').value.trim();
+    const lDesc = item.querySelector('textarea[name="formLessonDesc"]').value.trim();
+    
+    if (!lTitle || !lDuration || !lVideoUrl) {
+      alert("請完整填寫所有單元的標題、時長和影片網址！");
+      return;
+    }
+    
+    lessons.push({
+      id: i + 1,
+      title: lTitle,
+      duration: lDuration,
+      videoUrl: parseYoutubeEmbedUrl(lVideoUrl),
+      description: lDesc
+    });
+  }
+
+  let courseId = courseIdInput ? parseInt(courseIdInput) : null;
+  const isAdding = !courseId;
+  
+  if (isAdding) {
+    courseId = courses.length > 0 ? Math.max(...courses.map(c => c.id)) + 1 : 1001;
+  }
+
+  const courseObj = {
+    id: courseId,
+    title: title,
+    lecturer: lecturer,
+    coverUrl: coverUrl || "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&q=80&w=600",
+    description: description,
+    lessons: lessons
+  };
+
+  if (isAdding) {
+    courses.push(courseObj);
+  } else {
+    const idx = courses.findIndex(c => c.id === courseId);
+    if (idx !== -1) {
+      courses[idx] = courseObj;
+    }
+  }
+
+  dbSet("courses", courses);
+  alert("課程儲存成功！🎉");
+  renderAdminDashboard("courses");
+}
+
+window.adminDeleteCourse = function(courseId) {
+  const courseObj = courses.find(c => c.id === courseId);
+  if (!courseObj) return;
+
+  if (confirm(`⚠️ 確定要永久刪除課程「${courseObj.title}」嗎？\n刪除後將無法恢復此課程及其單元影片！`)) {
+    const idx = courses.findIndex(c => c.id === courseId);
+    if (idx !== -1) {
+      courses.splice(idx, 1);
+      dbSet("courses", courses);
+      alert("課程已成功刪除！");
+      renderAdminDashboard("courses");
+    }
+  }
+};
 
 
 // 從雲端資料庫 (Firebase) 監聽最新狀態並即時同步 (智慧型角色分權隔離與全域防重聽)
@@ -3368,6 +3810,15 @@ function startRealtimeSync() {
     triggerViewRender();
   });
   activeListeners.push(groupSessionsRef);
+  
+  const coursesRef = database.ref("courses");
+  coursesRef.on("value", (snapshot) => {
+    const val = snapshot.val();
+    courses = val ? (Array.isArray(val) ? val.filter(Boolean) : Object.values(val)).sort((a,b) => a.id - b.id) : [];
+    dbSet("courses", courses, false);
+    triggerViewRender();
+  });
+  activeListeners.push(coursesRef);
   
   // 1.1 監聽 Google Client ID 設定
   const googleClientIdRef = database.ref("settings/googleClientId");
