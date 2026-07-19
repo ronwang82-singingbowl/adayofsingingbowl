@@ -3392,7 +3392,10 @@ async function runMockLineLogin() {
   // Admin course panel triggers
   document.getElementById("btnAdminMenuCourses")?.addEventListener("click", () => renderAdminDashboard("courses"));
   document.getElementById("btnAdminAddCourse")?.addEventListener("click", () => renderAdminEditCourseForm());
-  document.getElementById("btnCancelEditCourse")?.addEventListener("click", () => renderAdminDashboard("courses"));
+  document.getElementById("btnCancelEditCourse")?.addEventListener("click", () => {
+    navigateTo("admin");
+    renderAdminDashboard("courses");
+  });
   document.getElementById("btnAdminAddLessonToForm")?.addEventListener("click", () => adminFormAddLessonRow());
   
   // Form Submit Edit Course
@@ -3783,6 +3786,7 @@ async function adminSaveCourse() {
 
   dbSet("courses", courses);
   alert("課程儲存成功！🎉");
+  navigateTo("admin");
   renderAdminDashboard("courses");
 }
 
