@@ -2069,12 +2069,13 @@ button {
     display: none !important;
   }
   .nav-links {
-    gap: clamp(4px, 1.5vw, 10px) !important;
-    flex-wrap: nowrap !important;
+    gap: clamp(3px, 1.2vw, 8px) 4px !important;
+    flex-wrap: wrap !important;
     justify-content: flex-end !important;
     align-items: center !important;
-    flex: 1 !important;
+    flex: 1 1 auto !important;
     min-width: 0 !important;
+    row-gap: 2px !important;
   }
   .nav-item {
     font-size: clamp(11px, 3vw, 14px) !important;
