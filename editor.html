@@ -212,10 +212,48 @@ input.f:focus, textarea.f:focus{ outline:2px solid var(--ui-accent-soft); border
 </head>
 <body>
 
-<div class="app">
+<div id="editorGateLock" style="position:fixed; inset:0; background:#F5F3EE; z-index:99999; display:flex; align-items:center; justify-content:center; font-family:'Noto Sans TC',sans-serif; color:#8A8478; text-align:center; padding:20px;">
+  <div>驗證中...</div>
+</div>
+
+<div class="app" id="mainAppRoot" style="display:none;">
   <div class="panel" id="panel"></div>
   <div class="preview-pane"><div class="stage" id="stage"></div></div>
 </div>
+
+<script>
+(function editorAccessGate(){
+  // 這個工具能直接發布內容到正式網站，加一道密碼門檻避免被公開網址誤觸或亂試。
+  const STORED_HASH = "7abcbcc0236eb18def7ee9c357f08b291f1db739ea526a956eb308df581ead40";
+  async function sha256Hex(str){
+    const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(str));
+    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, "0")).join("");
+  }
+  async function run(){
+    const lockEl = document.getElementById("editorGateLock");
+    const appEl = document.getElementById("mainAppRoot");
+    if (sessionStorage.getItem("bori_editor_ok") === "1") {
+      lockEl.remove();
+      appEl.style.display = "";
+      return;
+    }
+    for (let i = 0; i < 3; i++) {
+      const pw = prompt("此頁面為缽日網站編輯器，請輸入密碼：");
+      if (pw === null) break;
+      const hash = await sha256Hex(pw);
+      if (hash === STORED_HASH) {
+        sessionStorage.setItem("bori_editor_ok", "1");
+        lockEl.remove();
+        appEl.style.display = "";
+        return;
+      }
+      alert("密碼不正確。");
+    }
+    lockEl.innerHTML = '<div>🔒 驗證失敗，請重新整理頁面再試一次。</div>';
+  }
+  run();
+})();
+</script>
 
 <script>
 /* ================= STATE ================= */

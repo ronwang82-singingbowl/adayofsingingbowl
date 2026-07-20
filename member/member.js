@@ -189,6 +189,15 @@ const database = firebase.database();
 const auth = firebase.auth();
 let pushTimeout = null;
 
+// 統一的雲端寫入失敗處理：一律記錄到 console 方便排查；管理員登入時另外跳警示視窗
+// （會員端不跳窗是為了避免暫時性網路問題嚇到一般使用者，但錯誤都會被記下來）
+function handleDbWriteError(err, context) {
+  console.error(`[雲端資料寫入失敗] ${context || "未指定操作"}:`, err);
+  if (currentUser && currentUser.role === "admin") {
+    alert(`⚠️ 資料庫寫入失敗（${context || "未指定操作"}）：${err && err.message ? err.message : err}\n\n請確認 Firebase 安全規則設定正確，或稍後再試一次。`);
+  }
+}
+
 function dbSet(key, data, syncToCloud = true) {
   localStorage.setItem(`singbowl_${key}`, JSON.stringify(data));
   if (syncToCloud) {
@@ -3601,7 +3610,7 @@ function renderLessonPlayerPage() {
     
     // Sync to Firebase
     const pathKey = getUserPathKey(currentUser);
-    await database.ref(`users/${pathKey}/completedLessons`).set(currentUser.completedLessons || null);
+    await database.ref(`users/${pathKey}/completedLessons`).set(currentUser.completedLessons || null).catch(err => handleDbWriteError(err, "completedLessons"));
     
     // Update local data copy
     const idx = users.findIndex(u => u.id === currentUser.id);
@@ -4019,7 +4028,7 @@ function pushNode(key, data) {
         if (item) {
           const pathKey = getUserPathKey(item);
           if (isAdmin || item.id === currentUserId) {
-            database.ref(`users/${pathKey}`).set(item);
+            database.ref(`users/${pathKey}`).set(item).catch(err => handleDbWriteError(err, "users"));
           }
         }
       });
@@ -4043,38 +4052,38 @@ function pushNode(key, data) {
   // 管理員：直接寫入其他節點的全量 node
   if (isAdmin) {
     if (["bookings", "vouchers", "transactions", "remittances", "groupSessions", "slots"].includes(key) && Array.isArray(data)) {
-      database.ref(key).set(arrayToMap(data));
+      database.ref(key).set(arrayToMap(data)).catch(err => handleDbWriteError(err, key));
     } else {
-      database.ref(key).set(data);
+      database.ref(key).set(data).catch(err => handleDbWriteError(err, key));
     }
     return;
   }
-  
+
   // 一般會員：採用增量寫入 (個別 ID 的段點寫入)，保護其他使用者記錄不被複寫
   if (key === "bookings") {
     data.forEach(item => {
       if (item && item.userId === currentUserId) {
-        database.ref(`bookings/${item.id}`).set(item);
+        database.ref(`bookings/${item.id}`).set(item).catch(err => handleDbWriteError(err, "bookings"));
       }
     });
   } else if (key === "remittances") {
     data.forEach(item => {
       if (item && item.userId === currentUserId) {
-        database.ref(`remittances/${item.id}`).set(item);
+        database.ref(`remittances/${item.id}`).set(item).catch(err => handleDbWriteError(err, "remittances"));
       }
     });
   } else if (key === "transactions") {
     data.forEach(item => {
       if (item && item.userId === currentUserId) {
-        database.ref(`transactions/${item.id}`).set(item);
+        database.ref(`transactions/${item.id}`).set(item).catch(err => handleDbWriteError(err, "transactions"));
       }
     });
   } else {
     // slots, groupSessions, vouchers 等公共節點 (唯讀)
     if (["bookings", "vouchers", "transactions", "remittances", "groupSessions", "slots"].includes(key) && Array.isArray(data)) {
-      database.ref(key).set(arrayToMap(data));
+      database.ref(key).set(arrayToMap(data)).catch(err => handleDbWriteError(err, key));
     } else {
-      database.ref(key).set(data);
+      database.ref(key).set(data).catch(err => handleDbWriteError(err, key));
     }
   }
 }
