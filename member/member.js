@@ -1413,7 +1413,7 @@ function showAdminCalendarDayDetail(dateStr) {
   title.textContent = `📅 ${dateStr} 預約詳情`;
   list.innerHTML = "";
   
-  const dayBookings = bookings.filter(b => b.date === dateStr);
+  const dayBookings = bookings.filter(b => b.date === dateStr && b.status !== "已取消" && b.status !== "已拒絕");
   
   if (dayBookings.length === 0) {
     list.innerHTML = `<div style="font-size: 12px; color: var(--mist); text-align: center; padding: 10px 0;">當日無任何預約紀錄</div>`;
@@ -2298,7 +2298,20 @@ document.addEventListener("DOMContentLoaded", () => {
       alert("該時段已不可選，請選擇其他時段！");
       return;
     }
-    
+
+    // 重複預約提醒：同一位會員若已有同一天同一時段的有效預約（非已取消/已拒絕），先跳出確認提示
+    const existingDuplicate = bookings.find(b =>
+      b.userId === currentUser.id &&
+      b.date === slot.date &&
+      b.time === slot.time &&
+      b.status !== "已取消" &&
+      b.status !== "已拒絕"
+    );
+    if (existingDuplicate) {
+      const proceedAnyway = confirm(`您已經預約過此時段（${slot.date} ${slot.time}，狀態：${existingDuplicate.status}），請確認是否要重複預約。\n\n如有疑問，請洽詢官方 LINE 帳號。\n\n點選「確定」將繼續送出這筆新的預約；點選「取消」則不會送出。`);
+      if (!proceedAnyway) return;
+    }
+
     // 1. Create booking entry
     const newBookingId = getNextId(bookings, 1001);
     const timestamp = getNowDateTimeString();
