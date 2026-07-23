@@ -1,0 +1,6 @@
+
+User-agent: *
+Allow: /
+ 
+Sitemap: https://ronwang82-singingbowl.github.io/adayofsingingbowl/sitemap.xml
+ 
