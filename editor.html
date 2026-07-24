@@ -201,7 +201,7 @@ input.f:focus, textarea.f:focus{ outline:2px solid var(--ui-accent-soft); border
 .stage .line-card{ margin:40px auto 0; max-width:360px; background:var(--ink-3); border:1px solid var(--hairline); border-radius:18px; padding:32px 26px 28px; display: flex; flex-direction: column; align-items: center; text-align: center; }
 .stage .line-name{ font-family:"Noto Serif TC",serif; font-size:16px; color:var(--brass-soft); line-height:1.6; }
 .stage .line-id{ font-family:"JetBrains Mono",monospace; font-size:12.5px; color:var(--mist); margin-top:6px; }
-.stage .qr-wrap{ margin:22px auto 0; width:156px; height:156px; background:var(--paper); border-radius:12px; padding:10px; display:flex; align-items:center; justify-content:center; }
+.stage .qr-wrap{ margin:22px auto 0; width:203px; height:203px; background:var(--paper); border-radius:12px; padding:10px; display:flex; align-items:center; justify-content:center; }
 .stage .qr-wrap img{ width:100%; height:100%; object-fit:contain; }
 .stage .qr-caption{ font-family:"JetBrains Mono",monospace; font-size:10.5px; color:var(--mist); margin-top:12px; }
 .stage footer{ text-align:center; padding:34px 28px 44px; color:var(--mist); font-size:12px; }
@@ -782,7 +782,6 @@ function renderPreview(){
       <p class="body-text" style="margin-left:auto;margin-right:auto;">${nl2br(s.final.sub)}</p>
       <div class="line-card">
         <div class="line-name">${esc(s.final.lineName)}</div>
-        <div class="line-id">${esc(s.final.lineId)}</div>
         <div class="qr-wrap">${s.final.qrSrc ? `<img src="${esc(s.final.qrSrc)}" alt="LINE QR code">` : ""}</div>
         <div class="qr-caption">掃描加入，或點擊下方按鈕</div>
         <a class="cta-btn" style="margin-top:20px;width:100%;justify-content:center;" href="${esc(s.final.lineUrl)}" target="_blank" rel="noopener">${esc(s.final.ctaText)}</a>

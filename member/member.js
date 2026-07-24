@@ -666,6 +666,11 @@ let calCurrentYear = new Date().getFullYear();
 let calCurrentMonth = new Date().getMonth();
 let calSelectedDateStr = null;
 
+// 團體頌缽預約日曆狀態 (與 1對1 日曆機制相同，但只挑選 type === "group" 的開放時段)
+let groupCalCurrentYear = new Date().getFullYear();
+let groupCalCurrentMonth = new Date().getMonth();
+let groupCalSelectedDateStr = null;
+
 // Render 1on1 booking variables
 function render1on1Form() {
   if (!currentUser) return;
@@ -820,9 +825,7 @@ function update1on1Cost() {
   }
 }
 
-// Render Group Session booking cards
-let selectedGroupId = null;
-
+// Render Group Session booking (團體頌缽 - 與 1對1 相同的日曆+時段機制，僅類型不同且顏色區隔)
 function renderGroupForm() {
   if (!currentUser) return;
   if (currentUser.points === undefined) currentUser.points = 0;
@@ -830,81 +833,153 @@ function renderGroupForm() {
   const totalGroup = currentUser.points + currentUser.giftedGroupPoints;
   let pointsDisplay = totalGroup + " 次";
   if (currentUser.giftedGroupPoints > 0) {
-    pointsDisplay += ` (通用 ${currentUser.points} / 贈送 ${currentUser.giftedGroupPoints})`;
+    pointsDisplay += ` (通用 ${currentUser.points} / 贈送-團體 ${currentUser.giftedGroupPoints})`;
   }
   document.getElementById("lblBookGroupUserPoints").textContent = pointsDisplay;
-  
-  const container = document.getElementById("groupSessionsContainer");
-  container.innerHTML = "";
-  
-  groupSessions.forEach(session => {
-    const card = document.createElement("div");
-    card.className = `group-session-item ${selectedGroupId === session.id ? "selected" : ""}`;
-    const isFull = session.currentCapacity >= session.maxCapacity;
-    
-    let capClass = "";
-    let capText = `👥 已報名 ${session.currentCapacity} / ${session.maxCapacity} 人`;
-    if (isFull) {
-      capClass = "cap-full";
-      capText = "👥 已額滿";
-    } else if (session.maxCapacity - session.currentCapacity <= 3) {
-      capClass = "cap-warning";
-      capText = `👥 緊張 ${session.currentCapacity} / ${session.maxCapacity} 人`;
-    }
-    
-    card.innerHTML = `
-      <div class="group-item-info">
-        <h4>${session.title}</h4>
-        <span class="group-item-time">${session.time}</span>
-      </div>
-      <div class="group-item-meta">
-        <span class="group-item-cap ${capClass}">${capText}</span>
-        <span class="group-item-points">${session.pointCost} 次</span>
-      </div>
-    `;
-    
-    if (!isFull) {
-      card.addEventListener("click", () => {
-        selectedGroupId = session.id;
-        document.querySelectorAll(".group-session-item").forEach(item => item.classList.remove("selected"));
-        card.classList.add("selected");
-        updateGroupCost(session);
-      });
+
+  groupCalCurrentYear = new Date().getFullYear();
+  groupCalCurrentMonth = new Date().getMonth();
+  groupCalSelectedDateStr = null;
+
+  document.getElementById("selectedGroupSlotId").value = "";
+  document.getElementById("groupBookingSlotsGrid").innerHTML = "";
+  document.getElementById("lblSelectedGroupDaySlots").textContent = "團體場次選擇 (請先點選上方日期)";
+
+  renderGroupBookingCalendar();
+  updateGroupCost();
+}
+
+function renderGroupBookingCalendar() {
+  const lblMonthYear = document.getElementById("lblGroupCalendarMonthYear");
+  const daysGrid = document.getElementById("groupCalendarDaysGrid");
+  if (!lblMonthYear || !daysGrid) return;
+
+  lblMonthYear.textContent = `${groupCalCurrentYear} 年 ${groupCalCurrentMonth + 1} 月`;
+  daysGrid.innerHTML = "";
+
+  const firstDay = new Date(groupCalCurrentYear, groupCalCurrentMonth, 1);
+  const startDayOfWeek = firstDay.getDay();
+  const totalDays = new Date(groupCalCurrentYear, groupCalCurrentMonth + 1, 0).getDate();
+
+  for (let i = 0; i < startDayOfWeek; i++) {
+    const emptyCell = document.createElement("div");
+    emptyCell.className = "calendar-day-cell empty-cell";
+    daysGrid.appendChild(emptyCell);
+  }
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  for (let d = 1; d <= totalDays; d++) {
+    const cellDate = new Date(groupCalCurrentYear, groupCalCurrentMonth, d);
+    const dateStr = `${groupCalCurrentYear}-${String(groupCalCurrentMonth + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+
+    const cell = document.createElement("div");
+    cell.className = "calendar-day-cell";
+    cell.textContent = d;
+
+    if (cellDate < today) {
+      cell.classList.add("past-cell");
     } else {
-      card.style.opacity = "0.5";
-      card.style.cursor = "not-allowed";
+      const hasOpenGroupSlots = slots.some(s => s.date === dateStr && s.type === "group" && s.status === "open" && (s.currentCapacity || 0) < s.maxCapacity);
+      if (hasOpenGroupSlots) {
+        const dot = document.createElement("span");
+        dot.className = "dot-indicator dot-group";
+        cell.appendChild(dot);
+      }
+
+      if (groupCalSelectedDateStr === dateStr) {
+        cell.classList.add("active-selected");
+      }
+
+      cell.addEventListener("click", () => {
+        document.querySelectorAll("#groupCalendarDaysGrid .calendar-day-cell").forEach(c => c.classList.remove("active-selected"));
+        cell.classList.add("active-selected");
+        groupCalSelectedDateStr = dateStr;
+        renderGroupTimeSlots(dateStr);
+      });
     }
-    
-    container.appendChild(card);
-  });
-  
-  // Default select first available if none selected
-  const available = groupSessions.find(s => s.currentCapacity < s.maxCapacity);
-  if (available && selectedGroupId === null) {
-    selectedGroupId = available.id;
-    // Trigger render state
-    setTimeout(() => {
-      const cards = container.querySelectorAll(".group-session-item");
-      const idx = groupSessions.findIndex(s => s.id === available.id);
-      if (cards[idx]) cards[idx].click();
-    }, 50);
+    daysGrid.appendChild(cell);
   }
 }
 
-function updateGroupCost(session) {
-  document.getElementById("lblBookGroupCost").textContent = session.pointCost;
-  
+function renderGroupTimeSlots(dateStr) {
+  const lblSelected = document.getElementById("lblSelectedGroupDaySlots");
+  const grid = document.getElementById("groupBookingSlotsGrid");
+  const hiddenInput = document.getElementById("selectedGroupSlotId");
+  if (!lblSelected || !grid || !hiddenInput) return;
+
+  lblSelected.textContent = `選擇 ${dateStr} 的團體頌缽場次`;
+  grid.innerHTML = "";
+  hiddenInput.value = "";
+
+  const daySlots = slots.filter(s => s.date === dateStr && s.type === "group").sort((a, b) => a.time.localeCompare(b.time));
+
+  if (daySlots.length === 0) {
+    grid.innerHTML = `<div style="grid-column: span 7; color: var(--mist); font-size: 13px; text-align: center; padding: 10px 0;">當日無開放的團體頌缽場次</div>`;
+    updateGroupCost();
+    return;
+  }
+
+  const bookableSlots = daySlots.filter(s => s.status === "open");
+  if (bookableSlots.length === 0) {
+    grid.innerHTML = `<div style="grid-column: span 7; color: var(--mist); font-size: 13px; text-align: center; padding: 10px 0;">當日場次已額滿或暫不開放</div>`;
+    updateGroupCost();
+    return;
+  }
+
+  bookableSlots.forEach(s => {
+    const isFull = (s.currentCapacity || 0) >= s.maxCapacity;
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = `slot-btn group-type${isFull ? " disabled-slot" : ""}`;
+    btn.innerHTML = `${s.time}<span class="slot-cap-text">${s.title || "團體頌缽"} · ${s.currentCapacity || 0}/${s.maxCapacity}</span>`;
+
+    if (!isFull) {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll("#groupBookingSlotsGrid .slot-btn").forEach(b => b.classList.remove("selected"));
+        btn.classList.add("selected");
+        hiddenInput.value = s.id;
+        updateGroupCost();
+      });
+    }
+    grid.appendChild(btn);
+  });
+
+  updateGroupCost();
+}
+
+function updateGroupCost() {
+  const cost = 1;
+  const costLbl = document.getElementById("lblBookGroupCost");
+  if (costLbl) costLbl.textContent = cost;
+
   const warning = document.getElementById("lblBookGroupWarning");
   const submitBtn = document.getElementById("btnSubmitGroup");
-  
-  if ((currentUser.groupPoints || 0) < session.pointCost) {
+  const selectedSlotId = document.getElementById("selectedGroupSlotId").value;
+
+  if (currentUser.points === undefined) currentUser.points = 0;
+  if (currentUser.giftedGroupPoints === undefined) currentUser.giftedGroupPoints = 0;
+  const hasPoints = (currentUser.points + currentUser.giftedGroupPoints) >= cost;
+
+  if (!hasPoints) {
     warning.style.display = "flex";
+    warning.innerHTML = `<i data-lucide="alert-triangle"></i> ⚠️ 次數不足，請先<a href="https://line.me/R/ti/p/%40197nfdme" target="_blank" style="color:var(--brass-soft);text-decoration:underline;">聯絡療癒師加購次數</a>。`;
+    submitBtn.disabled = true;
+    submitBtn.classList.add("disabled");
+  } else if (!selectedSlotId) {
+    warning.style.display = "flex";
+    warning.innerHTML = `<i data-lucide="info"></i> 💡 請先選擇日期與團體場次。`;
     submitBtn.disabled = true;
     submitBtn.classList.add("disabled");
   } else {
     warning.style.display = "none";
     submitBtn.disabled = false;
     submitBtn.classList.remove("disabled");
+  }
+
+  if (typeof lucide !== 'undefined') {
+    lucide.createIcons();
   }
 }
 
@@ -1008,6 +1083,7 @@ let activeAdminPane = "overview";
 let adminSlotCurrentYear = new Date().getFullYear();
 let adminSlotCurrentMonth = new Date().getMonth();
 let adminSlotSelectedDateStr = null;
+let adminSelectedSlotType = "1on1"; // 目前在「開放時段」表單中選擇的類型：1on1 或 group
 
 function renderAdminDashboard(paneId) {
   activeAdminPane = paneId;
@@ -1550,9 +1626,9 @@ window.adminApproveBooking = function(bookingId) {
   
   booking.status = "已確認";
   dbSet("bookings", bookings);
-  
-  // Update slot status to booked
-  if (booking.slotId) {
+
+  // Update slot status to booked (1對1 為單一座位；團體頌缽共用同一時段，名額由報名時已即時扣除，這裡不重複佔用)
+  if (booking.slotId && booking.type === "1on1") {
     const slot = slots.find(s => s.id === booking.slotId);
     if (slot) {
       slot.status = "booked";
@@ -1582,8 +1658,14 @@ window.adminRejectBooking = function(bookingId) {
     if (booking.slotId) {
       const slot = slots.find(s => s.id === booking.slotId);
       if (slot) {
-        slot.status = "open";
-        slot.bookingId = null;
+        if (booking.type === "group") {
+          // 團體頌缽時段是多人共用，取消/拒絕一筆報名只釋放一個名額，不影響其他已報名的會員
+          slot.currentCapacity = Math.max(0, (slot.currentCapacity || 0) - 1);
+          if (slot.status === "full") slot.status = "open";
+        } else {
+          slot.status = "open";
+          slot.bookingId = null;
+        }
         dbSet("slots", slots);
       }
     }
@@ -1774,9 +1856,23 @@ function renderAdminSlotsCalendar() {
     cell.className = "calendar-day-cell";
     cell.textContent = d;
     
-    // Check if slots exist on this day
-    const hasSlots = slots.some(s => s.date === dateStr);
-    if (hasSlots) {
+    // Check if slots exist on this day, split by type so 1對1 與 團體頌缽 各自有專屬顏色圓點
+    const daySlots = slots.filter(s => s.date === dateStr);
+    const has1on1 = daySlots.some(s => (s.type || "1on1") === "1on1");
+    const hasGroup = daySlots.some(s => s.type === "group");
+
+    if (has1on1 && hasGroup) {
+      const dot1 = document.createElement("span");
+      dot1.className = "dot-indicator dot-offset-left";
+      cell.appendChild(dot1);
+      const dot2 = document.createElement("span");
+      dot2.className = "dot-indicator dot-group dot-offset-right";
+      cell.appendChild(dot2);
+    } else if (hasGroup) {
+      const dot = document.createElement("span");
+      dot.className = "dot-indicator dot-group";
+      cell.appendChild(dot);
+    } else if (has1on1) {
       const dot = document.createElement("span");
       dot.className = "dot-indicator";
       cell.appendChild(dot);
@@ -1816,19 +1912,27 @@ function renderAdminDateSlots(dateStr) {
   gridContainer.innerHTML = "";
   
   const daySlots = slots.filter(s => s.date === dateStr).sort((a, b) => a.time.localeCompare(b.time));
-  
+
   if (daySlots.length === 0) {
-    gridContainer.innerHTML = `<tr><td colspan="3" class="text-center text-muted" style="padding:15px 0;">本日尚未開放任何時段。</td></tr>`;
+    gridContainer.innerHTML = `<tr><td colspan="4" class="text-center text-muted" style="padding:15px 0;">本日尚未開放任何時段。</td></tr>`;
     return;
   }
-  
+
   daySlots.forEach(s => {
     const row = document.createElement("tr");
-    
+    const isGroup = s.type === "group";
+
+    const typeBadge = isGroup
+      ? `<span class="slot-type-badge type-group">🧑‍🤝‍🧑 ${s.title || "團體頌缽"}</span>`
+      : `<span class="slot-type-badge type-1on1">🧘 1對1</span>`;
+
     let statusText = "";
     let statusClass = "";
-    if (s.status === "open") {
-      statusText = "開放中";
+    if (isGroup && (s.status === "open" || s.status === "full") && (s.currentCapacity || 0) >= (s.maxCapacity || 0)) {
+      statusText = `已額滿 (${s.currentCapacity}/${s.maxCapacity})`;
+      statusClass = "status-full";
+    } else if (s.status === "open") {
+      statusText = isGroup ? `開放中 (${s.currentCapacity || 0}/${s.maxCapacity})` : "開放中";
       statusClass = "status-confirmed";
     } else if (s.status === "pending") {
       statusText = "待對帳/確認";
@@ -1837,28 +1941,32 @@ function renderAdminDateSlots(dateStr) {
       statusText = "已預約";
       statusClass = "status-completed";
     } else if (s.status === "closed") {
-      statusText = "手動關閉";
+      statusText = isGroup ? `手動關閉 (${s.currentCapacity || 0}/${s.maxCapacity})` : "手動關閉";
       statusClass = "status-cancelled";
     }
-    
+
+    const isFull = isGroup && (s.currentCapacity || 0) >= (s.maxCapacity || 0);
+
     let actionBtn = "";
-    if (s.status === "open") {
+    if (s.status === "open" && !isFull) {
       actionBtn = `<button type="button" class="table-action-btn danger" onclick="toggleSlotStatus(${s.id}, 'closed')">關閉</button>`;
     } else if (s.status === "closed") {
       actionBtn = `<button type="button" class="table-action-btn success" onclick="toggleSlotStatus(${s.id}, 'open')">開啟</button>`;
     } else if (s.status === "pending") {
       actionBtn = `<span style="font-size:12px;color:var(--mist)">待預約審核</span>`;
-    } else if (s.status === "booked") {
-      actionBtn = `<span style="font-size:12px;color:var(--mist)">已確認預約</span>`;
+    } else if (s.status === "booked" || isFull) {
+      actionBtn = `<span style="font-size:12px;color:var(--mist)">${isGroup ? "名額已滿" : "已確認預約"}</span>`;
     }
-    
+
     let deleteBtn = "";
-    if (s.status === "open" || s.status === "closed") {
+    const canDelete = isGroup ? ((s.currentCapacity || 0) === 0) : (s.status === "open" || s.status === "closed");
+    if (canDelete) {
       deleteBtn = `<button type="button" class="table-action-btn secondary" style="margin-left: 8px;" onclick="deleteSlot(${s.id})">刪除</button>`;
     }
-    
+
     row.innerHTML = `
       <td><span style="font-family:'JetBrains Mono';font-size:14px;font-weight:bold;">${s.time}</span></td>
+      <td>${typeBadge}</td>
       <td><span class="status-badge ${statusClass}">${statusText}</span></td>
       <td>
         <div class="action-btn-group" style="justify-content: flex-start;">
@@ -1871,30 +1979,41 @@ function renderAdminDateSlots(dateStr) {
   });
 }
 
-function addAdminSlot(dateVal, timeVal) {
+function addAdminSlot(dateVal, timeVal, opts = {}) {
   if (!dateVal || !timeVal) {
     alert("日期與時間無效！");
     return;
   }
-  
-  const duplicate = slots.find(s => s.date === dateVal && s.time === timeVal);
+
+  const slotType = opts.type === "group" ? "group" : "1on1";
+
+  // 同一天同一時間、同一種類型的時段才視為重複 (1對1 與 團體頌缽 可以並存於同一時間)
+  const duplicate = slots.find(s => s.date === dateVal && s.time === timeVal && (s.type || "1on1") === slotType);
   if (duplicate) {
     alert("此日期與時段已在列表中！");
     return;
   }
-  
+
   const nextSlotId = getNextId(slots, 1);
   const newSlot = {
     id: nextSlotId,
     date: dateVal,
     time: timeVal,
     status: "open",
-    bookingId: null
+    bookingId: null,
+    type: slotType
   };
-  
+
+  if (slotType === "group") {
+    newSlot.title = (opts.title || "").trim() || "團體頌缽";
+    newSlot.maxCapacity = Math.max(1, parseInt(opts.maxCapacity, 10) || 10);
+    newSlot.currentCapacity = 0;
+    newSlot.pointCost = 1;
+  }
+
   slots.push(newSlot);
   dbSet("slots", slots);
-  
+
   renderAdminSlotsPanel();
 }
 
@@ -2105,6 +2224,24 @@ document.addEventListener("DOMContentLoaded", () => {
       calCurrentYear++;
     }
     renderBookingCalendar();
+  });
+
+  // 團體頌缽預約日曆的月份切換
+  document.getElementById("btnGroupPrevMonth")?.addEventListener("click", () => {
+    groupCalCurrentMonth--;
+    if (groupCalCurrentMonth < 0) {
+      groupCalCurrentMonth = 11;
+      groupCalCurrentYear--;
+    }
+    renderGroupBookingCalendar();
+  });
+  document.getElementById("btnGroupNextMonth")?.addEventListener("click", () => {
+    groupCalCurrentMonth++;
+    if (groupCalCurrentMonth > 11) {
+      groupCalCurrentMonth = 0;
+      groupCalCurrentYear++;
+    }
+    renderGroupBookingCalendar();
   });
 
   document.getElementById("navLogo").addEventListener("click", (e) => {
@@ -2378,98 +2515,114 @@ document.addEventListener("DOMContentLoaded", () => {
     navigateTo("member");
   });
 
-  // Submit: Group booking
+  // Submit: Group booking (團體頌缽 - 使用與 1對1 相同的 slots 開放時段機制)
   document.getElementById("btnCancelGroup").addEventListener("click", () => navigateTo("member"));
   document.getElementById("formBookGroup").addEventListener("submit", (e) => {
     e.preventDefault();
-    
-    if (!selectedGroupId) {
-      alert("請先選擇要報名的課程！");
+
+    const slotId = parseInt(document.getElementById("selectedGroupSlotId").value);
+    if (!slotId) {
+      alert("請先選擇日期與團體場次！");
       return;
     }
-    
-    const session = groupSessions.find(s => s.id === selectedGroupId);
-    if (!session) return;
-    
+
+    const slot = slots.find(s => s.id === slotId);
+    if (!slot || slot.type !== "group" || slot.status !== "open") {
+      alert("該場次已不可選，請選擇其他場次！");
+      return;
+    }
+
+    const cost = slot.pointCost || 1;
+
     // Safety check for capacity
-    if (session.currentCapacity >= session.maxCapacity) {
-      alert("該課程已額滿，請選擇其他班次！");
+    if ((slot.currentCapacity || 0) >= slot.maxCapacity) {
+      alert("該場次已額滿，請選擇其他場次！");
       return;
     }
-    
-    if ((currentUser.groupPoints || 0) < session.pointCost) {
+
+    if (currentUser.points === undefined) currentUser.points = 0;
+    if (currentUser.giftedGroupPoints === undefined) currentUser.giftedGroupPoints = 0;
+    if ((currentUser.points + currentUser.giftedGroupPoints) < cost) {
       alert("可約次數不足，請加購次數後再進行報名。");
       return;
     }
-    
-    // Create group booking
+
+    // 重複報名提醒：同一位會員若已報名過同一場次（非已取消/已拒絕），先跳出確認提示
+    const existingDuplicate = bookings.find(b =>
+      b.userId === currentUser.id &&
+      b.slotId === slot.id &&
+      b.type === "group" &&
+      b.status !== "已取消" &&
+      b.status !== "已拒絕"
+    );
+    if (existingDuplicate) {
+      const proceedAnyway = confirm(`您已經報名過此場次（${slot.date} ${slot.time}），請確認是否要重複報名。\n\n如有疑問，請洽詢官方 LINE 帳號。\n\n點選「確定」將繼續送出這筆新的報名；點選「取消」則不會送出。`);
+      if (!proceedAnyway) return;
+    }
+
+    // 1. Create group booking
     const newBookingId = getNextId(bookings, 1001);
     const timestamp = getNowDateTimeString();
-    
-    // Set date to next occurrence (just mock today + 2 days for simplified logic)
-    const today = new Date();
-    today.setDate(today.getDate() + 2);
-    const dateStr = today.toISOString().split("T")[0];
-    
     const notes = document.getElementById("bookGroupNotes").value;
-    
+
     const newBooking = {
       id: newBookingId,
       userId: currentUser.id,
       firebaseUid: auth.currentUser ? auth.currentUser.uid : null,
       type: "group",
-      sessionId: session.id,
-      title: session.title,
-      date: dateStr,
-      time: session.time.replace("每週一 ", "").replace("每週三 ", "").replace("每週五 ", "").replace("每週六 ", ""),
-      cost: session.pointCost,
+      slotId: slot.id,
+      title: slot.title || "團體頌缽",
+      date: slot.date,
+      time: slot.time,
+      cost: cost,
       notes: notes,
       status: "已確認", // Group bookings are auto-confirmed in this template
       timestamp: timestamp
     };
-    
+
     bookings.push(newBooking);
     dbSet("bookings", bookings);
-    
-    // Deduct user points (prefer giftedGroupPoints, fallback to common points)
+
+    // 2. Deduct user points (prefer giftedGroupPoints, fallback to common points — never gifted-1on1 points)
     let paidBy = "common";
-    if (currentUser.giftedGroupPoints === undefined) currentUser.giftedGroupPoints = 0;
-    if (currentUser.points === undefined) currentUser.points = 0;
-    
-    if (currentUser.giftedGroupPoints >= session.pointCost) {
-      currentUser.giftedGroupPoints -= session.pointCost;
+    if (currentUser.giftedGroupPoints >= cost) {
+      currentUser.giftedGroupPoints -= cost;
       paidBy = "gifted";
     } else {
-      currentUser.points -= session.pointCost;
+      currentUser.points -= cost;
       paidBy = "common";
     }
     dbSet("users", users);
-    
+
     // Save payment method tag to booking
     newBooking.paidBy = paidBy;
     dbSet("bookings", bookings); // overwrite to save paidBy field
-    
-    // Increment session booking count
-    session.currentCapacity += 1;
-    dbSet("groupSessions", groupSessions);
-    
-    // Log transaction
+
+    // 3. Increment slot occupancy, auto-close (full) once capacity is reached
+    slot.currentCapacity = (slot.currentCapacity || 0) + 1;
+    if (slot.currentCapacity >= slot.maxCapacity) {
+      slot.status = "full";
+    }
+    dbSet("slots", slots);
+
+    // 4. Log point transaction
     const newTxId = getNextId(transactions, 5001);
     const targetNameStr = paidBy === "gifted" ? "贈送" : "通用";
     transactions.push({
       id: newTxId,
       userId: currentUser.id,
-      amount: session.pointCost,
+      firebaseUid: auth.currentUser ? auth.currentUser.uid : null,
+      amount: cost,
       type: "deduct",
-      reason: `報名團體頌缽課：${session.title} - 扣除${targetNameStr}額度`,
+      reason: `報名團體頌缽：${slot.title || "團體頌缽"} (${slot.date} ${slot.time}) - 扣除${targetNameStr}額度`,
       date: timestamp,
       balance: paidBy === "gifted" ? currentUser.giftedGroupPoints : currentUser.points
     });
     dbSet("transactions", transactions);
-    
-    alert(`報名成功！已扣除 ${session.pointCost} 次預約額度。\n期待與您共同體驗頌缽的頻率。`);
-    // Clear selection
-    selectedGroupId = null;
+
+    sendLineNotification(currentUser.id, `✉️ 團體頌缽報名成功\n\n親愛的會員，您已成功報名團體場次！\n\n📅 日期：${slot.date}\n⏰ 時間：${slot.time}\n✨ 項目：${slot.title || "團體頌缽"}\n\n期待與您共同體驗頌缽的頻率。`);
+
+    alert(`報名成功！已扣除 ${cost} 次預約額度。\n期待與您共同體驗頌缽的頻率。`);
     navigateTo("member");
   });
 
@@ -2746,6 +2899,32 @@ document.addEventListener("DOMContentLoaded", () => {
     renderAdminSlotsCalendar();
   });
 
+  // Admin: 開放時段類型切換 (1對1 / 團體頌缽)
+  document.querySelectorAll("#adminSlotTypeToggle .type-toggle-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      adminSelectedSlotType = btn.getAttribute("data-type");
+      document.querySelectorAll("#adminSlotTypeToggle .type-toggle-btn").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+
+      const groupFields = document.getElementById("adminGroupSlotFields");
+      if (groupFields) groupFields.style.display = adminSelectedSlotType === "group" ? "block" : "none";
+
+      // 快速新增時段按鈕也跟著切換顏色，讓管理員在下手前就能看出目前要開的是哪種類型
+      document.querySelectorAll(".btn-quick-time").forEach(qb => {
+        qb.classList.toggle("group-type", adminSelectedSlotType === "group");
+      });
+    });
+  });
+
+  function getAdminSlotOpts() {
+    if (adminSelectedSlotType !== "group") return { type: "1on1" };
+    return {
+      type: "group",
+      title: document.getElementById("txtGroupSlotTitle")?.value || "團體頌缽",
+      maxCapacity: document.getElementById("txtGroupSlotCapacity")?.value || 10
+    };
+  }
+
   // Admin Quick Slots buttons
   document.querySelectorAll(".btn-quick-time").forEach(btn => {
     btn.addEventListener("click", () => {
@@ -2754,7 +2933,7 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
       }
       const timeVal = btn.getAttribute("data-time");
-      addAdminSlot(adminSlotSelectedDateStr, timeVal);
+      addAdminSlot(adminSlotSelectedDateStr, timeVal, getAdminSlotOpts());
     });
   });
 
@@ -2766,7 +2945,7 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
     const timeVal = document.getElementById("txtSlotTime").value;
-    addAdminSlot(adminSlotSelectedDateStr, timeVal);
+    addAdminSlot(adminSlotSelectedDateStr, timeVal, getAdminSlotOpts());
     document.getElementById("txtSlotTime").value = "";
   });
 

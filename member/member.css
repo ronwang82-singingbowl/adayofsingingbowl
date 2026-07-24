@@ -14,7 +14,9 @@
   --hairline: #D8D4CC;
   --error: #E57373;
   --success: #81C784;
-  
+  --terra: #C1745A;
+  --terra-bg: rgba(193, 116, 90, 0.12);
+
   /* Layout */
   --max-width: 1080px;
   --header-height: 80px;
@@ -1032,6 +1034,29 @@ button {
   color: var(--error);
 }
 
+.status-badge.status-full {
+  background: var(--terra-bg);
+  color: var(--terra);
+}
+
+/* Slot type badge (1對1 vs 團體頌缽) */
+.slot-type-badge {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 99px;
+  font-weight: 500;
+  white-space: nowrap;
+  display: inline-block;
+}
+.slot-type-badge.type-1on1 {
+  background: rgba(115, 132, 107, 0.15);
+  color: var(--brass);
+}
+.slot-type-badge.type-group {
+  background: var(--terra-bg);
+  color: var(--terra);
+}
+
 .res-details {
   font-size: 13px;
   color: var(--mist);
@@ -1738,6 +1763,21 @@ button {
 .calendar-day-cell.active-selected .dot-indicator {
   background: #FFFFFF;
 }
+/* Group-type dot (used on its own for the group booking calendar, or
+   offset alongside the standard dot on the admin slots calendar when a
+   day has both 1對1 與 團體 時段) */
+.calendar-day-cell .dot-indicator.dot-group {
+  background: var(--terra);
+}
+.calendar-day-cell .dot-indicator.dot-offset-left {
+  left: calc(50% - 7px);
+}
+.calendar-day-cell .dot-indicator.dot-offset-right {
+  left: calc(50% + 2px);
+}
+.calendar-day-cell.active-selected .dot-indicator.dot-group {
+  background: #FFFFFF;
+}
 
 /* Time Slots Grid */
 .slots-buttons-grid {
@@ -1773,6 +1813,26 @@ button {
   cursor: not-allowed;
   text-decoration: line-through;
   background: rgba(0,0,0,0.2);
+}
+
+/* 團體頌缽專屬時段樣式 (與 1對1 時段以顏色區隔) */
+.slot-btn.group-type {
+  border-color: rgba(193, 116, 90, 0.35);
+}
+.slot-btn.group-type:hover:not(.disabled-slot) {
+  background: var(--terra-bg);
+  border-color: var(--terra);
+}
+.slot-btn.group-type.selected {
+  background: var(--terra) !important;
+  border-color: var(--terra) !important;
+}
+.slot-btn .slot-cap-text {
+  display: block;
+  font-size: 10px;
+  font-family: "Noto Sans TC", sans-serif;
+  opacity: 0.75;
+  margin-top: 2px;
 }
 
 /* ============ 8. Buy Points & Remittances ============ */
@@ -2003,6 +2063,45 @@ button {
   background: var(--brass-soft);
   color: var(--dark-bg);
   border-color: var(--brass-soft);
+}
+.quick-slot-btn.group-type {
+  border-color: rgba(193, 116, 90, 0.4);
+  color: var(--terra);
+}
+.quick-slot-btn.group-type:hover {
+  background: var(--terra);
+  color: #FFFFFF;
+  border-color: var(--terra);
+}
+
+/* Admin: 開放時段 類型切換 (1對1 / 團體頌缽) */
+.type-toggle-group {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+.type-toggle-btn {
+  flex: 1;
+  background: var(--ink-2);
+  border: 1px solid var(--hairline);
+  border-radius: var(--border-radius-sm);
+  padding: 10px 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--mist);
+  cursor: pointer;
+  text-align: center;
+  transition: var(--transition-smooth);
+}
+.type-toggle-btn.type-1on1.active {
+  background: var(--brass);
+  border-color: var(--brass);
+  color: #FFFFFF;
+}
+.type-toggle-btn.type-group.active {
+  background: var(--terra);
+  border-color: var(--terra);
+  color: #FFFFFF;
 }
 
 /* Warning banner in buy points */
