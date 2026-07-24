@@ -182,7 +182,8 @@ input.f:focus, textarea.f:focus{ outline:2px solid var(--ui-accent-soft); border
 .stage .step h3{ font-size:16.5px; font-family:"Noto Sans TC",sans-serif; font-weight:600; }
 .stage .step p{ margin:8px 0 0; color:var(--mist); font-size:14px; }
 .stage .about-grid{ margin-top:40px; display:flex; gap:22px; align-items:flex-start; }
-.stage .about-badge{ flex-shrink:0; width:64px; height:64px; border-radius:50%; background:var(--ink-2); border:1px solid var(--brass-dim); display:flex; align-items:center; justify-content:center; font-family:"Noto Serif TC",serif; font-size:22px; color:var(--brass-soft); }
+.stage .about-badge{ flex-shrink:0; width:96px; height:96px; border-radius:50%; background:var(--ink-2); border:1px solid var(--brass-dim); display:flex; align-items:center; justify-content:center; font-family:"Noto Serif TC",serif; font-size:33px; color:var(--brass-soft); overflow:hidden; }
+.stage .about-badge img{ width:100%; height:100%; object-fit:cover; border-radius:50%; }
 .stage .about-name{ font-size:19px; }
 .stage .about-role{ font-family:"JetBrains Mono",monospace; font-size:11px; color:var(--jade); margin-top:6px; }
 .stage .about-bio{ color:var(--mist); font-size:14.5px; margin-top:12px; line-height:1.85; }
@@ -312,6 +313,7 @@ let state = {
     eyebrow: "關於療癒師",
     title: "你的聲音嚮導",
     badge: "缽",
+    avatarSrc: "",
     name: "缽日療癒師",
     role: "Sound Healing Practitioner · Dialogue Guide",
     bio: "深耕頌缽療癒與身心對話領域，擁有豐富的個案陪伴經驗。曾協助上百位來訪者穿越內在卡點，從迷茫中找到方向。相信每一個人都有自癒的力量，療癒師只是那個陪你重新看見的人。",
@@ -598,7 +600,8 @@ function buildForm(){
   panel.appendChild(buildSection("關於療癒師", (b)=>{
     b.appendChild(fieldInput("小標籤", state.about.eyebrow, v=>state.about.eyebrow=v));
     b.appendChild(fieldInput("標題", state.about.title, v=>state.about.title=v));
-    b.appendChild(fieldInput("圓形徽章文字（如：缽）", state.about.badge, v=>state.about.badge=v));
+    b.appendChild(fieldInput("圓形徽章文字（如：缽，若下方有上傳照片則不顯示此文字）", state.about.badge, v=>state.about.badge=v));
+    b.appendChild(imageField("個人照片（選填，上傳後會取代圓形徽章文字，顯示在同一個圓形位置）", state.about, "avatarSrc", ()=>{}));
     b.appendChild(fieldInput("姓名／稱呼", state.about.name, v=>state.about.name=v));
     b.appendChild(fieldInput("身分／角色（英文小字）", state.about.role, v=>state.about.role=v));
     b.appendChild(fieldInput("介紹文字", state.about.bio, v=>state.about.bio=v, true));
@@ -745,7 +748,7 @@ function renderPreview(){
       <div class="eyebrow">${esc(s.about.eyebrow)}</div>
       <h2 style="font-size:clamp(24px,4vw,32px);">${esc(s.about.title)}</h2>
       <div class="about-grid">
-        <div class="about-badge">${esc(s.about.badge)}</div>
+        <div class="about-badge">${s.about.avatarSrc ? `<img src="${esc(s.about.avatarSrc)}" alt="${esc(s.about.name)}">` : esc(s.about.badge)}</div>
         <div>
           <div class="about-name" style="font-family:'Noto Serif TC',serif;">${esc(s.about.name)}</div>
           <div class="about-role">${esc(s.about.role)}</div>
@@ -1101,20 +1104,31 @@ function parseStateFromHTML(htmlText) {
   // 9. About
   const aboutSec = doc.querySelector(".about-grid")?.closest("section");
   if (aboutSec) {
-    state.aboutEyebrow = aboutSec.querySelector(".eyebrow")?.textContent?.trim() || state.aboutEyebrow;
-    state.aboutTitle = aboutSec.querySelector("h2")?.textContent?.trim() || state.aboutTitle;
-    state.aboutBadge = aboutSec.querySelector(".about-badge")?.textContent?.trim() || state.aboutBadge;
-    state.aboutName = aboutSec.querySelector(".about-name")?.textContent?.trim() || state.aboutName;
-    state.aboutRole = aboutSec.querySelector(".about-role")?.textContent?.trim() || state.aboutRole;
-    state.aboutBio = aboutSec.querySelector(".about-bio")?.textContent?.trim() || state.aboutBio;
-    state.aboutMeta = aboutSec.querySelector(".about-meta")?.textContent?.trim() || state.aboutMeta;
+    state.about.eyebrow = aboutSec.querySelector(".eyebrow")?.textContent?.trim() || state.about.eyebrow;
+    state.about.title = aboutSec.querySelector("h2")?.textContent?.trim() || state.about.title;
+    const aboutBadgeImg = aboutSec.querySelector(".about-badge img");
+    if (aboutBadgeImg) {
+      state.about.avatarSrc = aboutBadgeImg.getAttribute("src") || "";
+    } else {
+      state.about.badge = aboutSec.querySelector(".about-badge")?.textContent?.trim() || state.about.badge;
+      state.about.avatarSrc = "";
+    }
+    state.about.name = aboutSec.querySelector(".about-name")?.textContent?.trim() || state.about.name;
+    state.about.role = aboutSec.querySelector(".about-role")?.textContent?.trim() || state.about.role;
+    state.about.bio = aboutSec.querySelector(".about-bio")?.textContent?.trim() || state.about.bio;
+    const aboutMetaText = aboutSec.querySelector(".about-meta")?.textContent?.trim() || "";
+    const aboutMetaParts = aboutMetaText.split("　·　");
+    if (aboutMetaParts.length === 2) {
+      state.about.location = aboutMetaParts[0].replace(/^服務地點：/, "");
+      state.about.booking = aboutMetaParts[1];
+    }
   }
 
   // 10. Quote
   const quoteSec = doc.querySelector(".quote-section");
   if (quoteSec) {
-    state.quoteText = quoteSec.querySelector("blockquote")?.textContent?.trim() || state.quoteText;
-    state.quoteBy = quoteSec.querySelector(".quote-by")?.textContent?.trim() || state.quoteBy;
+    state.quote.text = quoteSec.querySelector("blockquote")?.textContent?.trim() || state.quote.text;
+    state.quote.by = quoteSec.querySelector(".quote-by")?.textContent?.trim()?.replace(/^—\s*/, "") || state.quote.by;
   }
 
   // 11. FAQ
