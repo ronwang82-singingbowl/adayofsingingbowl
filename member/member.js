@@ -2256,10 +2256,7 @@ document.addEventListener("DOMContentLoaded", () => {
     e.preventDefault();
     navigateTo("member");
   });
-  document.getElementById("btnNavBuyPoints")?.addEventListener("click", (e) => {
-    e.preventDefault();
-    navigateTo("buy-points");
-  });
+  // 購買點數已改為直接連到外部商店頁面（my1shop），不再導向站內購買頁，故不攔截預設連結行為
   document.getElementById("btnNavAdmin").addEventListener("click", (e) => {
     e.preventDefault();
     navigateTo("admin");
