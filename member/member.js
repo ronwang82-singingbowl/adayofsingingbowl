@@ -2285,7 +2285,6 @@ document.addEventListener("DOMContentLoaded", () => {
   });
   
   document.getElementById("btnBook1on1").addEventListener("click", () => navigateTo("book-1on1"));
-  document.getElementById("btnBookGroup").addEventListener("click", () => navigateTo("book-group"));
 
   // Form: Edit Profile Submission
   document.getElementById("formEditProfile").addEventListener("submit", (e) => {
