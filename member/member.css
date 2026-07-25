@@ -1120,6 +1120,41 @@ button {
   margin-bottom: 8px;
 }
 
+/* 療癒預約頁面：1對1 / 團體頌缽 頁籤切換 */
+.booking-type-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 28px;
+  padding: 4px;
+  background: var(--ink-3);
+  border: 1px solid var(--hairline);
+  border-radius: var(--border-radius-md);
+}
+.booking-tab-btn {
+  flex: 1;
+  background: transparent;
+  border: none;
+  border-radius: var(--border-radius-sm);
+  padding: 10px 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--mist);
+  cursor: pointer;
+  text-align: center;
+  transition: var(--transition-smooth);
+}
+.booking-tab-btn:hover {
+  color: var(--paper);
+}
+.booking-tab-btn.active[data-tab="1on1"] {
+  background: var(--brass);
+  color: #FFFFFF;
+}
+.booking-tab-btn.active[data-tab="group"] {
+  background: var(--terra);
+  color: #FFFFFF;
+}
+
 .booking-subtitle {
   font-size: 14px;
   color: var(--mist);

@@ -238,7 +238,7 @@ dbSet("courses", courses, false);
 // ==========================================
 
 const VIEWS = [
-  "landing", "auth", "register", "member", "edit-profile", "book-1on1", "book-group", 
+  "landing", "auth", "register", "member", "edit-profile", "book",
   "admin", "admin-points", "admin-add-member", "admin-edit-member", "buy-points", "admin-reject-remittance",
   "courses", "course-detail", "lesson-player", "admin-edit-course"
 ];
@@ -292,8 +292,7 @@ function navigateTo(viewId) {
 
   // Trigger page-specific renders
   if (viewId === "member") renderDashboard();
-  if (viewId === "book-1on1") render1on1Form();
-  if (viewId === "book-group") renderGroupForm();
+  if (viewId === "book") switchBookingTab("1on1");
   if (viewId === "buy-points") renderBuyPointsPage();
   if (viewId === "courses") renderCoursesPage();
   if (viewId === "course-detail") renderCourseDetailPage();
@@ -435,7 +434,7 @@ function onUserLogoutSuccess() {
   
   const activeSection = document.querySelector(".view-section.active");
   const activeView = activeSection ? activeSection.id.replace("view-", "") : "landing";
-  const memberOnlyViews = ["member", "admin", "buy-points", "book-1on1", "book-group", "edit-profile", "admin-points", "admin-add-member", "admin-edit-member", "courses", "course-detail", "lesson-player", "admin-edit-course"];
+  const memberOnlyViews = ["member", "admin", "buy-points", "book", "edit-profile", "admin-points", "admin-add-member", "admin-edit-member", "courses", "course-detail", "lesson-player", "admin-edit-course"];
   if (memberOnlyViews.includes(activeView)) {
     navigateTo("landing");
   }
@@ -530,7 +529,7 @@ function renderDashboard() {
         <p>您目前沒有任何預約紀錄</p>
         <button class="cta-btn secondary-btn small-btn mt-12" id="btnDashBookNow">立即預約</button>
       </div>`;
-    document.getElementById("btnDashBookNow")?.addEventListener("click", () => navigateTo("book-1on1"));
+    document.getElementById("btnDashBookNow")?.addEventListener("click", () => navigateTo("book"));
   } else {
     userBookings.forEach(b => {
       const resItem = document.createElement("div");
@@ -670,6 +669,32 @@ let calSelectedDateStr = null;
 let groupCalCurrentYear = new Date().getFullYear();
 let groupCalCurrentMonth = new Date().getMonth();
 let groupCalSelectedDateStr = null;
+
+// 「療癒預約」頁面內的頁籤切換：1對1 / 團體頌缽 共用同一個 view，只切換顯示哪個 panel
+let activeBookingTab = "1on1";
+
+function switchBookingTab(tab) {
+  activeBookingTab = tab === "group" ? "group" : "1on1";
+
+  document.querySelectorAll("#bookingTypeTabs .booking-tab-btn").forEach(btn => {
+    btn.classList.toggle("active", btn.getAttribute("data-tab") === activeBookingTab);
+  });
+
+  const panel1on1 = document.getElementById("bookPanel1on1");
+  const panelGroup = document.getElementById("bookPanelGroup");
+  if (panel1on1) panel1on1.style.display = activeBookingTab === "1on1" ? "block" : "none";
+  if (panelGroup) panelGroup.style.display = activeBookingTab === "group" ? "block" : "none";
+
+  if (activeBookingTab === "1on1") {
+    render1on1Form();
+  } else {
+    renderGroupForm();
+  }
+
+  if (typeof lucide !== 'undefined') {
+    lucide.createIcons();
+  }
+}
 
 // Render 1on1 booking variables
 function render1on1Form() {
@@ -2284,7 +2309,14 @@ document.addEventListener("DOMContentLoaded", () => {
     navigateTo("edit-profile");
   });
   
-  document.getElementById("btnBook1on1").addEventListener("click", () => navigateTo("book-1on1"));
+  document.getElementById("btnBook1on1").addEventListener("click", () => navigateTo("book"));
+
+  // 療癒預約頁面內的頁籤切換 (1對1 / 團體頌缽)
+  document.querySelectorAll("#bookingTypeTabs .booking-tab-btn").forEach(tabBtn => {
+    tabBtn.addEventListener("click", () => {
+      switchBookingTab(tabBtn.getAttribute("data-tab"));
+    });
+  });
 
   // Form: Edit Profile Submission
   document.getElementById("formEditProfile").addEventListener("submit", (e) => {
@@ -4200,8 +4232,7 @@ function triggerViewRender() {
     if (viewId === "member") renderDashboard();
     if (viewId === "admin") renderAdminDashboard(activeAdminPane);
     if (viewId === "buy-points") renderBuyPointsPage();
-    if (viewId === "book-1on1") render1on1Form();
-    if (viewId === "book-group") renderGroupForm();
+    if (viewId === "book") switchBookingTab(activeBookingTab);
   }
 }
 
