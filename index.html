@@ -41,7 +41,7 @@
 .stage h1, .stage h2, .stage h3 { font-family: "Noto Serif TC", serif; font-weight: 600; margin: 0px; color: var(--paper); }
 .stage .hero { position: relative; min-height: 92vh; display: flex; align-items: center; justify-content: center; overflow: hidden; padding: 100px 28px 70px; text-align: center; }
 .stage .hero-inner { position: relative; z-index: 1; }
-.stage .ripple-field { position: absolute; inset: 0px; display: flex; align-items: center; justify-content: center; z-index: 0; pointer-events: none; }
+.stage .ripple-field { position: absolute; inset: 0px; display: flex; align-items: center; justify-content: center; z-index: 0; pointer-events: none; will-change: transform; }
 .stage .ripple-field svg { width: min(900px, 140vw); height: min(900px, 140vw); }
 .stage .ripple-ring { fill: none; stroke: var(--brass-dim); stroke-width: 1; opacity: 0; transform-origin: center center; animation: 7s cubic-bezier(0.2, 0.6, 0.35, 1) 0s infinite normal none running ripple; }
 .stage .ripple-ring.r2 { animation-delay: 1.75s; }
@@ -332,7 +332,30 @@
       <div class="foot-links"><a href="https://www.instagram.com/mrpin_xuan/" target="_blank">Instagram</a><a href="https://line.me/ti/g2/5CRjmJQrMo7e_Im6XJd0uHaJtXXQLQgujii-vw?utm_source=invitation&amp;utm_medium=link_copy&amp;utm_campaign=default" target="_blank">LINE</a></div>
       缽日·台北·用聲音陪你梳理找回內在平衡
     </footer>
-  
+
 </div>
+<script>
+(function () {
+  var rippleField = document.querySelector('.ripple-field');
+  if (!rippleField) return;
+  var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (reduceMotion) return;
+
+  var ticking = false;
+  function update() {
+    var y = window.scrollY || window.pageYOffset || 0;
+    rippleField.style.transform = 'translateY(' + (y * 0.25) + 'px)';
+    ticking = false;
+  }
+  function onScroll() {
+    if (!ticking) {
+      window.requestAnimationFrame(update);
+      ticking = true;
+    }
+  }
+  window.addEventListener('scroll', onScroll, { passive: true });
+  update();
+})();
+</script>
 </body>
 </html>
