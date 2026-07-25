@@ -831,7 +831,7 @@ function update1on1Cost() {
   
   if (!hasPoints) {
     warning.style.display = "flex";
-    warning.innerHTML = `<i data-lucide="alert-triangle"></i> ⚠️ 次數不足，請先<a href="https://line.me/R/ti/p/%40197nfdme" target="_blank" style="color:var(--brass-soft);text-decoration:underline;">聯絡療癒師加購次數</a>。`;
+    warning.innerHTML = `<i data-lucide="alert-triangle"></i> ⚠️ 次數不足，請先<a href="https://adayofsingingbowl.my1shop.com/aby1kw" target="_blank" style="color:var(--brass-soft);text-decoration:underline;">購買點數</a>，並截圖購買證明到官方LINE上，請小幫手為您新增點數唷！`;
     submitBtn.disabled = true;
     submitBtn.classList.add("disabled");
   } else if (!selectedSlotId) {
@@ -989,7 +989,7 @@ function updateGroupCost() {
 
   if (!hasPoints) {
     warning.style.display = "flex";
-    warning.innerHTML = `<i data-lucide="alert-triangle"></i> ⚠️ 次數不足，請先<a href="https://line.me/R/ti/p/%40197nfdme" target="_blank" style="color:var(--brass-soft);text-decoration:underline;">聯絡療癒師加購次數</a>。`;
+    warning.innerHTML = `<i data-lucide="alert-triangle"></i> ⚠️ 次數不足，請先<a href="https://adayofsingingbowl.my1shop.com/aby1kw" target="_blank" style="color:var(--brass-soft);text-decoration:underline;">購買點數</a>，並截圖購買證明到官方LINE上，請小幫手為您新增點數唷！`;
     submitBtn.disabled = true;
     submitBtn.classList.add("disabled");
   } else if (!selectedSlotId) {
