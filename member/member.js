@@ -60,6 +60,17 @@ function getNextId(array, startId) {
   return array.reduce((max, item) => item && item.id ? Math.max(max, item.id) : max, startId - 1) + 1;
 }
 
+// HTML escape helper (避免使用者輸入的姓名/銀行名稱等資料被當成 HTML 標籤解析)
+function esc(str) {
+  if (str === null || str === undefined) return "";
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
 // Helper to get user Firebase path key (UID or manual_email or numeric_id)
 function getUserPathKey(user) {
   if (!user) return "";
@@ -2175,9 +2186,11 @@ window.adminApproveRemittance = function(remittanceId) {
     }
 
     if (bonusGroupVouchers > 0) {
-      if (member.groupPoints === undefined) member.groupPoints = 0;
-      member.groupPoints = (member.groupPoints || 0) + bonusGroupVouchers;
-      
+      // 修正：先前這裡誤寫入從未被預約邏輯讀取的 member.groupPoints，
+      // 導致會員票券列表看得到贈送票券、但實際可預約團體頌缽的贈送額度 (giftedGroupPoints) 卻沒有增加。
+      if (member.giftedGroupPoints === undefined) member.giftedGroupPoints = 0;
+      member.giftedGroupPoints = (member.giftedGroupPoints || 0) + bonusGroupVouchers;
+
       // Push bonus group session voucher(s)
       for (let i = 0; i < bonusGroupVouchers; i++) {
         const nextVoucherId = vouchers.length > 0 ? Math.max(...vouchers.map(v => v.id)) + 1 : 1;
@@ -2191,7 +2204,7 @@ window.adminApproveRemittance = function(remittanceId) {
           code: randomCode
         });
       }
-      
+
       // Log group transaction
       const nextTxId = transactions.length + 1;
       transactions.push({
@@ -2201,9 +2214,9 @@ window.adminApproveRemittance = function(remittanceId) {
         amount: bonusGroupVouchers,
         reason: `加購套票加贈 - 團體頌缽次數`,
         date: getNowDateTimeString(),
-        balance: member.groupPoints
+        balance: member.giftedGroupPoints
       });
-      
+
       dbSet("vouchers", vouchers, false);
     }
     
