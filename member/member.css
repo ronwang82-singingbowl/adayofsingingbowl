@@ -78,7 +78,9 @@ button {
   stroke: var(--brass-dim);
   stroke-width: 1;
   opacity: 0;
+  transform-box: fill-box;
   transform-origin: center;
+  vector-effect: non-scaling-stroke;
   animation: ripple 7s cubic-bezier(.2, .6, .35, 1) infinite;
 }
 
@@ -96,7 +98,7 @@ button {
 
 @keyframes ripple {
   0% {
-    r: 20px;
+    transform: scale(1);
     opacity: 0;
     stroke-width: 2.4;
   }
@@ -104,7 +106,7 @@ button {
     opacity: 0.55;
   }
   100% {
-    r: 420px;
+    transform: scale(21);
     opacity: 0;
     stroke-width: 0.4;
   }
