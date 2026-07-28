@@ -141,30 +141,37 @@ function daysUntil(expiresAt) {
    一律轉成「永不過期」的批次，避免既有客戶的點數被追溯砍掉。 */
 function ensureBatches(user) {
   if (!user) return;
-  if (!Array.isArray(user.pointBatches)) {
-    user.pointBatches = [];
-    POINT_TYPES.forEach(type => {
-      const legacy = Number(user[type]) || 0;
-      if (legacy > 0) {
-        user.pointBatches.push({
-          id: `legacy-${type}-${user.id}`,
-          type: type,
-          remaining: legacy,
-          expiresAt: null,           // 既有點數不追溯設效期
-          grantedAt: user.joinDate || todayStr(),
-          note: "系統轉換（原有點數，無期限）"
-        });
-      }
-    });
-  }
+  if (!Array.isArray(user.pointBatches)) user.pointBatches = [];
+
   POINT_TYPES.forEach(type => {
     if (user[type] === undefined) user[type] = 0;
+    const legacy = Number(user[type]) || 0;
+    const batchSum = user.pointBatches
+      .filter(b => b.type === type && !isExpired(b.expiresAt))
+      .reduce((sum, b) => sum + (Number(b.remaining) || 0), 0);
+
+    /* 整數欄位比批次總和「多」出來的部分，代表是還沒建立批次的點數
+       （舊資料，或 Firebase 非同步載入後才進來的雲端資料）。
+       一律補成「永不過期」的批次 —— 只會補、不會扣，
+       確保任何載入順序下都不可能把會員既有的點數弄不見。 */
+    if (legacy > batchSum) {
+      user.pointBatches.push({
+        id: `legacy-${type}-${user.id}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        type: type,
+        remaining: legacy - batchSum,
+        expiresAt: null,           // 既有點數不追溯設效期
+        grantedAt: user.joinDate || todayStr(),
+        note: "系統轉換（原有點數，無期限）"
+      });
+    }
   });
 }
 
-// 依批次重算三個整數欄位（唯一的真實來源是 pointBatches）
+/* 依批次重算三個整數欄位。
+   注意：這裡刻意「不」呼叫 ensureBatches —— 因為到期掃描剛把過期批次移除後
+   會呼叫本函式，若在此重新對帳會把剛過期的點數又補回來。 */
 function syncPointTotals(user) {
-  ensureBatches(user);
+  if (!user || !Array.isArray(user.pointBatches)) return;
   POINT_TYPES.forEach(type => {
     user[type] = user.pointBatches
       .filter(b => b.type === type && !isExpired(b.expiresAt))
@@ -4521,6 +4528,9 @@ function startRealtimeSync() {
       usersRef.on("value", (snapshot) => {
         const val = snapshot.val();
         users = val ? (Array.isArray(val) ? val.filter(Boolean) : Object.values(val)) : [];
+        // 雲端資料進來後補齊批次結構，再掃一次到期（順序很重要，避免點數對不上）
+        users.forEach(u => ensureBatches(u));
+        runExpirySweep();
         dbSet("users", users, false);
         syncCurrentUser();
         triggerViewRender();
