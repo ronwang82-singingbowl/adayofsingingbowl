@@ -672,7 +672,7 @@ function renderPreview(){
         <h1>${esc(s.hero.title)}</h1>
         <div class="hero-sub">${esc(s.hero.subtitle)}</div>
         <p class="hero-desc">${esc(s.hero.desc)}</p>
-        <a class="cta-btn" href="${esc(s.hero.ctaUrl)}" target="_blank" rel="noopener">${esc(s.hero.ctaText)}</a>
+        <a class="cta-btn" id="heroLineBtn" href="${esc(s.hero.ctaUrl)}" target="_blank" rel="noopener">${esc(s.hero.ctaText)}</a>
         <div class="hero-reassure">${esc(s.hero.reassure)}</div>
       </div>
     </section>
@@ -874,6 +874,16 @@ function buildFullSiteHTML(){
 <div class="stage">
 ${bodyMarkup}
 </div>
+<script>
+(function(){
+  var btn = document.getElementById("heroLineBtn");
+  if (!btn) return;
+  var isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  if (!isMobile) {
+    btn.setAttribute("href", "line-add.html");
+  }
+})();
+<\/script>
 </body>
 </html>`;
 }

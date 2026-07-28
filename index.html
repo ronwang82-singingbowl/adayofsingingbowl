@@ -160,7 +160,7 @@
         <div class="hero-sub">用聲音陪你梳理找回內在平衡</div>
         <p class="hero-desc">一場聲音與對話交織的體驗，陪你穿越卡住的地方
 重新看見自己的下一步</p>
-        <a class="cta-btn" href="https://lin.ee/5FUzEjg" target="_blank" rel="noopener">加入 LINE，預約體驗</a>
+        <a class="cta-btn" id="heroLineBtn" href="https://lin.ee/5FUzEjg" target="_blank" rel="noopener">加入 LINE，預約體驗</a>
         <div class="hero-reassure">加好友後，我們一起約時間找回內在的能量</div>
       </div>
     </section>
@@ -347,6 +347,17 @@
   window.addEventListener('scroll', update, { passive: true });
   window.addEventListener('resize', update, { passive: true });
   update();
+})();
+</script>
+
+<script>
+(function(){
+  var btn = document.getElementById("heroLineBtn");
+  if (!btn) return;
+  var isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  if (!isMobile) {
+    btn.setAttribute("href", "line-add.html");
+  }
 })();
 </script>
 </body>
