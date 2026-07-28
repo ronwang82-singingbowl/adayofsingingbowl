@@ -607,7 +607,7 @@ window.cancelBooking = function(bookingId) {
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   
   if (diffDays < 5) {
-    alert("⚠️ 很抱歉，本預約距離現在已不足 5 天，無法直接線上取消。\n\n如需取消預約，請私訊官方 LINE 帳號告知原因，由小編為您人工處理。\n\n官方 LINE: https://line.me/R/ti/p/%40197nfdme");
+    alert("⚠️ 很抱歉，本預約距離現在已不足 5 天，無法直接線上取消。\n\n如需取消預約，請私訊官方 LINE 帳號告知原因，由小編為您人工處理。\n\n官方 LINE: https://lin.ee/5FUzEjg");
     return;
   }
   
@@ -2374,11 +2374,11 @@ document.addEventListener("DOMContentLoaded", () => {
       const btnGo = document.getElementById("btnGoToPurchase");
       if (btnGo) {
         if (packageId === "1") {
-          btnGo.href = "https://line.me/R/ti/p/%40197nfdme"; // 1點 購買連結 (目前預設官方 LINE)
+          btnGo.href = "https://lin.ee/5FUzEjg"; // 1點 購買連結 (目前預設官方 LINE)
         } else if (packageId === "8") {
-          btnGo.href = "https://line.me/R/ti/p/%40197nfdme"; // 8點 購買連結 (目前預設官方 LINE)
+          btnGo.href = "https://lin.ee/5FUzEjg"; // 8點 購買連結 (目前預設官方 LINE)
         } else if (packageId === "15") {
-          btnGo.href = "https://line.me/R/ti/p/%40197nfdme"; // 15點 購買連結 (目前預設官方 LINE)
+          btnGo.href = "https://lin.ee/5FUzEjg"; // 15點 購買連結 (目前預設官方 LINE)
         }
       }
 
@@ -3370,7 +3370,7 @@ function handleLiffLogin() {
 
 // 本地模擬登入的 Fallback 邏輯
 async function runMockLineLogin() {
-  window.open("https://line.me/R/ti/p/%40197nfdme", "_blank");
+  window.open("https://lin.ee/5FUzEjg", "_blank");
 
   const mockLineUserId = "U_mock_line_user_99999";
   const mockName = "LINE 測試訪客";
