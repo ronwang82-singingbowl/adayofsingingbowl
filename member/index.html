@@ -880,12 +880,56 @@
                     <div class="form-group">
                       <label class="form-label" for="selCouponTemplate">票券類型 *</label>
                       <select class="form-input select-input" id="selCouponTemplate" required>
-                        <option value="生日優惠贈送次數" data-points="1">生日優惠贈送次數 (1 次)</option>
-                        <option value="團體頌缽1次" data-points="1">團體頌缽1次 (1 次)</option>
+                        <!-- 由 couponTemplates 動態產生 -->
                       </select>
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label" for="couponExpiry">使用期限</label>
+                      <input type="date" class="form-input" id="couponExpiry">
+                      <label style="display:flex;align-items:center;gap:8px;margin-top:8px;font-size:13px;cursor:pointer;">
+                        <input type="checkbox" id="couponNoExpiry" style="width:auto;margin:0;"> 此票券永不過期
+                      </label>
+                      <small style="color:var(--mist);font-size:12px;display:block;margin-top:6px;">預設會依票券類型設定的有效月數自動帶入，可手動調整。</small>
                     </div>
                     <button type="submit" class="cta-btn primary-btn w-100">發放票券</button>
                   </form>
+                </div>
+
+                <!-- 票券類型管理 -->
+                <div class="coupon-form-card">
+                  <h3>票券類型管理</h3>
+                  <form id="formNewCouponTemplate">
+                    <div class="form-group">
+                      <label class="form-label" for="tplName">票券名稱 *</label>
+                      <input type="text" class="form-input" id="tplName" placeholder="例：週年慶優惠券" required>
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label" for="tplPoints">贈送次數 *</label>
+                      <input type="number" class="form-input" id="tplPoints" min="1" value="1" required>
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label" for="tplPointType">點數種類 *</label>
+                      <select class="form-input select-input" id="tplPointType" required>
+                        <option value="giftedGroupPoints">贈送-團體（只能預約團體頌缽）</option>
+                        <option value="giftedPoints">贈送-1對1（只能預約1對1）</option>
+                        <option value="points">通用（兩種都能預約）</option>
+                      </select>
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label" for="tplValidMonths">有效期限（月）*</label>
+                      <input type="number" class="form-input" id="tplValidMonths" min="0" value="2" required>
+                      <small style="color:var(--mist);font-size:12px;display:block;margin-top:6px;">發放後幾個月到期。填 0 代表永不過期。</small>
+                    </div>
+                    <button type="submit" class="cta-btn primary-btn w-100">新增票券類型</button>
+                  </form>
+                  <div class="table-wrap" style="margin-top:18px;">
+                    <table class="admin-table">
+                      <thead>
+                        <tr><th>名稱</th><th>贈送</th><th>效期</th><th>操作</th></tr>
+                      </thead>
+                      <tbody id="couponTemplateList"></tbody>
+                    </table>
+                  </div>
                 </div>
 
                 <!-- Active Vouchers Log -->
@@ -898,6 +942,7 @@
                           <th>會員</th>
                           <th>票券名稱</th>
                           <th>贈送次數</th>
+                          <th>使用期限</th>
                           <th>狀態</th>
                           <th>操作</th>
                         </tr>
@@ -1210,11 +1255,19 @@
               <label class="form-label" for="adjustAmount">次數數量 *</label>
               <input type="number" class="form-input" id="adjustAmount" required min="1" step="1" placeholder="請輸入欲變動次數數量">
             </div>
+            <div class="form-group" id="adjustExpiryGroup">
+              <label class="form-label" for="adjustExpiry">使用期限（僅「增加」時適用）</label>
+              <input type="date" class="form-input" id="adjustExpiry">
+              <label style="display:flex;align-items:center;gap:8px;margin-top:8px;font-size:13px;cursor:pointer;">
+                <input type="checkbox" id="adjustNoExpiry" style="width:auto;margin:0;"> 這批點數永不過期
+              </label>
+              <small style="color:var(--mist);font-size:12px;display:block;margin-top:6px;">留空則自動採用預設效期。扣除點數時會「先扣快到期的」。</small>
+            </div>
             <div class="form-group">
               <label class="form-label" for="adjustReason">調整原因 (選填)</label>
               <input type="text" class="form-input" id="adjustReason" placeholder="例如：生日贈送、購課儲值等（留空預設為「手動調整」）">
             </div>
-            
+
             <div class="btn-row">
               <button type="button" class="cta-btn secondary-btn" id="btnCancelAdjustPoints">取消</button>
               <button type="submit" class="cta-btn primary-btn">確認調整</button>
