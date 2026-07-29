@@ -474,7 +474,7 @@ runExpirySweep();
 
 const VIEWS = [
   "landing", "auth", "register", "member", "edit-profile", "book",
-  "admin", "admin-points", "admin-add-member", "admin-edit-member", "buy-points", "admin-reject-remittance",
+  "admin", "admin-points", "admin-add-member", "admin-edit-member", "buy-points", "admin-reject-remittance", "admin-reschedule",
   "courses", "course-detail", "lesson-player", "admin-edit-course"
 ];
 
@@ -669,7 +669,7 @@ function onUserLogoutSuccess() {
   
   const activeSection = document.querySelector(".view-section.active");
   const activeView = activeSection ? activeSection.id.replace("view-", "") : "landing";
-  const memberOnlyViews = ["member", "admin", "buy-points", "book", "edit-profile", "admin-points", "admin-add-member", "admin-edit-member", "courses", "course-detail", "lesson-player", "admin-edit-course"];
+  const memberOnlyViews = ["member", "admin", "buy-points", "book", "edit-profile", "admin-points", "admin-add-member", "admin-edit-member", "admin-reschedule", "courses", "course-detail", "lesson-player", "admin-edit-course"];
   if (memberOnlyViews.includes(activeView)) {
     navigateTo("landing");
   }
@@ -1834,12 +1834,16 @@ function showAdminCalendarDayDetail(dateStr) {
         actionButtons = `
           <div style="display: flex; gap: 4px;">
             <button class="table-action-btn success" style="padding: 2px 6px; font-size: 11px; height: auto;" onclick="adminApproveBooking(${b.id}); event.stopPropagation();">確認</button>
+            <button class="table-action-btn" style="padding: 2px 6px; font-size: 11px; height: auto;" onclick="openRescheduleBooking(${b.id}); event.stopPropagation();">改期</button>
             <button class="table-action-btn danger" style="padding: 2px 6px; font-size: 11px; height: auto;" onclick="adminRejectBooking(${b.id}); event.stopPropagation();">拒絕</button>
           </div>
         `;
       } else if (b.status === "已確認") {
         actionButtons = `
-          <button class="table-action-btn danger" style="padding: 2px 6px; font-size: 11px; height: auto;" onclick="adminRejectBooking(${b.id}); event.stopPropagation();">取消並退次</button>
+          <div style="display: flex; gap: 4px;">
+            <button class="table-action-btn" style="padding: 2px 6px; font-size: 11px; height: auto;" onclick="openRescheduleBooking(${b.id}); event.stopPropagation();">改期</button>
+            <button class="table-action-btn danger" style="padding: 2px 6px; font-size: 11px; height: auto;" onclick="adminRejectBooking(${b.id}); event.stopPropagation();">取消並退次</button>
+          </div>
         `;
       }
       
@@ -1909,12 +1913,14 @@ function renderAdminBookingList() {
         actions = `
           <div class="action-btn-group">
             <button class="table-action-btn success" onclick="adminApproveBooking(${b.id})">確認</button>
+            <button class="table-action-btn" onclick="openRescheduleBooking(${b.id})">改期</button>
             <button class="table-action-btn danger" onclick="adminRejectBooking(${b.id})">拒絕</button>
           </div>
         `;
       } else if (b.status === "已確認") {
         actions = `
           <div class="action-btn-group">
+            <button class="table-action-btn" onclick="openRescheduleBooking(${b.id})">改期</button>
             <button class="table-action-btn danger" onclick="adminRejectBooking(${b.id})">取消並退次數</button>
           </div>
         `;
@@ -1925,7 +1931,9 @@ function renderAdminBookingList() {
         <td><span style="font-family:'JetBrains Mono';font-size:11px;">#${b.id}</span></td>
         <td><strong>${memberName}</strong></td>
         <td>${label}</td>
-        <td>${timeDetail}</td>
+        <td>${timeDetail}${Array.isArray(b.rescheduleHistory) && b.rescheduleHistory.length > 0
+          ? `<br><span style="font-size:11px;color:var(--brass-soft);">🔄 已改期 ${b.rescheduleHistory.length} 次（原 ${esc(b.rescheduleHistory[0].from)}）</span>`
+          : ""}</td>
         <td>${b.cost} 次</td>
         <td><span class="status-badge ${statusClass}">${b.status}</span></td>
         <td>${actions}</td>
@@ -1936,6 +1944,217 @@ function renderAdminBookingList() {
 }
 
 // Admin Action on Bookings
+/* ============================================================
+   管理員代為改期
+   ------------------------------------------------------------
+   兩種模式：
+   (A) 從已開放且還有空位的時段挑（安全，不會撞期）
+   (B) 手動指定任意日期時間（彈性，會跳提醒）
+   改期會自動：釋放舊時段 → 佔用新時段 → 通知會員
+   點數不變動（同一筆預約，只是換時間）
+   ============================================================ */
+let rescheduleTargetBookingId = null;
+
+// 釋放某筆預約目前佔用的時段
+function releaseSlotForBooking(booking) {
+  if (!booking || !booking.slotId) return;
+  const slot = slots.find(s => s.id === booking.slotId);
+  if (!slot) return;
+  if (booking.type === "group" || slot.type === "group") {
+    slot.currentCapacity = Math.max(0, (slot.currentCapacity || 0) - 1);
+    if (slot.status === "full") slot.status = "open";
+  } else {
+    slot.status = "open";
+    slot.bookingId = null;
+  }
+}
+
+// 讓某筆預約佔用指定時段
+function occupySlotForBooking(booking, slot) {
+  if (!slot) return;
+  if (booking.type === "group" || slot.type === "group") {
+    slot.currentCapacity = (slot.currentCapacity || 0) + 1;
+    if (slot.currentCapacity >= (slot.maxCapacity || 0)) slot.status = "full";
+  } else {
+    slot.status = booking.status === "已確認" ? "booked" : "pending";
+    slot.bookingId = booking.id;
+  }
+}
+
+// 取得可改期的候選時段（排除該筆預約目前佔用的那個）
+function getReschedulableSlots(booking) {
+  const isGroup = booking.type === "group";
+  const today = todayStr();
+  return slots
+    .filter(s => {
+      if (s.id === booking.slotId) return false;
+      if (s.date < today) return false;                       // 不列過去的時段
+      const slotIsGroup = (s.type === "group");
+      if (isGroup !== slotIsGroup) return false;              // 類型要一致
+      if (isGroup) {
+        return (s.currentCapacity || 0) < (s.maxCapacity || 0);
+      }
+      return s.status === "open";
+    })
+    .sort((a, b) => a.date === b.date ? String(a.time).localeCompare(String(b.time)) : a.date.localeCompare(b.date));
+}
+
+window.openRescheduleBooking = function(bookingId) {
+  const booking = bookings.find(b => b.id === bookingId);
+  if (!booking) return;
+  rescheduleTargetBookingId = bookingId;
+
+  const member = users.find(u => u.id === booking.userId);
+  const typeName = booking.type === "1on1" ? "1對1 頌缽" : (booking.title || "團體頌缽");
+
+  const info = document.getElementById("rescheduleInfo");
+  if (info) {
+    info.innerHTML =
+      `<div style="line-height:1.9;">` +
+      `<strong>${esc(member ? member.name : "未知會員")}</strong>　<span class="status-badge status-confirmed">${esc(booking.status)}</span><br>` +
+      `項目：${esc(typeName)}<br>` +
+      `目前時間：<strong>${esc(booking.date)} ${esc(booking.time || "")}</strong>` +
+      `</div>`;
+  }
+
+  // 填入可選時段
+  const sel = document.getElementById("rescheduleSlotSelect");
+  if (sel) {
+    const candidates = getReschedulableSlots(booking);
+    sel.innerHTML = "";
+    if (candidates.length === 0) {
+      sel.innerHTML = `<option value="">（目前沒有其他可用時段，請改用手動指定）</option>`;
+    } else {
+      candidates.forEach(s => {
+        const opt = document.createElement("option");
+        opt.value = s.id;
+        opt.textContent = s.type === "group"
+          ? `${s.date} ${s.time}　${s.title || "團體頌缽"}（尚有 ${(s.maxCapacity || 0) - (s.currentCapacity || 0)} 位）`
+          : `${s.date} ${s.time}`;
+        sel.appendChild(opt);
+      });
+    }
+  }
+
+  // 預設回到「從開放時段選」模式
+  const modeSlot = document.getElementById("rescheduleModeSlot");
+  if (modeSlot) modeSlot.checked = true;
+  const md = document.getElementById("rescheduleManualDate");
+  const mt = document.getElementById("rescheduleManualTime");
+  if (md) md.value = booking.date || "";
+  if (mt) mt.value = (booking.time || "").split(" ")[0] || "";
+  const notify = document.getElementById("rescheduleNotify");
+  if (notify) notify.checked = true;
+  syncRescheduleMode();
+
+  navigateTo("admin-reschedule");
+};
+
+// 依選擇的模式切換顯示區塊
+function syncRescheduleMode() {
+  const isSlotMode = document.getElementById("rescheduleModeSlot")?.checked;
+  const slotBox = document.getElementById("rescheduleSlotBox");
+  const manualBox = document.getElementById("rescheduleManualBox");
+  if (slotBox) slotBox.style.display = isSlotMode ? "block" : "none";
+  if (manualBox) manualBox.style.display = isSlotMode ? "none" : "block";
+}
+
+window.closeRescheduleModal = function() {
+  rescheduleTargetBookingId = null;
+  navigateTo("admin");
+};
+
+window.confirmReschedule = function() {
+  const booking = bookings.find(b => b.id === rescheduleTargetBookingId);
+  if (!booking) return;
+
+  const isSlotMode = document.getElementById("rescheduleModeSlot").checked;
+  const oldDate = booking.date;
+  const oldTime = booking.time;
+  let newSlot = null;
+  let newDate, newTime;
+
+  if (isSlotMode) {
+    const slotId = parseInt(document.getElementById("rescheduleSlotSelect").value);
+    if (!slotId) { alert("請選擇一個時段，或改用手動指定時間。"); return; }
+    newSlot = slots.find(s => s.id === slotId);
+    if (!newSlot) { alert("找不到該時段，請重新整理後再試。"); return; }
+    newDate = newSlot.date;
+    newTime = newSlot.time;
+  } else {
+    newDate = document.getElementById("rescheduleManualDate").value;
+    newTime = document.getElementById("rescheduleManualTime").value;
+    if (!newDate || !newTime) { alert("請填寫新的日期與時間。"); return; }
+
+    // 手動模式：提醒可能撞到既有預約
+    const clash = bookings.find(b =>
+      b.id !== booking.id &&
+      b.date === newDate &&
+      (b.time || "").startsWith(newTime) &&
+      (b.status === "已確認" || b.status === "待確認")
+    );
+    let warn = `確定將此預約改為 ${newDate} ${newTime} 嗎？\n\n⚠️ 手動指定的時間不受「時段開放設定」限制。`;
+    if (clash) {
+      const cm = users.find(u => u.id === clash.userId);
+      warn += `\n\n🔴 注意：這個時間已經有另一筆預約（${cm ? cm.name : "未知會員"}，#${clash.id}），確定仍要排入嗎？`;
+    }
+    if (!confirm(warn)) return;
+  }
+
+  if (isSlotMode) {
+    const label = newSlot.type === "group" ? `${newDate} ${newTime}　${newSlot.title || "團體頌缽"}` : `${newDate} ${newTime}`;
+    if (!confirm(`確定將此預約從\n${oldDate} ${oldTime}\n改為\n${label}\n嗎？`)) return;
+  }
+
+  // 1. 釋放舊時段
+  releaseSlotForBooking(booking);
+
+  // 2. 更新預約內容
+  booking.date = newDate;
+  booking.time = newTime;
+  if (isSlotMode) {
+    booking.slotId = newSlot.id;
+    if (newSlot.type === "group" && newSlot.title) booking.title = newSlot.title;
+    occupySlotForBooking(booking, newSlot);
+  } else {
+    // 手動指定：不綁任何已開放時段
+    booking.slotId = null;
+  }
+
+  // 3. 留下改期紀錄，之後查得到誰在什麼時候改的
+  if (!Array.isArray(booking.rescheduleHistory)) booking.rescheduleHistory = [];
+  booking.rescheduleHistory.push({
+    from: `${oldDate} ${oldTime || ""}`.trim(),
+    to: `${newDate} ${newTime}`,
+    at: getNowDateTimeString(),
+    by: currentUser ? currentUser.name : "管理員",
+    mode: isSlotMode ? "開放時段" : "手動指定"
+  });
+
+  dbSet("bookings", bookings);
+  dbSet("slots", slots);
+
+  // 4. 通知會員
+  const notify = document.getElementById("rescheduleNotify");
+  if (notify && notify.checked) {
+    const typeName = booking.type === "1on1" ? "1對1 頌缽療癒" : (booking.title || "團體頌缽");
+    const calendarUrl = generateGoogleCalendarUrl(booking);
+    sendLineNotification(
+      booking.userId,
+      `🔄 預約改期通知\n\n親愛的會員，您的預約時間已更新：\n\n` +
+      `原時間：${oldDate} ${oldTime || ""}\n` +
+      `✅ 新時間：${newDate} ${newTime}\n` +
+      `✨ 項目：${typeName}\n\n` +
+      `📌 一鍵加入 Google 日曆：\n${calendarUrl}\n\n` +
+      `如有任何問題，歡迎直接回覆此訊息與我們聯絡。`
+    );
+  }
+
+  closeRescheduleModal();
+  alert(`改期完成！\n\n${oldDate} ${oldTime || ""}　→　${newDate} ${newTime}`);
+  renderAdminDashboard(activeAdminPane);
+};
+
 window.adminApproveBooking = function(bookingId) {
   const booking = bookings.find(b => b.id === bookingId);
   if (!booking) return;
@@ -3792,6 +4011,12 @@ async function runMockLineLogin() {
 }
 
   // Admin Form Issue Coupon submit
+  // 改期：切換「開放時段 / 手動指定」模式
+  ["rescheduleModeSlot", "rescheduleModeManual"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener("change", syncRescheduleMode);
+  });
+
   // 新增票券類型
   const formNewTpl = document.getElementById("formNewCouponTemplate");
   if (formNewTpl) {

@@ -12,7 +12,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;500;600;700&family=Noto+Sans+TC:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   
   <!-- CSS -->
-  <link rel="stylesheet" href="member.css?v=68">
+  <link rel="stylesheet" href="member.css?v=69">
   
   <!-- Lucide Icons (CDN) -->
   <script src="https://unpkg.com/lucide@latest"></script>
@@ -1275,7 +1275,53 @@
           </form>
         </div>
       </section>
-      
+
+      <!-- 7.2.2 Reschedule Booking (代會員改期) -->
+      <section id="view-admin-reschedule" class="view-section">
+        <div class="auth-card">
+          <h2>幫會員改期</h2>
+          <p class="auth-subtitle">變更預約時間，點數不會變動</p>
+
+          <div class="member-current-points-badge" id="rescheduleInfo"></div>
+
+          <div class="form-group">
+            <label class="form-label">改期方式</label>
+            <label style="display:flex;align-items:flex-start;gap:8px;margin-bottom:8px;cursor:pointer;">
+              <input type="radio" name="rescheduleMode" id="rescheduleModeSlot" value="slot" checked style="width:auto;margin:4px 0 0 0;">
+              <span>從已開放的空時段選<br><small style="color:var(--mist);">安全做法，不會撞期，舊時段會自動釋出</small></span>
+            </label>
+            <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;">
+              <input type="radio" name="rescheduleMode" id="rescheduleModeManual" value="manual" style="width:auto;margin:4px 0 0 0;">
+              <span>手動指定時間<br><small style="color:var(--mist);">不受時段開放設定限制，撞期時會提醒你</small></span>
+            </label>
+          </div>
+
+          <div class="form-group" id="rescheduleSlotBox">
+            <label class="form-label" for="rescheduleSlotSelect">選擇新的時段</label>
+            <select class="form-input select-input" id="rescheduleSlotSelect"></select>
+          </div>
+
+          <div class="form-group" id="rescheduleManualBox" style="display:none;">
+            <label class="form-label" for="rescheduleManualDate">新的日期</label>
+            <input type="date" class="form-input" id="rescheduleManualDate">
+            <label class="form-label" for="rescheduleManualTime" style="margin-top:12px;">新的時間</label>
+            <input type="time" class="form-input" id="rescheduleManualTime">
+          </div>
+
+          <div class="form-group">
+            <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;">
+              <input type="checkbox" id="rescheduleNotify" checked style="width:auto;margin:0;">
+              改期後自動發 LINE 通知給會員
+            </label>
+          </div>
+
+          <div class="btn-row">
+            <button type="button" class="cta-btn secondary-btn" onclick="closeRescheduleModal()">取消</button>
+            <button type="button" class="cta-btn primary-btn" onclick="confirmReschedule()">確認改期</button>
+          </div>
+        </div>
+      </section>
+
       <!-- 7.2.3 Edit Member Dialog (Modal View) -->
       <section id="view-admin-edit-member" class="view-section">
         <div class="auth-card">
@@ -1460,7 +1506,7 @@
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 
   <!-- JavaScript -->
-  <script src="member.js?v=68"></script>
+  <script src="member.js?v=69"></script>
 
 </body>
 </html>
