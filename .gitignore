@@ -9,3 +9,9 @@ index_backup.html
 *.js
 !index.html
 !member/*.js
+# 部署工具要保留（版號同步腳本）
+!tools/*.py
+
+# 內在天氣測驗的工作檔（約 47MB，含多份備份與字型中間產物）
+# 正式站是獨立的 bori-quiz 儲存庫，這裡不需要也不應該追蹤
+quiz-site/
