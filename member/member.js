@@ -26,6 +26,14 @@ const DEFAULT_VOUCHERS = [
   { id: 4, userId: 4, name: "團體頌缽1次", bonusPoints: 1, status: "available", code: "GRP05" }
 ];
 
+/* 優惠票券「類型」範本 — 管理員可自行新增/刪除，用於促銷活動
+   pointType: giftedPoints(贈送-1對1) / giftedGroupPoints(贈送-團體) / points(通用)
+   validMonths: 發放後幾個月到期；填 0 代表永不過期 */
+const DEFAULT_COUPON_TEMPLATES = [
+  { id: 1, name: "生日優惠贈送次數", bonusPoints: 1, pointType: "giftedPoints", validMonths: 2 },
+  { id: 2, name: "團體頌缽1次", bonusPoints: 1, pointType: "giftedGroupPoints", validMonths: 2 }
+];
+
 const DEFAULT_GROUP_SESSIONS = [
   { id: 1, title: "週一晚間頌缽冥想", time: "每週一 19:30 - 20:30", maxCapacity: 10, currentCapacity: 8, pointCost: 1 },
   { id: 2, title: "週三午間放鬆療癒", time: "每週開課 12:30 - 13:30", maxCapacity: 10, currentCapacity: 10, pointCost: 1 }, // 預設已額滿
@@ -69,6 +77,215 @@ function esc(str) {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#039;");
+}
+
+/* ============================================================
+   點數效期系統（批次制：先到期的先扣）
+   ------------------------------------------------------------
+   設計說明：
+   - 每一筆加值/贈送都會產生一個「批次」，各自帶自己的到期日
+   - 扣點時「快到期的先扣」，最不容易讓會員的點數白白過期
+   - user.points / giftedPoints / giftedGroupPoints 三個整數欄位
+     一律由批次總和自動算出（保持與舊程式碼相容，不用改讀取端）
+   ============================================================ */
+
+// 【設定】點數預設效期（月）。想改全站預設效期，改這個數字就好。
+const POINT_VALIDITY_MONTHS = 2;
+
+// 官方 LINE（點數相關疑問請洽此處）
+const POINT_HELP_LINE_URL = "https://line.me/R/ti/p/%40197nfdme";
+
+const POINT_TYPES = ["points", "giftedPoints", "giftedGroupPoints"];
+const POINT_TYPE_LABEL = {
+  points: "通用點數",
+  giftedPoints: "贈送-1對1",
+  giftedGroupPoints: "贈送-團體"
+};
+
+function todayStr() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+// 加 N 個月（自動處理月底，例如 1/31 加 1 個月 => 2/28）
+function addMonthsStr(dateStr, months) {
+  const [y, m, d] = String(dateStr).split("-").map(Number);
+  const target = new Date(y, m - 1 + months, 1);
+  const lastDay = new Date(target.getFullYear(), target.getMonth() + 1, 0).getDate();
+  target.setDate(Math.min(d, lastDay));
+  return `${target.getFullYear()}-${String(target.getMonth() + 1).padStart(2, "0")}-${String(target.getDate()).padStart(2, "0")}`;
+}
+
+// 預設到期日 = 今天 + POINT_VALIDITY_MONTHS 個月
+function defaultExpiryStr() {
+  return addMonthsStr(todayStr(), POINT_VALIDITY_MONTHS);
+}
+
+// 到期日是否已過（expiresAt 為空 = 永不過期）
+function isExpired(expiresAt, refDate) {
+  if (!expiresAt) return false;
+  return String(expiresAt) < String(refDate || todayStr());
+}
+
+// 距離到期還有幾天（永不過期回傳 null）
+function daysUntil(expiresAt) {
+  if (!expiresAt) return null;
+  const [y, m, d] = String(expiresAt).split("-").map(Number);
+  const target = new Date(y, m - 1, d);
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+  return Math.round((target - now) / 86400000);
+}
+
+/* 舊資料轉換：既有會員只有整數點數、沒有批次。
+   一律轉成「永不過期」的批次，避免既有客戶的點數被追溯砍掉。 */
+function ensureBatches(user) {
+  if (!user) return;
+  if (!Array.isArray(user.pointBatches)) user.pointBatches = [];
+
+  POINT_TYPES.forEach(type => {
+    if (user[type] === undefined) user[type] = 0;
+    const legacy = Number(user[type]) || 0;
+    const batchSum = user.pointBatches
+      .filter(b => b.type === type && !isExpired(b.expiresAt))
+      .reduce((sum, b) => sum + (Number(b.remaining) || 0), 0);
+
+    /* 整數欄位比批次總和「多」出來的部分，代表是還沒建立批次的點數
+       （舊資料，或 Firebase 非同步載入後才進來的雲端資料）。
+       一律補成「永不過期」的批次 —— 只會補、不會扣，
+       確保任何載入順序下都不可能把會員既有的點數弄不見。 */
+    if (legacy > batchSum) {
+      user.pointBatches.push({
+        id: `legacy-${type}-${user.id}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        type: type,
+        remaining: legacy - batchSum,
+        expiresAt: null,           // 既有點數不追溯設效期
+        grantedAt: user.joinDate || todayStr(),
+        note: "系統轉換（原有點數，無期限）"
+      });
+    }
+  });
+}
+
+/* 依批次重算三個整數欄位。
+   注意：這裡刻意「不」呼叫 ensureBatches —— 因為到期掃描剛把過期批次移除後
+   會呼叫本函式，若在此重新對帳會把剛過期的點數又補回來。 */
+function syncPointTotals(user) {
+  if (!user || !Array.isArray(user.pointBatches)) return;
+  POINT_TYPES.forEach(type => {
+    user[type] = user.pointBatches
+      .filter(b => b.type === type && !isExpired(b.expiresAt))
+      .reduce((sum, b) => sum + (Number(b.remaining) || 0), 0);
+  });
+}
+
+/* 掃描並清除已過期的批次。回傳被清掉的明細（供寫入交易紀錄用） */
+function expireUserBatches(user) {
+  ensureBatches(user);
+  const expired = user.pointBatches.filter(b => isExpired(b.expiresAt) && (Number(b.remaining) || 0) > 0);
+  if (expired.length === 0) {
+    syncPointTotals(user);
+    return [];
+  }
+  user.pointBatches = user.pointBatches.filter(b => !isExpired(b.expiresAt));
+  syncPointTotals(user);
+  return expired.map(b => ({ type: b.type, amount: Number(b.remaining) || 0, expiresAt: b.expiresAt }));
+}
+
+/* 全體會員到期掃描：登入/載入時跑一次，把過期點數歸零並留下交易紀錄 */
+function runExpirySweep() {
+  let changed = false;
+  users.forEach(user => {
+    const expired = expireUserBatches(user);
+    expired.forEach(e => {
+      changed = true;
+      transactions.push({
+        id: getNextId(transactions, 1),
+        userId: user.id,
+        date: todayStr(),
+        type: "點數到期",
+        item: `${POINT_TYPE_LABEL[e.type] || e.type} ${e.amount} 點已於 ${e.expiresAt} 到期`,
+        amount: -e.amount,
+        balance: user[e.type] || 0
+      });
+    });
+  });
+  if (changed) {
+    dbSet("users", users);
+    dbSet("transactions", transactions);
+  }
+  return changed;
+}
+
+/* 發放點數（唯一的加點入口）
+   expiresAt 傳 null 代表永不過期；不傳則採用預設效期 */
+function grantPoints(user, type, amount, expiresAt, note) {
+  ensureBatches(user);
+  amount = Number(amount) || 0;
+  if (amount <= 0) return;
+  user.pointBatches.push({
+    id: `b${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    type: type,
+    remaining: amount,
+    expiresAt: expiresAt === undefined ? defaultExpiryStr() : (expiresAt || null),
+    grantedAt: todayStr(),
+    note: note || ""
+  });
+  syncPointTotals(user);
+}
+
+/* 扣點（唯一的扣點入口）：快到期的先扣。
+   回傳消耗明細，退點時可原封不動還回去，不會偷偷延長效期。 */
+function consumePoints(user, type, amount) {
+  ensureBatches(user);
+  amount = Number(amount) || 0;
+  const consumed = [];
+  const pool = user.pointBatches
+    .filter(b => b.type === type && !isExpired(b.expiresAt) && (Number(b.remaining) || 0) > 0)
+    .sort((a, b) => {
+      // 永不過期的排最後，其餘照到期日由近到遠
+      if (!a.expiresAt && !b.expiresAt) return 0;
+      if (!a.expiresAt) return 1;
+      if (!b.expiresAt) return -1;
+      return a.expiresAt < b.expiresAt ? -1 : 1;
+    });
+  let left = amount;
+  for (const batch of pool) {
+    if (left <= 0) break;
+    const take = Math.min(batch.remaining, left);
+    batch.remaining -= take;
+    left -= take;
+    consumed.push({ type: type, amount: take, expiresAt: batch.expiresAt, note: batch.note || "" });
+  }
+  user.pointBatches = user.pointBatches.filter(b => (Number(b.remaining) || 0) > 0);
+  syncPointTotals(user);
+  return consumed;
+}
+
+/* 退點：把當初扣掉的批次原樣還回去（保留原到期日） */
+function restorePoints(user, consumedRecord, note) {
+  ensureBatches(user);
+  if (!Array.isArray(consumedRecord) || consumedRecord.length === 0) return false;
+  consumedRecord.forEach(c => {
+    // 原批次若已過期就不還了，避免還回一批立刻消失的點數造成困惑
+    if (isExpired(c.expiresAt)) return;
+    grantPoints(user, c.type, c.amount, c.expiresAt, note || "預約取消退回");
+  });
+  syncPointTotals(user);
+  return true;
+}
+
+// 取得某會員各類點數的到期明細（會員中心顯示用）
+function getExpiryBreakdown(user) {
+  ensureBatches(user);
+  return user.pointBatches
+    .filter(b => !isExpired(b.expiresAt) && (Number(b.remaining) || 0) > 0)
+    .sort((a, b) => {
+      if (!a.expiresAt && !b.expiresAt) return 0;
+      if (!a.expiresAt) return 1;
+      if (!b.expiresAt) return -1;
+      return a.expiresAt < b.expiresAt ? -1 : 1;
+    });
 }
 
 // Helper to get user Firebase path key (UID or manual_email or numeric_id)
@@ -225,6 +442,7 @@ let googleClientId = "";
 let users = dbGet("users", DEFAULT_USERS);
 let bookings = dbGet("bookings", DEFAULT_BOOKINGS);
 let vouchers = dbGet("vouchers", DEFAULT_VOUCHERS);
+let couponTemplates = dbGet("couponTemplates", DEFAULT_COUPON_TEMPLATES);
 let groupSessions = dbGet("groupSessions", DEFAULT_GROUP_SESSIONS);
 let transactions = dbGet("transactions", DEFAULT_TRANSACTIONS);
 let slots = dbGet("slots", DEFAULT_SLOTS);
@@ -238,11 +456,17 @@ let currentUser = null;
 dbSet("users", users, false);
 dbSet("bookings", bookings, false);
 dbSet("vouchers", vouchers, false);
+dbSet("couponTemplates", couponTemplates, false);
 dbSet("groupSessions", groupSessions, false);
 dbSet("transactions", transactions, false);
 dbSet("slots", slots, false);
 dbSet("remittances", remittances, false);
 dbSet("courses", courses, false);
+
+/* 載入時先把所有會員的點數批次補齊（舊資料轉換），
+   再跑一次到期掃描，把已過期的點數自動歸零並留下交易紀錄。 */
+users.forEach(u => ensureBatches(u));
+runExpirySweep();
 
 // ==========================================
 // 2. 視圖切換與路由 (Router)
@@ -250,7 +474,7 @@ dbSet("courses", courses, false);
 
 const VIEWS = [
   "landing", "auth", "register", "member", "edit-profile", "book",
-  "admin", "admin-points", "admin-add-member", "admin-edit-member", "buy-points", "admin-reject-remittance",
+  "admin", "admin-points", "admin-add-member", "admin-edit-member", "buy-points", "admin-reject-remittance", "admin-reschedule",
   "courses", "course-detail", "lesson-player", "admin-edit-course"
 ];
 
@@ -445,7 +669,7 @@ function onUserLogoutSuccess() {
   
   const activeSection = document.querySelector(".view-section.active");
   const activeView = activeSection ? activeSection.id.replace("view-", "") : "landing";
-  const memberOnlyViews = ["member", "admin", "buy-points", "book", "edit-profile", "admin-points", "admin-add-member", "admin-edit-member", "courses", "course-detail", "lesson-player", "admin-edit-course"];
+  const memberOnlyViews = ["member", "admin", "buy-points", "book", "edit-profile", "admin-points", "admin-add-member", "admin-edit-member", "admin-reschedule", "courses", "course-detail", "lesson-player", "admin-edit-course"];
   if (memberOnlyViews.includes(activeView)) {
     navigateTo("landing");
   }
@@ -466,23 +690,52 @@ function renderDashboard() {
   document.getElementById("lblMemberGender").textContent = currentUser.gender;
   document.getElementById("lblMemberJoinDate").textContent = currentUser.joinDate;
   
-  // Points Display
-  if (currentUser.points === undefined) currentUser.points = 0;
-  if (currentUser.giftedPoints === undefined) currentUser.giftedPoints = 0;
-  if (currentUser.giftedGroupPoints === undefined) currentUser.giftedGroupPoints = 0;
-  
+  // Points Display — 先掃描到期，確保顯示的是真正還能用的點數
+  expireUserBatches(currentUser);
+
   const total1on1 = currentUser.points + currentUser.giftedPoints;
   const totalGroup = currentUser.points + currentUser.giftedGroupPoints;
-  
+
   document.getElementById("lblMemberPoints").textContent = total1on1;
   document.getElementById("lblMemberGroupPoints").textContent = totalGroup;
-  
+
   const pointsTip = document.querySelector(".points-tip");
   if (pointsTip) {
+    // 各批點數的到期明細
+    const batches = getExpiryBreakdown(currentUser);
+    let expiryHtml = "";
+    if (batches.length > 0) {
+      const rows = batches.map(b => {
+        const label = POINT_TYPE_LABEL[b.type] || b.type;
+        if (!b.expiresAt) {
+          return `<li>${label} <strong>${b.remaining}</strong> 次 — 無使用期限</li>`;
+        }
+        const d = daysUntil(b.expiresAt);
+        const urgent = d !== null && d <= 14;
+        return `<li>${label} <strong>${b.remaining}</strong> 次 — 效期至 <strong>${esc(b.expiresAt)}</strong>` +
+               (urgent ? ` <span style="color:#C0392B;font-weight:600;">（剩 ${d} 天，即將到期）</span>` : ` <span style="color:var(--mist);">（剩 ${d} 天）</span>`) +
+               `</li>`;
+      }).join("");
+      expiryHtml =
+        `<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--hairline);">` +
+        `<div style="font-weight:600;margin-bottom:6px;">⏳ 點數使用期限</div>` +
+        `<ul style="margin:0;padding-left:18px;line-height:1.9;">${rows}</ul>` +
+        `<div style="margin-top:8px;color:var(--mist);font-size:12.5px;line-height:1.7;">` +
+        `點數到期後將自動失效，系統會依「先到期的先扣」自動使用。<br>` +
+        `如對點數效期有任何疑問，歡迎詢問<a href="${POINT_HELP_LINE_URL}" target="_blank" rel="noopener" style="color:var(--brass-soft);text-decoration:underline;">官方 LINE</a>，我們會協助您確認。` +
+        `</div></div>`;
+    } else {
+      expiryHtml =
+        `<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--hairline);color:var(--mist);font-size:12.5px;line-height:1.7;">` +
+        `如對點數效期有任何疑問，歡迎詢問<a href="${POINT_HELP_LINE_URL}" target="_blank" rel="noopener" style="color:var(--brass-soft);text-decoration:underline;">官方 LINE</a>，我們會協助您確認。` +
+        `</div>`;
+    }
+
     pointsTip.innerHTML = `💡 您擁有的額度明細：通用點數：<strong>${currentUser.points}</strong> 次（1對1及團體皆可折抵）<br>` +
-                          `贈送-1對1：<strong>${currentUser.giftedPoints}</strong> 次（限1對1）/ 贈送-團體：<strong>${currentUser.giftedGroupPoints}</strong> 次（限團體）。`;
+                          `贈送-1對1：<strong>${currentUser.giftedPoints}</strong> 次（限1對1）/ 贈送-團體：<strong>${currentUser.giftedGroupPoints}</strong> 次（限團體）。` +
+                          expiryHtml;
   }
-  
+
   // Vouchers List
   const vouchersContainer = document.getElementById("memberVouchersList");
   const userVouchers = vouchers.filter(v => v.userId === currentUser.id);
@@ -494,12 +747,21 @@ function renderDashboard() {
     userVouchers.forEach(v => {
       const item = document.createElement("div");
       item.className = "voucher-item";
+      const vExpired = isExpired(v.expiresAt);
+      let expiryLine = "";
+      if (v.expiresAt) {
+        const d = daysUntil(v.expiresAt);
+        expiryLine = vExpired
+          ? `<p style="color:#C0392B;">已於 ${esc(v.expiresAt)} 到期</p>`
+          : `<p style="color:${d <= 14 ? '#C0392B' : 'var(--mist)'};">效期至 ${esc(v.expiresAt)}（剩 ${d} 天）</p>`;
+      }
       item.innerHTML = `
         <div class="voucher-info">
-          <h4>${v.name}</h4>
-          <p>代碼：${v.code} (${v.status === "used" ? "已使用" : "未使用"})</p>
+          <h4>${esc(v.name)}</h4>
+          <p>代碼：${esc(v.code)} (${v.status === "used" ? "已使用" : "未使用"})</p>
+          ${expiryLine}
         </div>
-        <div class="voucher-bonus ${v.status === "used" ? "used" : ""}">+${v.bonusPoints} 次</div>
+        <div class="voucher-bonus ${(v.status === "used" || vExpired) ? "used" : ""}">+${v.bonusPoints} 次</div>
       `;
       vouchersContainer.appendChild(item);
     });
@@ -631,18 +893,16 @@ window.cancelBooking = function(bookingId) {
     if (member) {
       let currentBal = 0;
       const refundType = booking.paidBy || "common";
-      if (refundType === "gifted") {
-        if (booking.type === "1on1") {
-          member.giftedPoints = (member.giftedPoints || 0) + booking.cost;
-          currentBal = member.giftedPoints;
-        } else {
-          member.giftedGroupPoints = (member.giftedGroupPoints || 0) + booking.cost;
-          currentBal = member.giftedGroupPoints;
-        }
+      const refundField = refundType === "gifted"
+        ? (booking.type === "1on1" ? "giftedPoints" : "giftedGroupPoints")
+        : "points";
+      // 優先原樣退回當初扣掉的批次（保留原到期日）；舊資料沒記批次才退成預設效期
+      if (Array.isArray(booking.consumedBatches) && booking.consumedBatches.length > 0) {
+        restorePoints(member, booking.consumedBatches, "預約取消退回");
       } else {
-        member.points = (member.points || 0) + booking.cost;
-        currentBal = member.points;
+        grantPoints(member, refundField, booking.cost, defaultExpiryStr(), "預約取消退回");
       }
+      currentBal = member[refundField] || 0;
       dbSet("users", users);
       
       // 3. Log point transaction
@@ -1274,7 +1534,18 @@ function renderAdminMemberList() {
       }
       
       const isTargetAdmin = u.role === "admin";
-      const pointsText = isTargetAdmin ? `<span class="badge status-pending">管理員帳號</span>` : `通用: <strong class="text-brass">${u.points || 0}</strong> 次<br>贈送1對1: <strong class="text-brass">${u.giftedPoints || 0}</strong> 次<br>贈送團體: <strong class="text-brass">${u.giftedGroupPoints || 0}</strong> 次`;
+      // 最近一筆到期資訊（讓管理員一眼看出誰的點數快過期）
+      let soonestNote = "";
+      if (!isTargetAdmin) {
+        const bs = getExpiryBreakdown(u).filter(b => b.expiresAt);
+        if (bs.length > 0) {
+          const d = daysUntil(bs[0].expiresAt);
+          soonestNote = `<br><span style="font-size:11px;color:${d <= 14 ? '#C0392B' : 'var(--mist)'};">最近到期：${esc(bs[0].expiresAt)}（${d} 天）</span>`;
+        } else if (getExpiryBreakdown(u).length > 0) {
+          soonestNote = `<br><span style="font-size:11px;color:var(--mist);">無期限</span>`;
+        }
+      }
+      const pointsText = isTargetAdmin ? `<span class="badge status-pending">管理員帳號</span>` : `通用: <strong class="text-brass">${u.points || 0}</strong> 次<br>贈送1對1: <strong class="text-brass">${u.giftedPoints || 0}</strong> 次<br>贈送團體: <strong class="text-brass">${u.giftedGroupPoints || 0}</strong> 次${soonestNote}`;
       
       const actionsHtml = isTargetAdmin ? `
         <div class="action-btn-group">
@@ -1289,7 +1560,7 @@ function renderAdminMemberList() {
       `;
       
       row.innerHTML = `
-        <td><strong>${u.name}</strong> ${isTargetAdmin ? '<span class="status-badge status-approved" style="font-size:10px;padding:2px 4px;margin-left:4px;">管理員</span>' : ''}</td>
+        <td><strong>${u.name}</strong> ${isTargetAdmin ? '<span class="status-badge status-approved" style="font-size:10px;padding:2px 4px;margin-left:4px;">管理員</span>' : ''}<br><span style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--mist);">ID: ${u.id}</span></td>
         <td>${u.phone}<br><span style="font-size:11px;color:var(--mist);">${u.email}</span><br><span style="font-size:11px;color:var(--brass-soft);font-weight:500;">密碼: ${pwdText}</span></td>
         <td>${u.gender}</td>
         <td>${u.joinDate}</td>
@@ -1342,9 +1613,18 @@ window.openAdjustPoints = function(memberId) {
   const member = users.find(u => u.id === memberId);
   if (!member) return;
   
+  // 開窗前先掃一次到期，避免顯示到已過期的點數
+  expireUserBatches(member);
+
   document.getElementById("adjustMemberId").value = member.id;
   document.getElementById("lblAdjustTargetName").textContent = member.name;
   document.getElementById("lblAdjustTargetPoints").textContent = member.points;
+
+  // 預填預設到期日
+  const adjExpiry = document.getElementById("adjustExpiry");
+  const adjNoExpiry = document.getElementById("adjustNoExpiry");
+  if (adjExpiry) { adjExpiry.value = defaultExpiryStr(); adjExpiry.disabled = false; }
+  if (adjNoExpiry) adjNoExpiry.checked = false;
   const lblGifted = document.getElementById("lblAdjustTargetGifted");
   if (lblGifted) lblGifted.textContent = member.giftedPoints || 0;
   const lblGiftedGroup = document.getElementById("lblAdjustTargetGiftedGroup");
@@ -1554,12 +1834,16 @@ function showAdminCalendarDayDetail(dateStr) {
         actionButtons = `
           <div style="display: flex; gap: 4px;">
             <button class="table-action-btn success" style="padding: 2px 6px; font-size: 11px; height: auto;" onclick="adminApproveBooking(${b.id}); event.stopPropagation();">確認</button>
+            <button class="table-action-btn" style="padding: 2px 6px; font-size: 11px; height: auto;" onclick="openRescheduleBooking(${b.id}); event.stopPropagation();">改期</button>
             <button class="table-action-btn danger" style="padding: 2px 6px; font-size: 11px; height: auto;" onclick="adminRejectBooking(${b.id}); event.stopPropagation();">拒絕</button>
           </div>
         `;
       } else if (b.status === "已確認") {
         actionButtons = `
-          <button class="table-action-btn danger" style="padding: 2px 6px; font-size: 11px; height: auto;" onclick="adminRejectBooking(${b.id}); event.stopPropagation();">取消並退次</button>
+          <div style="display: flex; gap: 4px;">
+            <button class="table-action-btn" style="padding: 2px 6px; font-size: 11px; height: auto;" onclick="openRescheduleBooking(${b.id}); event.stopPropagation();">改期</button>
+            <button class="table-action-btn danger" style="padding: 2px 6px; font-size: 11px; height: auto;" onclick="adminRejectBooking(${b.id}); event.stopPropagation();">取消並退次</button>
+          </div>
         `;
       }
       
@@ -1629,12 +1913,14 @@ function renderAdminBookingList() {
         actions = `
           <div class="action-btn-group">
             <button class="table-action-btn success" onclick="adminApproveBooking(${b.id})">確認</button>
+            <button class="table-action-btn" onclick="openRescheduleBooking(${b.id})">改期</button>
             <button class="table-action-btn danger" onclick="adminRejectBooking(${b.id})">拒絕</button>
           </div>
         `;
       } else if (b.status === "已確認") {
         actions = `
           <div class="action-btn-group">
+            <button class="table-action-btn" onclick="openRescheduleBooking(${b.id})">改期</button>
             <button class="table-action-btn danger" onclick="adminRejectBooking(${b.id})">取消並退次數</button>
           </div>
         `;
@@ -1643,9 +1929,11 @@ function renderAdminBookingList() {
       const row = document.createElement("tr");
       row.innerHTML = `
         <td><span style="font-family:'JetBrains Mono';font-size:11px;">#${b.id}</span></td>
-        <td><strong>${memberName}</strong></td>
+        <td><strong>${memberName}</strong><br><span style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--mist);">userId: ${b.userId}</span></td>
         <td>${label}</td>
-        <td>${timeDetail}</td>
+        <td>${timeDetail}${Array.isArray(b.rescheduleHistory) && b.rescheduleHistory.length > 0
+          ? `<br><span style="font-size:11px;color:var(--brass-soft);">🔄 已改期 ${b.rescheduleHistory.length} 次（原 ${esc(b.rescheduleHistory[0].from)}）</span>`
+          : ""}</td>
         <td>${b.cost} 次</td>
         <td><span class="status-badge ${statusClass}">${b.status}</span></td>
         <td>${actions}</td>
@@ -1656,6 +1944,217 @@ function renderAdminBookingList() {
 }
 
 // Admin Action on Bookings
+/* ============================================================
+   管理員代為改期
+   ------------------------------------------------------------
+   兩種模式：
+   (A) 從已開放且還有空位的時段挑（安全，不會撞期）
+   (B) 手動指定任意日期時間（彈性，會跳提醒）
+   改期會自動：釋放舊時段 → 佔用新時段 → 通知會員
+   點數不變動（同一筆預約，只是換時間）
+   ============================================================ */
+let rescheduleTargetBookingId = null;
+
+// 釋放某筆預約目前佔用的時段
+function releaseSlotForBooking(booking) {
+  if (!booking || !booking.slotId) return;
+  const slot = slots.find(s => s.id === booking.slotId);
+  if (!slot) return;
+  if (booking.type === "group" || slot.type === "group") {
+    slot.currentCapacity = Math.max(0, (slot.currentCapacity || 0) - 1);
+    if (slot.status === "full") slot.status = "open";
+  } else {
+    slot.status = "open";
+    slot.bookingId = null;
+  }
+}
+
+// 讓某筆預約佔用指定時段
+function occupySlotForBooking(booking, slot) {
+  if (!slot) return;
+  if (booking.type === "group" || slot.type === "group") {
+    slot.currentCapacity = (slot.currentCapacity || 0) + 1;
+    if (slot.currentCapacity >= (slot.maxCapacity || 0)) slot.status = "full";
+  } else {
+    slot.status = booking.status === "已確認" ? "booked" : "pending";
+    slot.bookingId = booking.id;
+  }
+}
+
+// 取得可改期的候選時段（排除該筆預約目前佔用的那個）
+function getReschedulableSlots(booking) {
+  const isGroup = booking.type === "group";
+  const today = todayStr();
+  return slots
+    .filter(s => {
+      if (s.id === booking.slotId) return false;
+      if (s.date < today) return false;                       // 不列過去的時段
+      const slotIsGroup = (s.type === "group");
+      if (isGroup !== slotIsGroup) return false;              // 類型要一致
+      if (isGroup) {
+        return (s.currentCapacity || 0) < (s.maxCapacity || 0);
+      }
+      return s.status === "open";
+    })
+    .sort((a, b) => a.date === b.date ? String(a.time).localeCompare(String(b.time)) : a.date.localeCompare(b.date));
+}
+
+window.openRescheduleBooking = function(bookingId) {
+  const booking = bookings.find(b => b.id === bookingId);
+  if (!booking) return;
+  rescheduleTargetBookingId = bookingId;
+
+  const member = users.find(u => u.id === booking.userId);
+  const typeName = booking.type === "1on1" ? "1對1 頌缽" : (booking.title || "團體頌缽");
+
+  const info = document.getElementById("rescheduleInfo");
+  if (info) {
+    info.innerHTML =
+      `<div style="line-height:1.9;">` +
+      `<strong>${esc(member ? member.name : "未知會員")}</strong>　<span class="status-badge status-confirmed">${esc(booking.status)}</span><br>` +
+      `項目：${esc(typeName)}<br>` +
+      `目前時間：<strong>${esc(booking.date)} ${esc(booking.time || "")}</strong>` +
+      `</div>`;
+  }
+
+  // 填入可選時段
+  const sel = document.getElementById("rescheduleSlotSelect");
+  if (sel) {
+    const candidates = getReschedulableSlots(booking);
+    sel.innerHTML = "";
+    if (candidates.length === 0) {
+      sel.innerHTML = `<option value="">（目前沒有其他可用時段，請改用手動指定）</option>`;
+    } else {
+      candidates.forEach(s => {
+        const opt = document.createElement("option");
+        opt.value = s.id;
+        opt.textContent = s.type === "group"
+          ? `${s.date} ${s.time}　${s.title || "團體頌缽"}（尚有 ${(s.maxCapacity || 0) - (s.currentCapacity || 0)} 位）`
+          : `${s.date} ${s.time}`;
+        sel.appendChild(opt);
+      });
+    }
+  }
+
+  // 預設回到「從開放時段選」模式
+  const modeSlot = document.getElementById("rescheduleModeSlot");
+  if (modeSlot) modeSlot.checked = true;
+  const md = document.getElementById("rescheduleManualDate");
+  const mt = document.getElementById("rescheduleManualTime");
+  if (md) md.value = booking.date || "";
+  if (mt) mt.value = (booking.time || "").split(" ")[0] || "";
+  const notify = document.getElementById("rescheduleNotify");
+  if (notify) notify.checked = true;
+  syncRescheduleMode();
+
+  navigateTo("admin-reschedule");
+};
+
+// 依選擇的模式切換顯示區塊
+function syncRescheduleMode() {
+  const isSlotMode = document.getElementById("rescheduleModeSlot")?.checked;
+  const slotBox = document.getElementById("rescheduleSlotBox");
+  const manualBox = document.getElementById("rescheduleManualBox");
+  if (slotBox) slotBox.style.display = isSlotMode ? "block" : "none";
+  if (manualBox) manualBox.style.display = isSlotMode ? "none" : "block";
+}
+
+window.closeRescheduleModal = function() {
+  rescheduleTargetBookingId = null;
+  navigateTo("admin");
+};
+
+window.confirmReschedule = function() {
+  const booking = bookings.find(b => b.id === rescheduleTargetBookingId);
+  if (!booking) return;
+
+  const isSlotMode = document.getElementById("rescheduleModeSlot").checked;
+  const oldDate = booking.date;
+  const oldTime = booking.time;
+  let newSlot = null;
+  let newDate, newTime;
+
+  if (isSlotMode) {
+    const slotId = parseInt(document.getElementById("rescheduleSlotSelect").value);
+    if (!slotId) { alert("請選擇一個時段，或改用手動指定時間。"); return; }
+    newSlot = slots.find(s => s.id === slotId);
+    if (!newSlot) { alert("找不到該時段，請重新整理後再試。"); return; }
+    newDate = newSlot.date;
+    newTime = newSlot.time;
+  } else {
+    newDate = document.getElementById("rescheduleManualDate").value;
+    newTime = document.getElementById("rescheduleManualTime").value;
+    if (!newDate || !newTime) { alert("請填寫新的日期與時間。"); return; }
+
+    // 手動模式：提醒可能撞到既有預約
+    const clash = bookings.find(b =>
+      b.id !== booking.id &&
+      b.date === newDate &&
+      (b.time || "").startsWith(newTime) &&
+      (b.status === "已確認" || b.status === "待確認")
+    );
+    let warn = `確定將此預約改為 ${newDate} ${newTime} 嗎？\n\n⚠️ 手動指定的時間不受「時段開放設定」限制。`;
+    if (clash) {
+      const cm = users.find(u => u.id === clash.userId);
+      warn += `\n\n🔴 注意：這個時間已經有另一筆預約（${cm ? cm.name : "未知會員"}，#${clash.id}），確定仍要排入嗎？`;
+    }
+    if (!confirm(warn)) return;
+  }
+
+  if (isSlotMode) {
+    const label = newSlot.type === "group" ? `${newDate} ${newTime}　${newSlot.title || "團體頌缽"}` : `${newDate} ${newTime}`;
+    if (!confirm(`確定將此預約從\n${oldDate} ${oldTime}\n改為\n${label}\n嗎？`)) return;
+  }
+
+  // 1. 釋放舊時段
+  releaseSlotForBooking(booking);
+
+  // 2. 更新預約內容
+  booking.date = newDate;
+  booking.time = newTime;
+  if (isSlotMode) {
+    booking.slotId = newSlot.id;
+    if (newSlot.type === "group" && newSlot.title) booking.title = newSlot.title;
+    occupySlotForBooking(booking, newSlot);
+  } else {
+    // 手動指定：不綁任何已開放時段
+    booking.slotId = null;
+  }
+
+  // 3. 留下改期紀錄，之後查得到誰在什麼時候改的
+  if (!Array.isArray(booking.rescheduleHistory)) booking.rescheduleHistory = [];
+  booking.rescheduleHistory.push({
+    from: `${oldDate} ${oldTime || ""}`.trim(),
+    to: `${newDate} ${newTime}`,
+    at: getNowDateTimeString(),
+    by: currentUser ? currentUser.name : "管理員",
+    mode: isSlotMode ? "開放時段" : "手動指定"
+  });
+
+  dbSet("bookings", bookings);
+  dbSet("slots", slots);
+
+  // 4. 通知會員
+  const notify = document.getElementById("rescheduleNotify");
+  if (notify && notify.checked) {
+    const typeName = booking.type === "1on1" ? "1對1 頌缽療癒" : (booking.title || "團體頌缽");
+    const calendarUrl = generateGoogleCalendarUrl(booking);
+    sendLineNotification(
+      booking.userId,
+      `🔄 預約改期通知\n\n親愛的會員，您的預約時間已更新：\n\n` +
+      `原時間：${oldDate} ${oldTime || ""}\n` +
+      `✅ 新時間：${newDate} ${newTime}\n` +
+      `✨ 項目：${typeName}\n\n` +
+      `📌 一鍵加入 Google 日曆：\n${calendarUrl}\n\n` +
+      `如有任何問題，歡迎直接回覆此訊息與我們聯絡。`
+    );
+  }
+
+  closeRescheduleModal();
+  alert(`改期完成！\n\n${oldDate} ${oldTime || ""}　→　${newDate} ${newTime}`);
+  renderAdminDashboard(activeAdminPane);
+};
+
 window.adminApproveBooking = function(bookingId) {
   const booking = bookings.find(b => b.id === bookingId);
   if (!booking) return;
@@ -1711,18 +2210,16 @@ window.adminRejectBooking = function(bookingId) {
     if (member) {
       let currentBal = 0;
       const refundType = booking.paidBy || "common";
-      if (refundType === "gifted") {
-        if (booking.type === "1on1") {
-          member.giftedPoints = (member.giftedPoints || 0) + booking.cost;
-          currentBal = member.giftedPoints;
-        } else {
-          member.giftedGroupPoints = (member.giftedGroupPoints || 0) + booking.cost;
-          currentBal = member.giftedGroupPoints;
-        }
+      const refundField = refundType === "gifted"
+        ? (booking.type === "1on1" ? "giftedPoints" : "giftedGroupPoints")
+        : "points";
+      // 優先原樣退回當初扣掉的批次（保留原到期日）；舊資料沒記批次才退成預設效期
+      if (Array.isArray(booking.consumedBatches) && booking.consumedBatches.length > 0) {
+        restorePoints(member, booking.consumedBatches, "預約取消退回");
       } else {
-        member.points = (member.points || 0) + booking.cost;
-        currentBal = member.points;
+        grantPoints(member, refundField, booking.cost, defaultExpiryStr(), "預約取消退回");
       }
+      currentBal = member[refundField] || 0;
       dbSet("users", users);
       
       // 3. Log points
@@ -1752,6 +2249,58 @@ window.adminRejectBooking = function(bookingId) {
 };
 
 // 4.4 Coupons Panel (Issue form & list)
+/* 依目前選到的票券類型，把到期日欄位預填成算出來的日期 */
+function syncCouponExpiryDefault() {
+  const tplSelect = document.getElementById("selCouponTemplate");
+  const expiryEl = document.getElementById("couponExpiry");
+  const noExpiryEl = document.getElementById("couponNoExpiry");
+  if (!tplSelect || !expiryEl) return;
+  const tpl = couponTemplates.find(t => String(t.id) === String(tplSelect.value));
+  if (!tpl) return;
+  const vm = Number(tpl.validMonths);
+  if (vm > 0) {
+    expiryEl.value = addMonthsStr(todayStr(), vm);
+    if (noExpiryEl) noExpiryEl.checked = false;
+    expiryEl.disabled = false;
+  } else {
+    expiryEl.value = "";
+    if (noExpiryEl) noExpiryEl.checked = true;
+    expiryEl.disabled = true;
+  }
+}
+
+/* 票券類型管理列表 */
+function renderCouponTemplateList() {
+  const box = document.getElementById("couponTemplateList");
+  if (!box) return;
+  box.innerHTML = "";
+  if (couponTemplates.length === 0) {
+    box.innerHTML = `<tr><td colspan="4" style="text-align:center;color:var(--mist);padding:16px;">尚未建立任何票券類型</td></tr>`;
+    return;
+  }
+  couponTemplates.forEach(t => {
+    const vm = Number(t.validMonths);
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td><strong>${esc(t.name)}</strong></td>
+      <td><span class="tx-add">+${t.bonusPoints}</span> ${esc(POINT_TYPE_LABEL[t.pointType] || t.pointType)}</td>
+      <td>${vm > 0 ? vm + " 個月" : "永久"}</td>
+      <td><button type="button" class="table-action-btn danger" onclick="deleteCouponTemplate(${t.id})">刪除</button></td>
+    `;
+    box.appendChild(tr);
+  });
+}
+
+/* 刪除票券類型（已發出去的票券不受影響） */
+function deleteCouponTemplate(id) {
+  const tpl = couponTemplates.find(t => t.id === id);
+  if (!tpl) return;
+  if (!confirm(`確定要刪除票券類型「${tpl.name}」嗎？\n\n（已經發放出去的票券與點數不受影響，只是之後不能再用這個類型發放）`)) return;
+  couponTemplates = couponTemplates.filter(t => t.id !== id);
+  dbSet("couponTemplates", couponTemplates);
+  renderAdminCouponsPanel();
+}
+
 function renderAdminCouponsPanel() {
   // Populate member dropdown list
   const memberSelect = document.getElementById("selCouponTarget");
@@ -1763,7 +2312,29 @@ function renderAdminCouponsPanel() {
     opt.textContent = `${u.name} (剩餘: ${u.points}次)`;
     memberSelect.appendChild(opt);
   });
-  
+
+  // 票券類型下拉：由可自訂的 couponTemplates 產生
+  const tplSelect = document.getElementById("selCouponTemplate");
+  if (tplSelect) {
+    tplSelect.innerHTML = "";
+    if (couponTemplates.length === 0) {
+      tplSelect.innerHTML = `<option value="">（尚未建立票券類型）</option>`;
+    } else {
+      couponTemplates.forEach(t => {
+        const opt = document.createElement("option");
+        opt.value = t.id;
+        const vm = Number(t.validMonths);
+        opt.textContent = `${t.name} (${t.bonusPoints} 次・${POINT_TYPE_LABEL[t.pointType] || t.pointType}・${vm > 0 ? vm + "個月效期" : "永久"})`;
+        tplSelect.appendChild(opt);
+      });
+    }
+  }
+  // 預設帶入該票券類型算出的到期日
+  syncCouponExpiryDefault();
+
+  // 票券類型管理列表
+  renderCouponTemplateList();
+
   // Render issued coupons log
   const container = document.getElementById("adminCouponList");
   container.innerHTML = "";
@@ -1776,8 +2347,9 @@ function renderAdminCouponsPanel() {
     
     row.innerHTML = `
       <td><strong>${mName}</strong></td>
-      <td>${v.name}<br><span style="font-family:'JetBrains Mono';font-size:10.5px;color:var(--mist)">Code: ${v.code}</span></td>
+      <td>${esc(v.name)}<br><span style="font-family:'JetBrains Mono';font-size:10.5px;color:var(--mist)">Code: ${esc(v.code)}</span></td>
       <td><span class="tx-add">+${v.bonusPoints}</span></td>
+      <td>${v.expiresAt ? `<span style="font-size:12px;">${esc(v.expiresAt)}</span>` : `<span style="font-size:12px;color:var(--mist)">永久</span>`}</td>
       <td>
         <span class="status-badge ${isUsed ? 'status-completed' : 'status-confirmed'}">
           ${isUsed ? '已使用' : '未使用'}
@@ -1807,7 +2379,10 @@ window.deleteAdminCoupon = function(couponId) {
     return;
   }
   
-  const is1on1 = voucher.name === "生日優惠贈送次數";
+  // 優先用票券自身記錄的點數種類；舊資料才回退到用名稱判斷
+  const is1on1 = voucher.pointType
+    ? voucher.pointType === "giftedPoints"
+    : voucher.name === "生日優惠贈送次數";
   const targetNameStr = is1on1 ? "贈送-1對1" : "贈送-團體";
   const userPoints = is1on1 ? (member.giftedPoints || 0) : (member.giftedGroupPoints || 0);
   
@@ -1817,11 +2392,7 @@ window.deleteAdminCoupon = function(couponId) {
   }
   
   if (confirm(confirmMsg)) {
-    if (is1on1) {
-      member.giftedPoints = Math.max(0, (member.giftedPoints || 0) - voucher.bonusPoints);
-    } else {
-      member.giftedGroupPoints = Math.max(0, (member.giftedGroupPoints || 0) - voucher.bonusPoints);
-    }
+    consumePoints(member, is1on1 ? "giftedPoints" : "giftedGroupPoints", voucher.bonusPoints);
     dbSet("users", users);
     
     const timestamp = getNowDateTimeString();
@@ -2162,9 +2733,10 @@ window.adminApproveRemittance = function(remittanceId) {
   }
   
   if (confirm(`確定已收到會員 ${member.name} 的匯款，並發放 ${remit.points} 點數嗎？`)) {
-    // Grant points (1on1 points)
-    member.points = (member.points || 0) + remit.points;
-    
+    // Grant points (1on1 points) — 帶入效期
+    const remitExpiry = remit.expiresAt || defaultExpiryStr();
+    grantPoints(member, "points", remit.points, remitExpiry, `加購點數 (${getPackageName(remit.packageId)})`);
+
     // Write point transaction log
     const newTx = {
       id: transactions.length + 1,
@@ -2188,8 +2760,7 @@ window.adminApproveRemittance = function(remittanceId) {
     if (bonusGroupVouchers > 0) {
       // 修正：先前這裡誤寫入從未被預約邏輯讀取的 member.groupPoints，
       // 導致會員票券列表看得到贈送票券、但實際可預約團體頌缽的贈送額度 (giftedGroupPoints) 卻沒有增加。
-      if (member.giftedGroupPoints === undefined) member.giftedGroupPoints = 0;
-      member.giftedGroupPoints = (member.giftedGroupPoints || 0) + bonusGroupVouchers;
+      grantPoints(member, "giftedGroupPoints", bonusGroupVouchers, remitExpiry, "加購方案贈送團體場次");
 
       // Push bonus group session voucher(s)
       for (let i = 0; i < bonusGroupVouchers; i++) {
@@ -2522,15 +3093,18 @@ document.addEventListener("DOMContentLoaded", () => {
     if (currentUser.giftedPoints === undefined) currentUser.giftedPoints = 0;
     if (currentUser.points === undefined) currentUser.points = 0;
     
+    let consumedRecord = [];
     if (currentUser.giftedPoints >= cost) {
-      currentUser.giftedPoints -= cost;
+      consumedRecord = consumePoints(currentUser, "giftedPoints", cost);
       paidBy = "gifted";
     } else {
-      currentUser.points -= cost;
+      consumedRecord = consumePoints(currentUser, "points", cost);
       paidBy = "common";
     }
+    // 記下實際扣掉哪幾批，取消時可原樣退回（不會偷偷延長效期）
+    newBooking.consumedBatches = consumedRecord;
     dbSet("users", users);
-    
+
     // Save payment method tag to booking
     newBooking.paidBy = paidBy;
     dbSet("bookings", bookings); // overwrite to save paidBy field
@@ -2626,13 +3200,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // 2. Deduct user points (prefer giftedGroupPoints, fallback to common points — never gifted-1on1 points)
     let paidBy = "common";
+    let consumedRecord = [];
     if (currentUser.giftedGroupPoints >= cost) {
-      currentUser.giftedGroupPoints -= cost;
+      consumedRecord = consumePoints(currentUser, "giftedGroupPoints", cost);
       paidBy = "gifted";
     } else {
-      currentUser.points -= cost;
+      consumedRecord = consumePoints(currentUser, "points", cost);
       paidBy = "common";
     }
+    // 記下實際扣掉哪幾批，取消時可原樣退回
+    newBooking.consumedBatches = consumedRecord;
     dbSet("users", users);
 
     // Save payment method tag to booking
@@ -3032,39 +3609,35 @@ document.addEventListener("DOMContentLoaded", () => {
     if (targetType === "gifted_1on1") targetNameStr = "贈送-1對1";
     if (targetType === "gifted_group") targetNameStr = "贈送-團體";
     
+    // 對應到批次系統的欄位名稱
+    const fieldName = targetType === "common" ? "points"
+      : targetType === "gifted_1on1" ? "giftedPoints"
+      : "giftedGroupPoints";
+
     if (adjustType === "add") {
-      let currentBal = 0;
-      if (targetType === "common") {
-        member.points += amount;
-        currentBal = member.points;
-      } else if (targetType === "gifted_1on1") {
-        member.giftedPoints += amount;
-        currentBal = member.giftedPoints;
-      } else if (targetType === "gifted_group") {
-        member.giftedGroupPoints += amount;
-        currentBal = member.giftedGroupPoints;
+      // 讀取效期欄位；勾選「永不過期」則不設到期日
+      const noExpiryEl = document.getElementById("adjustNoExpiry");
+      const expiryInputEl = document.getElementById("adjustExpiry");
+      let expiry;
+      if (noExpiryEl && noExpiryEl.checked) {
+        expiry = null;
+      } else {
+        expiry = (expiryInputEl && expiryInputEl.value) ? expiryInputEl.value : defaultExpiryStr();
       }
+      grantPoints(member, fieldName, amount, expiry, `管理員調整：${reason}`);
+      const currentBal = member[fieldName] || 0;
       transactions.push({
         id: newTxId,
         userId: member.id,
         amount: amount,
         type: "add",
-        reason: `管理員調整(${targetNameStr})：${reason}`,
+        reason: `管理員調整(${targetNameStr})：${reason}${expiry ? `（效期至 ${expiry}）` : "（永不過期）"}`,
         date: timestamp,
         balance: currentBal
       });
     } else {
-      let currentBal = 0;
-      if (targetType === "common") {
-        member.points = Math.max(0, member.points - amount);
-        currentBal = member.points;
-      } else if (targetType === "gifted_1on1") {
-        member.giftedPoints = Math.max(0, member.giftedPoints - amount);
-        currentBal = member.giftedPoints;
-      } else if (targetType === "gifted_group") {
-        member.giftedGroupPoints = Math.max(0, member.giftedGroupPoints - amount);
-        currentBal = member.giftedGroupPoints;
-      }
+      consumePoints(member, fieldName, amount);
+      const currentBal = member[fieldName] || 0;
       transactions.push({
         id: newTxId,
         userId: member.id,
@@ -3438,14 +4011,80 @@ async function runMockLineLogin() {
 }
 
   // Admin Form Issue Coupon submit
+  // 改期：切換「開放時段 / 手動指定」模式
+  ["rescheduleModeSlot", "rescheduleModeManual"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener("change", syncRescheduleMode);
+  });
+
+  // 新增票券類型
+  const formNewTpl = document.getElementById("formNewCouponTemplate");
+  if (formNewTpl) {
+    formNewTpl.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const name = document.getElementById("tplName").value.trim();
+      const bonusPoints = parseInt(document.getElementById("tplPoints").value);
+      const pointType = document.getElementById("tplPointType").value;
+      const validMonths = parseInt(document.getElementById("tplValidMonths").value);
+
+      if (!name) { alert("請輸入票券名稱。"); return; }
+      if (!(bonusPoints > 0)) { alert("點數必須大於 0。"); return; }
+      if (couponTemplates.some(t => t.name === name)) {
+        alert("已經有同名的票券類型了，請換一個名稱。");
+        return;
+      }
+      couponTemplates.push({
+        id: getNextId(couponTemplates, 1),
+        name: name,
+        bonusPoints: bonusPoints,
+        pointType: pointType,
+        validMonths: isNaN(validMonths) ? POINT_VALIDITY_MONTHS : validMonths
+      });
+      dbSet("couponTemplates", couponTemplates);
+      formNewTpl.reset();
+      document.getElementById("tplValidMonths").value = POINT_VALIDITY_MONTHS;
+      renderAdminCouponsPanel();
+      alert(`票券類型「${name}」已新增，現在可以在上方發放了。`);
+    });
+  }
+
+  // 切換票券類型時，自動更新到期日預設值
+  const tplSel = document.getElementById("selCouponTemplate");
+  if (tplSel) tplSel.addEventListener("change", syncCouponExpiryDefault);
+  const cpnNoExp = document.getElementById("couponNoExpiry");
+  if (cpnNoExp) cpnNoExp.addEventListener("change", () => {
+    const el = document.getElementById("couponExpiry");
+    if (el) el.disabled = cpnNoExp.checked;
+  });
+  const adjNoExp = document.getElementById("adjustNoExpiry");
+  if (adjNoExp) adjNoExp.addEventListener("change", () => {
+    const el = document.getElementById("adjustExpiry");
+    if (el) el.disabled = adjNoExp.checked;
+  });
+
   document.getElementById("formAdminIssueCoupon").addEventListener("submit", (e) => {
     e.preventDefault();
-    
+
     const userId = parseInt(document.getElementById("selCouponTarget").value);
     const templateSelect = document.getElementById("selCouponTemplate");
-    const couponName = templateSelect.value;
-    const bonus = parseInt(templateSelect.options[templateSelect.selectedIndex].dataset.points);
-    
+    const tpl = couponTemplates.find(t => String(t.id) === String(templateSelect.value));
+    if (!tpl) { alert("請先選擇票券類型。"); return; }
+    const couponName = tpl.name;
+    const bonus = Number(tpl.bonusPoints) || 0;
+
+    // 到期日：可在發放表單覆寫，否則依票券類型的有效月數計算
+    const cpnNoExpiryEl = document.getElementById("couponNoExpiry");
+    const cpnExpiryEl = document.getElementById("couponExpiry");
+    let couponExpiry;
+    if (cpnNoExpiryEl && cpnNoExpiryEl.checked) {
+      couponExpiry = null;
+    } else if (cpnExpiryEl && cpnExpiryEl.value) {
+      couponExpiry = cpnExpiryEl.value;
+    } else {
+      const vm = Number(tpl.validMonths);
+      couponExpiry = (vm > 0) ? addMonthsStr(todayStr(), vm) : null;
+    }
+
     const member = users.find(u => u.id === userId);
     if (!member) return;
     
@@ -3458,27 +4097,20 @@ async function runMockLineLogin() {
       userId: member.id,
       name: couponName,
       bonusPoints: bonus,
+      pointType: tpl.pointType || "giftedGroupPoints",
+      expiresAt: couponExpiry,
       status: "available",
       code: randomCode
     };
-    
+
     vouchers.push(newCoupon);
     dbSet("vouchers", vouchers);
-    
-    // Apply points to member directly (simplification for coupons)
-    if (member.points === undefined) member.points = 0;
-    if (member.giftedPoints === undefined) member.giftedPoints = 0;
-    if (member.giftedGroupPoints === undefined) member.giftedGroupPoints = 0;
-    
-    let currentBal = 0;
-    const is1on1 = couponName === "生日優惠贈送次數";
-    if (is1on1) {
-      member.giftedPoints += bonus;
-      currentBal = member.giftedPoints;
-    } else {
-      member.giftedGroupPoints += bonus;
-      currentBal = member.giftedGroupPoints;
-    }
+
+    // 依票券類型設定的點數種類入帳，並帶入到期日
+    const cpnField = tpl.pointType || "giftedGroupPoints";
+    grantPoints(member, cpnField, bonus, couponExpiry, `票券：${couponName}`);
+    const currentBal = member[cpnField] || 0;
+    const is1on1 = cpnField === "giftedPoints";
     dbSet("users", users);
     
     // Log points transaction
@@ -4121,6 +4753,9 @@ function startRealtimeSync() {
       usersRef.on("value", (snapshot) => {
         const val = snapshot.val();
         users = val ? (Array.isArray(val) ? val.filter(Boolean) : Object.values(val)) : [];
+        // 雲端資料進來後補齊批次結構，再掃一次到期（順序很重要，避免點數對不上）
+        users.forEach(u => ensureBatches(u));
+        runExpirySweep();
         dbSet("users", users, false);
         syncCurrentUser();
         triggerViewRender();
