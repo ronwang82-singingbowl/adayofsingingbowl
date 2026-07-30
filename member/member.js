@@ -5071,7 +5071,65 @@ window.boriRepair = {
     users = users.filter(u => u !== target);
     dbSet("users", users);
     console.log(`✅ 已刪除「${target.name}」（${target.email}）。`);
-    console.warn("⚠️ 還沒完：請到 Firebase 主控台 → Authentication → Users，把這個 email 的登入憑證也刪掉，否則它仍然可以登入。");
+    console.warn("⚠️ 建議收尾：到 Firebase 主控台 → Authentication → Users 把這個 email 的登入憑證也刪掉（詳見 boriRepair 說明）。");
+    if (typeof renderAdminDashboard === "function") renderAdminDashboard("members");
+  },
+
+  /* 一鍵清除「程式建立的臨時管理員帳號」。
+     判定條件（必須同時成立，避免誤刪真人帳號）：
+       1. role 是 admin
+       2. email 以 temp_ 或 test_ 開頭，或完全沒有 joinDate（真人註冊一定會寫入日期）
+       3. 不是你正在使用的帳號，也不是主管理員 admin@singbowl.com */
+  async purgeAllTempAdmins() {
+    if (!currentUser || currentUser.role !== "admin") {
+      console.error("❌ 請先以管理員身分登入再執行。");
+      return;
+    }
+    const suspects = users.filter(u =>
+      u &&
+      u.role === "admin" &&
+      u.email !== currentUser.email &&
+      u.email !== "admin@singbowl.com" &&
+      (/^(temp_|test_)/i.test(u.email || "") || !u.joinDate)
+    );
+
+    if (suspects.length === 0) {
+      console.log("✅ 沒有找到需要清除的臨時管理員帳號，後台是乾淨的。");
+      return;
+    }
+
+    console.log(`找到 ${suspects.length} 個疑似程式建立的管理員帳號：`);
+    console.table(suspects.map(u => ({ id: u.id, 姓名: u.name, email: u.email, 加入日期: u.joinDate || "（無）" })));
+
+    const listStr = suspects.map(u => `  ・${u.name}（${u.email}）`).join("\n");
+    if (!confirm(`確定要刪除以下 ${suspects.length} 個管理員帳號嗎？\n\n${listStr}\n\n你自己的帳號（${currentUser.email}）不會被動到。\n此動作無法復原。`)) {
+      console.log("已取消，沒有刪除任何東西。");
+      return;
+    }
+
+    const removed = [];
+    const failed = [];
+    for (const u of suspects) {
+      try {
+        await database.ref(`users/${getUserPathKey(u)}`).remove();
+        removed.push(u);
+      } catch (e) {
+        console.error(`刪除 ${u.email} 失敗：`, e);
+        failed.push(u);
+      }
+    }
+    users = users.filter(u => !removed.includes(u));
+    dbSet("users", users);
+
+    console.log(`✅ 已刪除 ${removed.length} 個帳號：`, removed.map(u => u.email).join("、"));
+    if (failed.length) console.error(`❌ 有 ${failed.length} 個刪除失敗：`, failed.map(u => u.email).join("、"));
+    console.log("\n目前剩下的管理員：");
+    this.admins();
+    console.warn(
+      "\n⚠️ 建議收尾（非緊急）：這些帳號在 Firebase Authentication 裡的登入憑證還在。\n" +
+      "   資料已刪除，所以就算用那些帳密登入也拿不到管理員權限（系統找不到對應資料，不會授權）。\n" +
+      "   但為了乾淨，仍建議到 Firebase 主控台 → Authentication → Users 把它們刪掉。"
+    );
     if (typeof renderAdminDashboard === "function") renderAdminDashboard("members");
   }
 };
