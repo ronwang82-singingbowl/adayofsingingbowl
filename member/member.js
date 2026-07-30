@@ -1993,7 +1993,7 @@ function renderAdminBookingList() {
       const row = document.createElement("tr");
       row.innerHTML = `
         <td><span style="font-family:'JetBrains Mono';font-size:11px;">#${b.id}</span></td>
-        <td><strong>${memberName}</strong><br><span style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--mist);">userId: ${b.userId}</span></td>
+        <td><strong>${memberName}</strong></td>
         <td>${label}</td>
         <td>${timeDetail}${Array.isArray(b.rescheduleHistory) && b.rescheduleHistory.length > 0
           ? `<br><span style="font-size:11px;color:var(--brass-soft);">🔄 已改期 ${b.rescheduleHistory.length} 次（原 ${esc(b.rescheduleHistory[0].from)}）</span>`
