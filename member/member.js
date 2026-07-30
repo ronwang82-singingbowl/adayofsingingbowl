@@ -63,24 +63,71 @@ async function hashPassword(password) {
   return hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
 }
 
-function getNextId(array, startId) {
-  if (!Array.isArray(array)) return startId;
-  return array.reduce((max, item) => item && item.id ? Math.max(max, item.id) : max, startId - 1) + 1;
+/* ============================================================
+   ID 配號機制（防撞號）
+
+   背景：這套系統的 id 是「拿本機那份陣列算最大值 +1」。如果本機快取比雲端舊，
+   就會算出別人已經用過的號碼；而寫入時是用 id 當 key 覆蓋，撞號 = 有一筆資料被靜默蓋掉。
+   （實際發生過：測試帳號與真實會員都拿到 users id=5。）
+
+   兩道防線：
+   1. _idFloor —— 同步的「發號地板」。記住每個集合這台裝置已知配發過的最大 id，
+      即使本機陣列之後變舊/變短，也絕不會再發回已用過的號碼。存在 localStorage，重整後仍有效。
+   2. getFreshNextId() —— 非同步，在真正建立資料前先向 Firebase 拉一次最新快照再算號，
+      擋掉「另一台裝置剛剛才建立、我這邊還沒同步到」的跨裝置撞號。
+   ============================================================ */
+let _idFloor = {};
+try {
+  _idFloor = JSON.parse(localStorage.getItem("singbowl_id_floor") || "{}") || {};
+} catch (e) {
+  _idFloor = {};
+}
+function _saveIdFloor() {
+  try {
+    localStorage.setItem("singbowl_id_floor", JSON.stringify(_idFloor));
+  } catch (e) { /* 隱私模式等寫不進去就算了，不影響功能 */ }
+}
+function _bumpIdFloor(ns, id) {
+  if (!ns || !id) return;
+  if (!_idFloor[ns] || id > _idFloor[ns]) {
+    _idFloor[ns] = id;
+    _saveIdFloor();
+  }
 }
 
-// 建立新會員 id 前，先向 Firebase 拉一次「最新」的 users 快照再計算，
-// 避免兩個裝置同時各自用本機快取算出相同的 id（曾造成 Ron 測試帳號與真實會員 id 撞號）。
-// 若離線或讀取失敗，退回用本機快取計算（跟舊行為一致，不會讓功能整個掛掉）。
-async function getFreshNextUserId(localArray, startId) {
-  try {
-    const snap = await database.ref("users").once("value");
-    const val = snap.val();
-    const freshUsers = val ? (Array.isArray(val) ? val.filter(Boolean) : Object.values(val)) : [];
-    return getNextId(freshUsers, startId);
-  } catch (e) {
-    console.error("getFreshNextUserId 讀取雲端最新資料失敗，退回本機快取計算:", e);
-    return getNextId(localArray, startId);
+/* ns（集合名稱，如 "bookings"）為選填；有帶就會啟用發號地板保護 */
+function getNextId(array, startId, ns) {
+  let next = Array.isArray(array)
+    ? array.reduce((max, item) => item && item.id ? Math.max(max, item.id) : max, startId - 1) + 1
+    : startId;
+  if (ns && _idFloor[ns] && next <= _idFloor[ns]) {
+    next = _idFloor[ns] + 1;
   }
+  _bumpIdFloor(ns, next);
+  return next;
+}
+
+/* 建立資料前先向 Firebase 拉最新快照再算號。
+   離線或讀取失敗時退回本機計算（跟舊行為一致，不會讓功能整個掛掉）。 */
+async function getFreshNextId(node, localArray, startId) {
+  const localNext = getNextId(localArray, startId, node);
+  try {
+    const snap = await database.ref(node).once("value");
+    const val = snap.val();
+    const fresh = val ? (Array.isArray(val) ? val.filter(Boolean) : Object.values(val)) : [];
+    const remoteNext = getNextId(fresh, startId, node);
+    const next = Math.max(localNext, remoteNext);
+    _bumpIdFloor(node, next);
+    return next;
+  } catch (e) {
+    console.error(`getFreshNextId("${node}") 讀取雲端最新資料失敗，退回本機快取計算:`, e);
+    return localNext;
+  }
+}
+
+/* 會員專用捷徑（維持既有呼叫方式） */
+async function getFreshNextUserId(localArray, startId) {
+  return getFreshNextId("users", localArray, startId);
 }
 
 // HTML escape helper (避免使用者輸入的姓名/銀行名稱等資料被當成 HTML 標籤解析)
@@ -215,7 +262,9 @@ function runExpirySweep() {
     expired.forEach(e => {
       changed = true;
       transactions.push({
-        id: getNextId(transactions, 1),
+        // 到期掃描在同步流程中執行（雲端監聽器會立刻用到結果），故沿用同步配號，
+        // 但帶入 ns 讓「發號地板」生效，避免本機快取變舊後發回已用過的號碼。
+        id: getNextId(transactions, 5001, "transactions"),
         userId: user.id,
         date: todayStr(),
         type: "點數到期",
@@ -869,7 +918,7 @@ function renderDashboard() {
 }
 
 // Handle Cancel Booking
-window.cancelBooking = function(bookingId) {
+window.cancelBooking = async function(bookingId) {
   const booking = bookings.find(b => b.id === bookingId);
   if (!booking) return;
   
@@ -921,7 +970,7 @@ window.cancelBooking = function(bookingId) {
       dbSet("users", users);
       
       // 3. Log point transaction
-      const newTxId = getNextId(transactions, 5001);
+      const newTxId = await getFreshNextId("transactions", transactions, 5001);
       const nowStr = getNowDateTimeString();
       const typeNameStr = booking.type === "1on1" ? "1對1" : "團體";
       const targetNameStr = refundType === "gifted" ? "贈送" : "通用";
@@ -2194,7 +2243,7 @@ window.adminApproveBooking = function(bookingId) {
   renderAdminDashboard(activeAdminPane);
 };
 
-window.adminRejectBooking = function(bookingId) {
+window.adminRejectBooking = async function(bookingId) {
   const booking = bookings.find(b => b.id === bookingId);
   if (!booking) return;
   
@@ -2238,7 +2287,7 @@ window.adminRejectBooking = function(bookingId) {
       dbSet("users", users);
       
       // 3. Log points
-      const newTxId = getNextId(transactions, 5001);
+      const newTxId = await getFreshNextId("transactions", transactions, 5001);
       const nowStr = getNowDateTimeString();
       const typeNameStr = booking.type === "1on1" ? "1對1" : "團體";
       const targetNameStr = refundType === "gifted" ? "贈送" : "通用";
@@ -2378,7 +2427,7 @@ function renderAdminCouponsPanel() {
   });
 }
 
-window.deleteAdminCoupon = function(couponId) {
+window.deleteAdminCoupon = async function(couponId) {
   const vIndex = vouchers.findIndex(v => v.id === couponId);
   if (vIndex === -1) return;
   
@@ -2411,7 +2460,7 @@ window.deleteAdminCoupon = function(couponId) {
     dbSet("users", users);
     
     const timestamp = getNowDateTimeString();
-    const newTxId = getNextId(transactions, 5001);
+    const newTxId = await getFreshNextId("transactions", transactions, 5001);
     transactions.push({
       id: newTxId,
       userId: member.id,
@@ -2601,7 +2650,7 @@ function renderAdminDateSlots(dateStr) {
   });
 }
 
-function addAdminSlot(dateVal, timeVal, opts = {}) {
+async function addAdminSlot(dateVal, timeVal, opts = {}) {
   if (!dateVal || !timeVal) {
     alert("日期與時間無效！");
     return;
@@ -2616,7 +2665,7 @@ function addAdminSlot(dateVal, timeVal, opts = {}) {
     return;
   }
 
-  const nextSlotId = getNextId(slots, 1);
+  const nextSlotId = await getFreshNextId("slots", slots, 1);
   const newSlot = {
     id: nextSlotId,
     date: dateVal,
@@ -2737,7 +2786,7 @@ function renderAdminRemittancesPanel() {
   }
 }
 
-window.adminApproveRemittance = function(remittanceId) {
+window.adminApproveRemittance = async function(remittanceId) {
   const remit = remittances.find(r => r.id === remittanceId);
   if (!remit) return;
   
@@ -2754,7 +2803,8 @@ window.adminApproveRemittance = function(remittanceId) {
 
     // Write point transaction log
     const newTx = {
-      id: transactions.length + 1,
+      // 原本是 transactions.length + 1，會產生跟現有 id 完全不同區段、且極易撞號的號碼
+      id: await getFreshNextId("transactions", transactions, 5001),
       userId: member.id,
       type: "add",
       amount: remit.points,
@@ -2779,7 +2829,7 @@ window.adminApproveRemittance = function(remittanceId) {
 
       // Push bonus group session voucher(s)
       for (let i = 0; i < bonusGroupVouchers; i++) {
-        const nextVoucherId = vouchers.length > 0 ? Math.max(...vouchers.map(v => v.id)) + 1 : 1;
+        const nextVoucherId = await getFreshNextId("vouchers", vouchers, 1);
         const randomCode = Math.random().toString(36).substring(2, 8).toUpperCase();
         vouchers.push({
           id: nextVoucherId,
@@ -2792,7 +2842,7 @@ window.adminApproveRemittance = function(remittanceId) {
       }
 
       // Log group transaction
-      const nextTxId = transactions.length + 1;
+      const nextTxId = await getFreshNextId("transactions", transactions, 5001);
       transactions.push({
         id: nextTxId,
         userId: member.id,
@@ -2983,7 +3033,7 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   // Remittance Slip Submit Listener
-  document.getElementById("formSubmitRemittance")?.addEventListener("submit", (e) => {
+  document.getElementById("formSubmitRemittance")?.addEventListener("submit", async (e) => {
     e.preventDefault();
     if (!currentUser) return;
     
@@ -3010,7 +3060,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const note = document.getElementById("buyRemitNote").value.trim();
     
     const newRemit = {
-      id: remittances.length + 1,
+      // 原本是 remittances.length + 1，兩位會員同時回報匯款就會撞號、其中一筆被靜默蓋掉
+      id: await getFreshNextId("remittances", remittances, 1),
       userId: currentUser.id,
       firebaseUid: auth.currentUser ? auth.currentUser.uid : null,
       userName: currentUser.name,
@@ -3042,9 +3093,9 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("btnCancel1on1").addEventListener("click", () => navigateTo("member"));
   
   // Submit: 1-on-1 reservation
-  document.getElementById("formBook1on1").addEventListener("submit", (e) => {
+  document.getElementById("formBook1on1").addEventListener("submit", async (e) => {
     e.preventDefault();
-    
+
     const cost = 1;
     if (currentUser.points < cost) {
       alert("可約次數不足，請加購次數後再進行預約。");
@@ -3077,9 +3128,9 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // 1. Create booking entry
-    const newBookingId = getNextId(bookings, 1001);
+    const newBookingId = await getFreshNextId("bookings", bookings, 1001);
     const timestamp = getNowDateTimeString();
-    
+
     const newBooking = {
       id: newBookingId,
       userId: currentUser.id,
@@ -3125,7 +3176,7 @@ document.addEventListener("DOMContentLoaded", () => {
     dbSet("bookings", bookings); // overwrite to save paidBy field
     
     // 4. Log point transaction
-    const newTxId = getNextId(transactions, 5001);
+    const newTxId = await getFreshNextId("transactions", transactions, 5001);
     const targetNameStr = paidBy === "gifted" ? "贈送" : "通用";
     transactions.push({
       id: newTxId,
@@ -3147,7 +3198,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Submit: Group booking (團體頌缽 - 使用與 1對1 相同的 slots 開放時段機制)
   document.getElementById("btnCancelGroup").addEventListener("click", () => navigateTo("member"));
-  document.getElementById("formBookGroup").addEventListener("submit", (e) => {
+  document.getElementById("formBookGroup").addEventListener("submit", async (e) => {
     e.preventDefault();
 
     const slotId = parseInt(document.getElementById("selectedGroupSlotId").value);
@@ -3191,7 +3242,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // 1. Create group booking
-    const newBookingId = getNextId(bookings, 1001);
+    const newBookingId = await getFreshNextId("bookings", bookings, 1001);
     const timestamp = getNowDateTimeString();
     const notes = document.getElementById("bookGroupNotes").value;
 
@@ -3239,7 +3290,7 @@ document.addEventListener("DOMContentLoaded", () => {
     dbSet("slots", slots);
 
     // 4. Log point transaction
-    const newTxId = getNextId(transactions, 5001);
+    const newTxId = await getFreshNextId("transactions", transactions, 5001);
     const targetNameStr = paidBy === "gifted" ? "贈送" : "通用";
     transactions.push({
       id: newTxId,
@@ -3600,9 +3651,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Admin Form Points Adjust submit
   document.getElementById("btnCancelAdjustPoints").addEventListener("click", () => navigateTo("admin"));
-  document.getElementById("formAdminAdjustPoints").addEventListener("submit", (e) => {
+  document.getElementById("formAdminAdjustPoints").addEventListener("submit", async (e) => {
     e.preventDefault();
-    
+
     const targetUserId = parseInt(document.getElementById("adjustMemberId").value);
     const targetType = document.getElementById("adjustPointTargetType").value;
     const adjustType = document.querySelector('input[name="adjustType"]:checked').value;
@@ -3618,8 +3669,8 @@ document.addEventListener("DOMContentLoaded", () => {
     if (member.giftedGroupPoints === undefined) member.giftedGroupPoints = 0;
     
     const timestamp = getNowDateTimeString();
-    const newTxId = getNextId(transactions, 5001);
-    
+    const newTxId = await getFreshNextId("transactions", transactions, 5001);
+
     let targetNameStr = "通用";
     if (targetType === "gifted_1on1") targetNameStr = "贈送-1對1";
     if (targetType === "gifted_group") targetNameStr = "贈送-團體";
@@ -4035,7 +4086,7 @@ async function runMockLineLogin() {
   // 新增票券類型
   const formNewTpl = document.getElementById("formNewCouponTemplate");
   if (formNewTpl) {
-    formNewTpl.addEventListener("submit", (e) => {
+    formNewTpl.addEventListener("submit", async (e) => {
       e.preventDefault();
       const name = document.getElementById("tplName").value.trim();
       const bonusPoints = parseInt(document.getElementById("tplPoints").value);
@@ -4049,7 +4100,7 @@ async function runMockLineLogin() {
         return;
       }
       couponTemplates.push({
-        id: getNextId(couponTemplates, 1),
+        id: await getFreshNextId("couponTemplates", couponTemplates, 1),
         name: name,
         bonusPoints: bonusPoints,
         pointType: pointType,
@@ -4077,7 +4128,7 @@ async function runMockLineLogin() {
     if (el) el.disabled = adjNoExp.checked;
   });
 
-  document.getElementById("formAdminIssueCoupon").addEventListener("submit", (e) => {
+  document.getElementById("formAdminIssueCoupon").addEventListener("submit", async (e) => {
     e.preventDefault();
 
     const userId = parseInt(document.getElementById("selCouponTarget").value);
@@ -4103,8 +4154,8 @@ async function runMockLineLogin() {
     const member = users.find(u => u.id === userId);
     if (!member) return;
     
-    // Add coupon to vouchers list
-    const nextCpnId = vouchers.length > 0 ? Math.max(...vouchers.map(v => v.id)) + 1 : 1;
+    // Add coupon to vouchers list（改用統一的防撞號配號機制）
+    const nextCpnId = await getFreshNextId("vouchers", vouchers, 1);
     const randomCode = Math.random().toString(36).substring(2, 8).toUpperCase();
     
     const newCoupon = {
@@ -4130,7 +4181,7 @@ async function runMockLineLogin() {
     
     // Log points transaction
     const timestamp = getNowDateTimeString();
-    const newTxId = getNextId(transactions, 5001);
+    const newTxId = await getFreshNextId("transactions", transactions, 5001);
     const targetNameStr = is1on1 ? "贈送-1對1" : "贈送-團體";
     transactions.push({
       id: newTxId,
@@ -4652,7 +4703,7 @@ async function adminSaveCourse() {
   const isAdding = !courseId;
   
   if (isAdding) {
-    courseId = courses.length > 0 ? Math.max(...courses.map(c => c.id)) + 1 : 1001;
+    courseId = await getFreshNextId("courses", courses, 1001);
   }
 
   const courseObj = {
