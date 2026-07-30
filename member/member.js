@@ -68,6 +68,21 @@ function getNextId(array, startId) {
   return array.reduce((max, item) => item && item.id ? Math.max(max, item.id) : max, startId - 1) + 1;
 }
 
+// 建立新會員 id 前，先向 Firebase 拉一次「最新」的 users 快照再計算，
+// 避免兩個裝置同時各自用本機快取算出相同的 id（曾造成 Ron 測試帳號與真實會員 id 撞號）。
+// 若離線或讀取失敗，退回用本機快取計算（跟舊行為一致，不會讓功能整個掛掉）。
+async function getFreshNextUserId(localArray, startId) {
+  try {
+    const snap = await database.ref("users").once("value");
+    const val = snap.val();
+    const freshUsers = val ? (Array.isArray(val) ? val.filter(Boolean) : Object.values(val)) : [];
+    return getNextId(freshUsers, startId);
+  } catch (e) {
+    console.error("getFreshNextUserId 讀取雲端最新資料失敗，退回本機快取計算:", e);
+    return getNextId(localArray, startId);
+  }
+}
+
 // HTML escape helper (避免使用者輸入的姓名/銀行名稱等資料被當成 HTML 標籤解析)
 function esc(str) {
   if (str === null || str === undefined) return "";
@@ -3418,9 +3433,9 @@ document.addEventListener("DOMContentLoaded", () => {
         authUser = userCredential.user;
       }
       
-      const nextUserId = getNextId(users, 1);
+      const nextUserId = await getFreshNextUserId(users, 1);
       const dateStr = new Date().toISOString().split("T")[0];
-      
+
       const newUser = {
         id: nextUserId,
         email: email,
@@ -3824,7 +3839,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     
     const hashedPassword = await hashPassword(password);
-    const nextUserId = getNextId(users, 1);
+    const nextUserId = await getFreshNextUserId(users, 1);
     const dateStr = new Date().toISOString().split("T")[0];
     
     const newUser = {
