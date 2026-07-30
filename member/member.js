@@ -1764,6 +1764,8 @@ window.openEditMember = function(memberId) {
 // 4.3 Booking List rendering with filter state
 let bookingFilter = "all";
 let adminBookingDateFilterValue = "";
+// 是否隱藏已取消／已拒絕的預約（純畫面過濾，不會動到資料），選擇會記住
+let hideCancelledBookings = localStorage.getItem("singbowl_hide_cancelled") === "1";
 
 // Admin Booking Calendar Variables
 let adminCalendarCurrentYear = new Date().getFullYear();
@@ -1933,14 +1935,22 @@ function renderAdminBookingList() {
   const container = document.getElementById("adminBookingList");
   container.innerHTML = "";
   
+  // 同步「隱藏已取消」勾選框的狀態（重整後仍記得上次的選擇）
+  const hideChk = document.getElementById("chkHideCancelledBookings");
+  if (hideChk) hideChk.checked = hideCancelledBookings;
+
   // 1. Filter bookings
   const filteredBookings = bookings.filter(b => {
     // Status filter
     if (bookingFilter !== "all" && b.status !== bookingFilter) return false;
-    
+
+    // 隱藏已取消／已拒絕（僅在「所有預約」等非取消頁籤生效，避免點了「已取消」頁籤卻空白）
+    if (hideCancelledBookings && bookingFilter !== "已取消" &&
+        (b.status === "已取消" || b.status === "已拒絕")) return false;
+
     // Date filter
     if (adminBookingDateFilterValue && b.date !== adminBookingDateFilterValue) return false;
-    
+
     return true;
   });
   
@@ -3540,6 +3550,47 @@ document.addEventListener("DOMContentLoaded", () => {
     renderAdminBookingList();
   });
 
+  // 隱藏已取消紀錄（純畫面過濾，資料不動）
+  document.getElementById("chkHideCancelledBookings")?.addEventListener("change", (e) => {
+    hideCancelledBookings = e.target.checked;
+    localStorage.setItem("singbowl_hide_cancelled", hideCancelledBookings ? "1" : "0");
+    renderAdminBookingList();
+  });
+
+  // 永久刪除已取消／已拒絕的預約紀錄
+  document.getElementById("btnPurgeCancelledBookings")?.addEventListener("click", () => {
+    const doomed = bookings.filter(b => b && (b.status === "已取消" || b.status === "已拒絕"));
+    if (doomed.length === 0) {
+      alert("目前沒有已取消或已拒絕的預約紀錄。");
+      return;
+    }
+
+    // 依會員分組列出，讓你刪之前看得到「刪掉的是誰的紀錄」
+    const byMember = {};
+    doomed.forEach(b => {
+      const m = users.find(u => u.id === b.userId);
+      const key = m ? `${m.name}（ID ${m.id}）` : `未知會員（userId ${b.userId}）`;
+      byMember[key] = (byMember[key] || 0) + 1;
+    });
+    const breakdown = Object.keys(byMember).map(k => `  ・${k}：${byMember[k]} 筆`).join("\n");
+
+    if (!confirm(
+      `確定要永久刪除 ${doomed.length} 筆「已取消 / 已拒絕」的預約紀錄嗎？\n\n${breakdown}\n\n` +
+      `⚠️ 此動作無法復原。\n` +
+      `※ 只刪除預約紀錄本身，會員的點數與點數異動紀錄都不會受影響。\n` +
+      `※ 如果只是覺得畫面太亂，建議改用上方的「隱藏已取消」勾選框，不必真的刪掉。`
+    )) return;
+
+    // 二次確認：這是不可逆的操作，值得多按一次
+    if (!confirm(`最後確認：真的要刪掉這 ${doomed.length} 筆紀錄嗎？`)) return;
+
+    bookings = bookings.filter(b => !(b && (b.status === "已取消" || b.status === "已拒絕")));
+    dbSet("bookings", bookings);
+    renderAdminBookingList();
+    renderAdminDashboard("bookings");
+    alert(`已刪除 ${doomed.length} 筆已取消 / 已拒絕的預約紀錄。`);
+  });
+
   // Submit: Admin reject remittance slip
   document.getElementById("formAdminRejectRemittance")?.addEventListener("submit", (e) => {
     e.preventDefault();
@@ -5022,6 +5073,71 @@ window.boriRepair = {
 
     console.log(`✅ 完成：${target.name} 的 id 已由 ${oldId} 改為 ${newId}。請重新整理頁面確認。`);
     if (typeof renderAdminDashboard === "function") renderAdminDashboard("members");
+  },
+
+  /* 檢視某個 userId 底下的所有預約，含「建立時間」——
+     建立時間是判斷「這筆到底是誰約的」最可靠的線索（會員加入之前的預約不可能是他的）。 */
+  bookingsOf(userId) {
+    const list = bookings.filter(b => b && b.userId === Number(userId));
+    if (!list.length) {
+      console.log(`userId ${userId} 底下沒有任何預約。`);
+      return;
+    }
+    const owner = users.find(u => u.id === Number(userId));
+    console.log(`userId ${userId}${owner ? `（目前對應到：${owner.name}，加入日期 ${owner.joinDate}）` : "（找不到對應會員）"} 共有 ${list.length} 筆預約：`);
+    console.table(list.map(b => ({
+      預約ID: b.id,
+      項目: b.type === "1on1" ? "1對1" : "團體",
+      預約時間: `${b.date} ${b.time || ""}`.trim(),
+      狀態: b.status,
+      建立於: b.timestamp || "（舊資料無記錄）"
+    })));
+  },
+
+  /* 把預約紀錄從一個 userId 搬到另一個 userId。
+     用於修正「因為 id 撞號而掛錯人」的歷史預約。
+     onlyCancelled 預設 true —— 只搬已取消/已拒絕的，避免動到還在進行中的預約。 */
+  async moveBookings(fromUserId, toUserId, onlyCancelled = true) {
+    if (!currentUser || currentUser.role !== "admin") {
+      console.error("❌ 請先以管理員身分登入再執行。");
+      return;
+    }
+    const from = Number(fromUserId), to = Number(toUserId);
+    const toUser = users.find(u => u.id === to);
+    if (!toUser) {
+      console.error(`❌ 找不到 id 為 ${to} 的會員，請先確認搬過去的對象存在。`);
+      return;
+    }
+    const fromUser = users.find(u => u.id === from);
+
+    const targets = bookings.filter(b =>
+      b && b.userId === from &&
+      (!onlyCancelled || b.status === "已取消" || b.status === "已拒絕")
+    );
+    if (!targets.length) {
+      console.log("沒有符合條件的預約需要搬動。");
+      return;
+    }
+
+    console.log(`即將把以下 ${targets.length} 筆預約從 userId ${from}${fromUser ? `（${fromUser.name}）` : ""} 搬到 userId ${to}（${toUser.name}）：`);
+    console.table(targets.map(b => ({
+      預約ID: b.id, 預約時間: `${b.date} ${b.time || ""}`.trim(), 狀態: b.status, 建立於: b.timestamp || "（無）"
+    })));
+
+    if (!confirm(
+      `確定要把這 ${targets.length} 筆預約改成「${toUser.name}」的嗎？\n\n` +
+      `⚠️ 請先看 Console 上方表格的「建立於」欄位確認：\n` +
+      `這些預約如果是在別的會員加入之前建立的，就一定不是他的，可以放心搬。\n\n` +
+      (onlyCancelled ? `目前只會搬「已取消 / 已拒絕」的紀錄，進行中的預約不會被動到。` : `⚠️ 你關閉了「只搬已取消」的保護，進行中的預約也會被搬動。`)
+    )) {
+      console.log("已取消，沒有搬動任何資料。");
+      return;
+    }
+
+    targets.forEach(b => { b.userId = to; });
+    dbSet("bookings", bookings);
+    console.log(`✅ 已把 ${targets.length} 筆預約改掛到「${toUser.name}」（id ${to}）。`);
+    if (typeof renderAdminBookingList === "function") renderAdminBookingList();
   },
 
   /* 列出所有管理員權限的帳號，方便定期稽核「後台有幾把鑰匙」 */
