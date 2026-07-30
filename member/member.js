@@ -5022,6 +5022,57 @@ window.boriRepair = {
 
     console.log(`✅ 完成：${target.name} 的 id 已由 ${oldId} 改為 ${newId}。請重新整理頁面確認。`);
     if (typeof renderAdminDashboard === "function") renderAdminDashboard("members");
+  },
+
+  /* 列出所有管理員權限的帳號，方便定期稽核「後台有幾把鑰匙」 */
+  admins() {
+    const list = users.filter(u => u && u.role === "admin");
+    console.log(`目前共有 ${list.length} 個管理員帳號：`);
+    console.table(list.map(u => ({ id: u.id, 姓名: u.name, email: u.email, 加入日期: u.joinDate || "（無，可能是程式建立的）" })));
+    return list.length;
+  },
+
+  /* 依 email 精準刪除單一帳號（用 email 而非 id，才能正確處理 id 撞號的情況）。
+     注意：這只會刪掉資料庫裡的會員資料，Firebase Authentication 的登入憑證要另外到
+     Firebase 主控台 → Authentication → Users 手動刪除，否則該帳號仍可登入。 */
+  async purgeUser(email) {
+    if (!currentUser || currentUser.role !== "admin") {
+      console.error("❌ 請先以管理員身分登入再執行。");
+      return;
+    }
+    const key = String(email).trim().toLowerCase();
+    if (currentUser.email === key) {
+      console.error("❌ 不能刪除你自己正在使用的帳號。");
+      return;
+    }
+    const target = users.find(u => u && u.email === key);
+    if (!target) {
+      console.error(`❌ 找不到 email 為 ${email} 的帳號。`);
+      return;
+    }
+    const hasBookings = bookings.filter(b => b && b.userId === target.id).length;
+    const sharesId = users.filter(u => u && u.id === target.id).length > 1;
+    let msg = `確定要刪除帳號「${target.name}（${target.email}）」嗎？\n權限：${target.role}\n此動作無法復原。`;
+    if (hasBookings) {
+      msg += `\n\n⚠️ 這個 id（${target.id}）底下有 ${hasBookings} 筆預約` +
+        (sharesId ? `，而且有其他帳號共用同一個 id —— 這些預約不會被刪除，以免誤刪別人的資料。` : `，將一併保留，請自行確認。`);
+    }
+    if (!confirm(msg)) {
+      console.log("已取消。");
+      return;
+    }
+    const pathKey = getUserPathKey(target);
+    try {
+      await database.ref(`users/${pathKey}`).remove();
+    } catch (e) {
+      console.error("刪除雲端節點失敗：", e);
+      return;
+    }
+    users = users.filter(u => u !== target);
+    dbSet("users", users);
+    console.log(`✅ 已刪除「${target.name}」（${target.email}）。`);
+    console.warn("⚠️ 還沒完：請到 Firebase 主控台 → Authentication → Users，把這個 email 的登入憑證也刪掉，否則它仍然可以登入。");
+    if (typeof renderAdminDashboard === "function") renderAdminDashboard("members");
   }
 };
 
