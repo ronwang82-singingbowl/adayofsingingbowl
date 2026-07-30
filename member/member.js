@@ -5273,6 +5273,12 @@ async function migrateDatabaseIfNecessary() {
       }
     }
   } catch (err) {
+    // db_state 是很早期的舊資料節點，資料早就搬完了，安全規則現在也不開放讀取。
+    // 讀不到是「正常且預期」的結果，不該每次載入都在 Console 噴紅字嚇人。
+    if (err && (err.code === "PERMISSION_DENIED" || /permission_denied/i.test(err.message || ""))) {
+      console.log("（略過舊版 db_state 檢查：安全規則已封閉該節點，資料早已遷移完成，屬正常情況）");
+      return;
+    }
     console.error("資料遷移錯誤:", err);
   }
 }
