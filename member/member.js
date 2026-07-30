@@ -4899,6 +4899,81 @@ function triggerViewRender() {
   }
 }
 
+/* ============================================================
+   一次性修復工具（管理員專用，從瀏覽器 Console 呼叫）
+   用途：處理歷史上因 id 撞號造成的重複會員 id。
+   使用方式（登入管理員後按 F12 開 Console）：
+     boriRepair.list()                          // 檢視所有重複 id
+     boriRepair.reassign("你的email")            // 幫該帳號換一個全新且唯一的 id
+     boriRepair.reassign("你的email", true)      // 同時把該 id 底下的預約/點數紀錄一起搬過去
+   ============================================================ */
+window.boriRepair = {
+  list() {
+    const byId = {};
+    users.forEach(u => {
+      if (!u) return;
+      (byId[u.id] = byId[u.id] || []).push(`${u.name}（${u.email}，加入 ${u.joinDate}）`);
+    });
+    const dups = Object.keys(byId).filter(id => byId[id].length > 1);
+    if (!dups.length) {
+      console.log("✅ 目前沒有重複的會員 id。");
+      return;
+    }
+    dups.forEach(id => {
+      console.warn(`⚠️ id = ${id} 有 ${byId[id].length} 個帳號共用：`);
+      byId[id].forEach(s => console.log("   ・" + s));
+    });
+    console.log('\n修復方式：boriRepair.reassign("要換 id 的那個 email")');
+  },
+
+  async reassign(email, moveRecords = false) {
+    if (!currentUser || currentUser.role !== "admin") {
+      console.error("❌ 請先以管理員身分登入再執行。");
+      return;
+    }
+    const target = users.find(u => u && u.email === String(email).trim().toLowerCase());
+    if (!target) {
+      console.error(`❌ 找不到 email 為 ${email} 的會員。`);
+      return;
+    }
+    const oldId = target.id;
+    const newId = await getFreshNextUserId(users, 1);
+    if (users.some(u => u && u.id === newId)) {
+      console.error(`❌ 新 id ${newId} 已被佔用，請稍後再試。`);
+      return;
+    }
+
+    const relatedBookings = bookings.filter(b => b && b.userId === oldId).length;
+    const relatedTx = transactions.filter(t => t && t.userId === oldId).length;
+    const relatedVouchers = vouchers.filter(v => v && v.userId === oldId).length;
+    const msg =
+      `要把「${target.name}（${target.email}）」的 id 從 ${oldId} 改成 ${newId} 嗎？\n\n` +
+      `目前掛在 id=${oldId} 底下的紀錄：預約 ${relatedBookings} 筆、點數異動 ${relatedTx} 筆、優惠券 ${relatedVouchers} 筆\n` +
+      (moveRecords
+        ? `⚠️ 這些紀錄「會」一起搬到新 id（注意：若這些紀錄其實屬於另一個共用同 id 的人，會被誤搬）。`
+        : `這些紀錄「不會」被搬動，會留在 id=${oldId}（也就是留給另一個帳號）。`);
+    if (!confirm(msg)) {
+      console.log("已取消。");
+      return;
+    }
+
+    target.id = newId;
+    dbSet("users", users);
+
+    if (moveRecords) {
+      bookings.forEach(b => { if (b && b.userId === oldId) b.userId = newId; });
+      transactions.forEach(t => { if (t && t.userId === oldId) t.userId = newId; });
+      vouchers.forEach(v => { if (v && v.userId === oldId) v.userId = newId; });
+      dbSet("bookings", bookings);
+      dbSet("transactions", transactions);
+      dbSet("vouchers", vouchers);
+    }
+
+    console.log(`✅ 完成：${target.name} 的 id 已由 ${oldId} 改為 ${newId}。請重新整理頁面確認。`);
+    if (typeof renderAdminDashboard === "function") renderAdminDashboard("members");
+  }
+};
+
 // 雲端增量/段點寫入 (防止會員端覆蓋其他會員的資料)
 function pushNode(key, data) {
   const isAdmin = currentUser && currentUser.role === "admin";
