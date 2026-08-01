@@ -55,6 +55,8 @@ const DEFAULT_TRANSACTIONS = [
 ];
 
 // Secure SHA-256 Hashing helper
+/* 已停用：登入密碼全部交由 Firebase Authentication 保管，本系統不再自行雜湊或儲存密碼。
+   保留這個函式只是為了避免舊資料處理時意外報錯，正常流程不會呼叫到它。 */
 async function hashPassword(password) {
   if (!password) return "";
   const msgBuffer = new TextEncoder().encode(password);
@@ -1589,14 +1591,9 @@ function renderAdminMemberList() {
   } else {
     filteredMembers.forEach(u => {
       const row = document.createElement("tr");
-      let pwdText = "未設定";
-      if (u.lineUserId) {
-        pwdText = "LINE註冊";
-      } else if (u.password) {
-        const isHashed = u.password.length === 64 && /^[0-9a-f]+$/.test(u.password);
-        pwdText = isHashed ? "已設定 (安全加密)" : u.password;
-      }
-      
+      // 登入方式（不再顯示密碼 —— 密碼由 Firebase Authentication 保管，後台看不到也不需要看到）
+      const loginText = u.lineUserId ? "LINE 登入" : "Email 登入";
+
       const isTargetAdmin = u.role === "admin";
       // 最近一筆到期資訊（讓管理員一眼看出誰的點數快過期）
       let soonestNote = "";
@@ -1625,7 +1622,7 @@ function renderAdminMemberList() {
       
       row.innerHTML = `
         <td><strong>${u.name}</strong> ${isTargetAdmin ? '<span class="status-badge status-approved" style="font-size:10px;padding:2px 4px;margin-left:4px;">管理員</span>' : ''}<br><span style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--mist);">ID: ${u.id}</span></td>
-        <td>${u.phone}<br><span style="font-size:11px;color:var(--mist);">${u.email}</span><br><span style="font-size:11px;color:var(--brass-soft);font-weight:500;">密碼: ${pwdText}</span></td>
+        <td>${u.phone}<br><span style="font-size:11px;color:var(--mist);">${u.email}</span><br><span style="font-size:11px;color:var(--brass-soft);font-weight:500;">${loginText}</span></td>
         <td>${u.gender}</td>
         <td>${u.joinDate}</td>
         <td>${pointsText}</td>
@@ -3380,81 +3377,28 @@ document.addEventListener("DOMContentLoaded", () => {
       await auth.signInWithEmailAndPassword(email, password);
       // 成功登入後，onAuthStateChanged 會自動觸發 profile 載入與畫面渲染，不需手動呼叫 onUserLoginSuccess
     } catch (err) {
-      console.warn("Firebase Auth 登入失敗，檢查是否需要進行帳號安全遷移:", err.code);
-      
-      if (err.code === "auth/user-not-found" || err.code === "auth/invalid-credential") {
-        // 2. 帳號可能還沒建立在 Firebase Auth（但舊資料庫有），啟動遷移與驗證
-        try {
-          const snapshot = await database.ref("users").orderByChild("email").equalTo(email).once("value");
-          const allUsers = snapshot.val();
-          let matchedKey = null;
-          let matchedUser = null;
-          
-          if (allUsers) {
-            if (Array.isArray(allUsers)) {
-              for (let i = 0; i < allUsers.length; i++) {
-                if (allUsers[i] && allUsers[i].email && allUsers[i].email.toLowerCase() === email) {
-                  matchedUser = allUsers[i];
-                  matchedKey = i;
-                  break;
-                }
-              }
-            } else {
-              for (const key in allUsers) {
-                if (allUsers[key] && allUsers[key].email && allUsers[key].email.toLowerCase() === email) {
-                  matchedUser = allUsers[key];
-                  matchedKey = key;
-                  break;
-                }
-              }
-            }
-          }
-          
-          if (matchedUser) {
-            // 驗證密碼是否正確 (比對舊有 SHA-256 雜湊或明文)
-            const enteredHash = await hashPassword(password);
-            const isPasswordCorrect = (matchedUser.password === enteredHash) || (matchedUser.password === password) || (!matchedUser.password);
-            
-            if (isPasswordCorrect) {
-              btnSubmit.textContent = "建立安全帳號中...";
-              // 在 Firebase Auth 建立該帳號
-              const userCredential = await auth.createUserWithEmailAndPassword(email, password);
-              const newUser = userCredential.user;
-              
-              // 搬遷 Profile 資料到新的安全 UID 路徑下
-              matchedUser.firebaseUid = newUser.uid;
-              if (!matchedUser.password) {
-                matchedUser.password = enteredHash;
-              } else if (matchedUser.password !== enteredHash) {
-                matchedUser.password = enteredHash; // 確保儲存為雜湊
-              }
-              
-              await database.ref(`users/${newUser.uid}`).set(matchedUser);
-              
-              // 移除舊的路徑資料
-              await database.ref(`users/${matchedKey}`).remove();
-              
-              console.log("舊會員帳號遷移與驗證成功！", matchedUser.name);
-            } else {
-              alert("密碼不正確，請重新輸入。");
-              passwordInput.focus();
-            }
-          } else {
-            // 用戶不存在，引導至註冊頁面並預帶欄位
-            document.getElementById("regName").value = "";
-            document.getElementById("regPhone").value = "";
-            document.getElementById("regEmail").value = email;
-            document.getElementById("regPassword").value = password; // 預填密碼
-            document.getElementById("formRegisterProfile").dataset.tempEmail = email;
-            navigateTo("register");
-          }
-        } catch (dbErr) {
-          console.error("資料庫驗證遷移出錯", dbErr);
-          alert("登入驗證時出錯，原因：" + dbErr.message);
-        }
+      console.warn("Firebase Auth 登入失敗:", err.code);
+
+      /* 【已移除的舊帳號遷移流程】
+         這裡原本有一段「Firebase Auth 找不到帳號時，改用資料庫裡的 password 欄位驗證」的相容邏輯。
+         移除原因有三：
+         1. 它已經是死程式 —— 那段邏輯要先未登入讀取整個 users 節點，但安全規則已封閉未登入讀取，必定失敗。
+         2. 它有一行 `|| (!matchedUser.password)`：只要某筆會員資料沒有 password 欄位，
+            任何密碼都會通過驗證。這是實質的登入後門。
+         3. 所有現存會員都已經有 Firebase Auth 帳號，不再需要遷移。
+         現在登入完全交給 Firebase Authentication，資料庫不再參與密碼驗證。 */
+      if (err.code === "auth/user-not-found") {
+        // 這個 email 還沒有帳號 —— 引導去註冊，不透露「這個 email 是否已註冊」以外的資訊
+        document.getElementById("regName").value = "";
+        document.getElementById("regPhone").value = "";
+        document.getElementById("regEmail").value = email;
+        document.getElementById("formRegisterProfile").dataset.tempEmail = email;
+        alert("查無此帳號，將帶您前往註冊。");
+        navigateTo("register");
+      } else if (err.code === "auth/too-many-requests") {
+        alert("嘗試次數過多，請稍候幾分鐘再試一次。");
       } else {
-        // 其他驗證錯誤（例如密碼錯誤）
-        alert("登入驗證失敗：密碼不正確或帳號格式有誤！");
+        alert("登入失敗：電子郵件或密碼不正確。");
         passwordInput.focus();
       }
     } finally {
@@ -3475,8 +3419,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const gender = document.querySelector('input[name="regGender"]:checked').value;
     
     const password = document.getElementById("regPassword").value.trim();
-    const hashedPassword = await hashPassword(password);
-    
+
     // 驗證電子郵件是否已被註冊
     const existing = users.find(u => u.email === email);
     if (existing) {
@@ -3503,7 +3446,7 @@ document.addEventListener("DOMContentLoaded", () => {
         name: name,
         phone: phone,
         gender: gender,
-        password: hashedPassword, // Store set login password (hashed)
+        // 不儲存密碼：登入由 Firebase Authentication 全權負責，資料庫不該保存任何密碼資訊
         role: "member",
         points: 0, // 預設新註冊會員起步次數為 0
         joinDate: dateStr,
@@ -3801,6 +3744,11 @@ document.addEventListener("DOMContentLoaded", () => {
     users[memberIndex].phone = newPhone;
     users[memberIndex].gender = newGender;
     
+    /* 密碼處理
+       重要：真正的登入密碼由 Firebase Authentication 保管，網站沒有權限直接改別人的密碼。
+       以前這裡只是把雜湊寫進資料庫的 password 欄位，但登入根本不看那個欄位 ——
+       也就是說「幫會員改密碼」其實從來沒有生效過，會員仍然只能用舊密碼登入。
+       現在改成：自己的密碼可以直接改；別人的則寄出官方密碼重設信（這是唯一正確且安全的做法）。 */
     if (newPassword && !users[memberIndex].lineUserId) {
       const isSelf = (currentUser && users[memberIndex].email === currentUser.email);
       if (isSelf && auth.currentUser) {
@@ -3812,10 +3760,24 @@ document.addEventListener("DOMContentLoaded", () => {
           alert("修改密碼失敗：基於 Firebase 安全限制，可能需要您登出重新登入以驗證身分，然後再試一次！\n錯誤原因：" + authErr.message);
           return;
         }
+      } else {
+        const wantReset = confirm(
+          `基於安全設計，網站無法直接替其他會員設定密碼（這是 Firebase 的保護機制，不是故障）。\n\n` +
+          `要改為寄送「密碼重設信」到 ${newEmail} 嗎？\n會員點信中連結後可自行設定新密碼。`
+        );
+        if (wantReset) {
+          try {
+            await auth.sendPasswordResetEmail(newEmail);
+            alert(`已寄出密碼重設信到 ${newEmail}，請提醒會員收信（也請他們看一下垃圾郵件匣）。`);
+          } catch (resetErr) {
+            console.error("寄送密碼重設信失敗:", resetErr);
+            alert("寄送失敗：" + resetErr.message);
+          }
+        }
       }
-      const hashedPassword = await hashPassword(newPassword);
-      users[memberIndex].password = hashedPassword;
     }
+    // 不再把密碼寫進資料庫：登入完全交給 Firebase Authentication，資料庫不該保存密碼
+    delete users[memberIndex].password;
     
     // 收集開通的課程 ID
     const unlockedCourses = {};
@@ -3844,15 +3806,17 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
     
+    // 匯出檔不再包含密碼欄 —— 匯出的 Excel 常常會被轉寄、存在雲端硬碟，
+    // 那是客戶資料最容易外流的地方，密碼絕對不該出現在裡面。
     const headers = [
-      "會員ID", "姓名", "電子郵件", "手機號碼", "生理性別", 
-      "加入日期", "登入密碼", "通用點數", "贈送-1對1點數", "贈送-團體點數", "是否LINE帳號"
+      "會員ID", "姓名", "電子郵件", "手機號碼", "生理性別",
+      "加入日期", "登入方式", "通用點數", "贈送-1對1點數", "贈送-團體點數", "是否LINE帳號"
     ];
-    
+
     let tableRows = "";
     memberUsers.forEach(u => {
       const isLineStr = u.lineUserId ? "是" : "否";
-      const pwdText = u.lineUserId ? "LINE註冊" : (u.password || "未設定");
+      const loginText = u.lineUserId ? "LINE 登入" : "Email 登入";
       tableRows += `
         <tr>
           <td>${u.id}</td>
@@ -3861,7 +3825,7 @@ document.addEventListener("DOMContentLoaded", () => {
           <td>${u.phone}</td>
           <td>${u.gender}</td>
           <td>${u.joinDate}</td>
-          <td>${pwdText}</td>
+          <td>${loginText}</td>
           <td>${u.points || 0}</td>
           <td>${u.giftedPoints || 0}</td>
           <td>${u.giftedGroupPoints || 0}</td>
@@ -3940,32 +3904,65 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
     
-    const hashedPassword = await hashPassword(password);
+    if (password.length < 6) {
+      alert("密碼至少需要 6 個字元（這是 Firebase 的規定）。");
+      return;
+    }
+
+    /* 真正建立一個可以登入的帳號。
+       以前這裡只寫入資料庫、沒有建立 Firebase Authentication 帳號，
+       導致手動新增的會員拿到帳密卻「怎麼樣都登不進去」。
+
+       這裡用第二個 Firebase App 實例來建立帳號 —— 因為 createUserWithEmailAndPassword()
+       會把「目前登入者」切換成新建立的那個人，直接用主實例會把管理員自己登出。 */
+    let secondaryApp;
+    try {
+      secondaryApp = firebase.app("secondary");
+    } catch (e) {
+      secondaryApp = firebase.initializeApp(firebaseConfig, "secondary");
+    }
+
+    let newUid = null;
+    try {
+      const cred = await secondaryApp.auth().createUserWithEmailAndPassword(email, password);
+      newUid = cred.user.uid;
+      await secondaryApp.auth().signOut();
+    } catch (authErr) {
+      console.error("建立會員登入帳號失敗:", authErr);
+      if (authErr.code === "auth/email-already-in-use") {
+        alert("這個 Email 已經有登入帳號了（可能是之前註冊過但資料被刪除）。\n請改用其他 Email，或到 Firebase 主控台 → Authentication 確認。");
+      } else {
+        alert("建立會員登入帳號失敗：" + authErr.message);
+      }
+      return;
+    }
+
     const nextUserId = await getFreshNextUserId(users, 1);
     const dateStr = new Date().toISOString().split("T")[0];
-    
+
     const newUser = {
       id: nextUserId,
       email: email,
       name: name,
       phone: phone,
       gender: gender,
-      password: hashedPassword, // Save initial password (hashed)
+      // 不儲存密碼：密碼由 Firebase Authentication 保管
       role: "member",
       points: 0, // Starts at 0 points
-      joinDate: dateStr
+      joinDate: dateStr,
+      firebaseUid: newUid
     };
-    
+
     users.push(newUser);
     dbSet("users", users);
-    
+
     // Clean inputs
     document.getElementById("addMemName").value = "";
     document.getElementById("addMemEmail").value = "";
     document.getElementById("addMemPhone").value = "";
     document.getElementById("addMemPassword").value = "";
-    
-    alert(`會員「${name}」已成功新增！`);
+
+    alert(`會員「${name}」已成功新增，並且可以用這組帳密登入了！\n\n請把以下資訊給他：\n帳號：${email}\n密碼：${password}\n\n（提醒他登入後可自行修改密碼）`);
     renderAdminDashboard("members");
   });
 
@@ -5138,6 +5135,45 @@ window.boriRepair = {
     dbSet("bookings", bookings);
     console.log(`✅ 已把 ${targets.length} 筆預約改掛到「${toUser.name}」（id ${to}）。`);
     if (typeof renderAdminBookingList === "function") renderAdminBookingList();
+  },
+
+  /* 清除資料庫裡殘留的 password 欄位。
+     登入已完全交由 Firebase Authentication 處理，資料庫不需要、也不該保存任何密碼。
+     舊資料用的是沒加鹽的 SHA-256（甚至可能有明文），留著只是風險，沒有任何用途。 */
+  async purgePasswords() {
+    if (!currentUser || currentUser.role !== "admin") {
+      console.error("❌ 請先以管理員身分登入再執行。");
+      return;
+    }
+    const affected = users.filter(u => u && u.password !== undefined);
+    if (!affected.length) {
+      console.log("✅ 資料庫裡已經沒有任何 password 欄位了，很乾淨。");
+      return;
+    }
+    console.log(`找到 ${affected.length} 筆還帶著 password 欄位的會員資料：`);
+    console.table(affected.map(u => ({
+      id: u.id, 姓名: u.name, email: u.email,
+      密碼型態: (typeof u.password === "string" && u.password.length === 64 && /^[0-9a-f]+$/.test(u.password)) ? "SHA-256 雜湊" : "⚠️ 疑似明文"
+    })));
+    if (!confirm(
+      `要清除這 ${affected.length} 筆資料裡的 password 欄位嗎？\n\n` +
+      `✅ 不會影響任何人登入 —— 密碼是由 Firebase Authentication 保管的，這個欄位早就沒在用了。\n` +
+      `✅ 不會影響點數、預約或任何其他資料。`
+    )) {
+      console.log("已取消。");
+      return;
+    }
+    for (const u of affected) {
+      delete u.password;
+      try {
+        await database.ref(`users/${getUserPathKey(u)}/password`).remove();
+      } catch (e) {
+        console.error(`清除 ${u.email} 的密碼欄位失敗：`, e);
+      }
+    }
+    dbSet("users", users);
+    console.log(`✅ 已清除 ${affected.length} 筆密碼欄位。資料庫裡不再保存任何密碼。`);
+    if (typeof renderAdminDashboard === "function") renderAdminDashboard("members");
   },
 
   /* 列出所有管理員權限的帳號，方便定期稽核「後台有幾把鑰匙」 */
