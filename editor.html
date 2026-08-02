@@ -880,6 +880,27 @@ function buildFullSiteHTML(){
 ${bodyMarkup}
 </div>
 <script>
+/* 首頁波紋背景的捲動視差。
+   這段原本只寫在 index.html 裡、沒有進這個範本，所以 2026-08-02
+   那次發布把它整段蓋掉了。放進範本後，之後再怎麼發布都不會再消失。
+   （尊重使用者的「減少動態效果」系統設定，開啟時直接不做視差。） */
+(function () {
+  var rippleField = document.querySelector('.ripple-field');
+  if (!rippleField) return;
+  var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (reduceMotion) return;
+
+  function update() {
+    var y = window.scrollY || window.pageYOffset || 0;
+    rippleField.style.transform = 'translateY(' + (y * 0.25) + 'px)';
+  }
+  window.addEventListener('scroll', update, { passive: true });
+  window.addEventListener('resize', update, { passive: true });
+  update();
+})();
+<\/script>
+
+<script>
 (function(){
   var btn = document.getElementById("heroLineBtn");
   if (!btn) return;
