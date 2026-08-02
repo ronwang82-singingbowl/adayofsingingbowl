@@ -201,6 +201,12 @@ input.f:focus, textarea.f:focus{ outline:2px solid var(--ui-accent-soft); border
 .stage .final{ text-align:center; background:transparent; border-top:1px solid var(--hairline); padding:100px 0 80px; }
 .stage .final h2{ font-size:clamp(26px,5vw,38px); line-height:1.4; white-space:pre-line; }
 .stage .line-card{ margin:40px auto 0; max-width:360px; background:var(--ink-3); border:1px solid var(--hairline); border-radius:18px; padding:32px 26px 28px; display: flex; flex-direction: column; align-items: center; text-align: center; }
+/* 「內在天氣」測驗入口。文案目前寫死在 renderPreview() 的範本裡，
+   編輯器面板上沒有對應欄位——要改字請直接改範本，兩邊都要改。 */
+.stage .quiz-invite{ margin:0 auto; max-width:520px; background:var(--ink-3); border:1px solid var(--hairline); border-radius:18px; padding:38px 28px; text-align:center; }
+.stage .quiz-invite h3{ font-family:"Noto Serif TC",serif; font-weight:600; color:var(--paper); font-size:clamp(20px,3.4vw,25px); line-height:1.5; margin:0 0 14px; }
+.stage .quiz-invite p{ margin:0 0 26px; font-size:15px; line-height:1.95; color:var(--mist); }
+.stage .quiz-btn{ display:inline-flex; align-items:center; gap:8px; padding:13px 30px; border:1px solid var(--brass); color:var(--paper); background:transparent; font-weight:600; font-size:14.5px; text-decoration:none; border-radius:999px; }
 .stage .line-name{ font-family:"Noto Serif TC",serif; font-size:16px; color:var(--brass-soft); line-height:1.6; }
 .stage .line-id{ font-family:"JetBrains Mono",monospace; font-size:12.5px; color:var(--mist); margin-top:6px; }
 .stage .qr-wrap{ margin:22px auto 0; width:203px; height:203px; background:var(--paper); border-radius:12px; padding:10px; display:flex; align-items:center; justify-content:center; }
@@ -731,6 +737,15 @@ function renderPreview(){
       <h2 style="font-size:clamp(24px,4vw,32px);">${esc(s.whoTitle)}</h2>
       <div class="who-list">
         ${s.who.map(w=>`<div class="who-item"><span class="mark">・</span><p>${esc(w.text)}</p></div>`).join("")}
+      </div>
+    </div></section>
+
+    <section class="tight"><div class="wrap">
+      <div class="quiz-invite">
+        <div class="eyebrow">先認識自己一點</div>
+        <h3>不確定上面說的，是不是你？</h3>
+        <p>四個問題，看看你這陣子是用哪一種方式在感受世界。<br>不用留任何資料，測完就知道。</p>
+        <a class="quiz-btn" href="https://ronwang82-singingbowl.github.io/bori-quiz/?from=home" target="_blank" rel="noopener">測測我的內在天氣</a>
       </div>
     </div></section>
 
