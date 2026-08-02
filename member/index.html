@@ -15,7 +15,13 @@
   <link rel="stylesheet" href="member.css?v=899fca88">
   
   <!-- Lucide Icons (CDN) -->
-  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- 鎖定版號並加上 SRI：這一頁同時持有 Firebase 登入 session，
+       用 @latest 等於把「今天載到什麼程式」的決定權交給 CDN。
+       1.28.0 就是原本 @latest 解析到的版本，行為完全相同。
+       升級版本時 integrity 也必須一起換，否則瀏覽器會直接拒絕載入。 -->
+  <script src="https://unpkg.com/lucide@1.28.0/dist/umd/lucide.min.js"
+          integrity="sha384-VrnzGPiSyQxm3mI2VhlssyR85zugSHtxMkgO42qV3wUAbNk1oRdZkCWjXKOhuVu6"
+          crossorigin="anonymous"></script>
   
   <!-- LINE LIFF SDK -->
   <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
@@ -1514,7 +1520,7 @@
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 
   <!-- JavaScript -->
-<script src="member.js?v=9492c519"></script>
+<script src="member.js?v=8d311990"></script>
 
 </body>
 </html>

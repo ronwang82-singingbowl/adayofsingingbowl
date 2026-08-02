@@ -2888,7 +2888,12 @@ window.openAdminRejectRemittance = function(remittanceId) {
 // ==========================================
 
 document.addEventListener("DOMContentLoaded", () => {
-  
+
+  // 0. 先把首屏（未登入的會員中心介紹頁）的 lucide 圖示畫出來。
+  // 登入後的各個 render 函式各自也會再呼叫一次；缺了這一次，未登入畫面上的
+  // 圖示會全部是空白，日曆的上／下月按鈕更會變成沒有任何標示的空按鈕。
+  if (typeof lucide !== "undefined") lucide.createIcons();
+
   // 1. Navigation click bindings
   document.getElementById("btnPrevMonth").addEventListener("click", () => {
     calCurrentMonth--;

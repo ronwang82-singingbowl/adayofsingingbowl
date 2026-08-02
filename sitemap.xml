@@ -1,10 +1,19 @@
-
 <?xml version="1.0" encoding="UTF-8"?>
+<!-- 注意：<?xml ...?> 必須是檔案的第一個字元，前面連空行都不能有，否則不是合法 XML。
+     line-add.html 是導向 LINE 的工具頁，刻意不收錄（該頁已加 noindex）。
+     「內在天氣」測驗在 /bori-quiz/ 底下，不屬於這份 sitemap 的路徑範圍，
+     需要的話要在該 repo 另外放一份。 -->
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://ronwang82-singingbowl.github.io/adayofsingingbowl/</loc>
+    <lastmod>2026-08-02</lastmod>
     <changefreq>monthly</changefreq>
     <priority>1.0</priority>
   </url>
+  <url>
+    <loc>https://ronwang82-singingbowl.github.io/adayofsingingbowl/privacy.html</loc>
+    <lastmod>2026-08-02</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.3</priority>
+  </url>
 </urlset>
- 
