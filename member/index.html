@@ -1035,6 +1035,11 @@
                         <label class="form-label" style="font-size: 11px; margin-bottom: 4px;">LINE Webhook 代理 URL *</label>
                         <input type="text" class="form-input text-input" id="txtLineWebhookUrl" placeholder="請貼上 Google Apps Script 部署網址" style="font-size:11px; padding: 6px 8px; height: auto; background: var(--ink-2); color: #fff;">
                       </div>
+                      <div class="form-group" style="margin-bottom: 8px;">
+                        <label class="form-label" style="font-size: 11px; margin-bottom: 4px;">管理員 LINE User ID</label>
+                        <input type="text" class="form-input text-input" id="txtAdminLineUserId" placeholder="收「明日預約清單」的 LINE ID（U 開頭 33 碼）" style="font-size:11px; padding: 6px 8px; height: auto; background: var(--ink-2); color: #fff;">
+                        <p class="section-subtitle" style="margin-top: 4px; margin-bottom: 0; font-size: 10.5px; line-height: 1.6;">每天自動收到隔天的預約彙總（含尚未確認的）。留空則不發送管理員通知。</p>
+                      </div>
                       <button type="button" class="cta-btn primary-btn small-btn w-100" id="btnSaveLineConfig" style="font-size: 11px; height: 28px;">儲存設定</button>
                     </div>
                   </div>
@@ -1520,7 +1525,7 @@
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 
   <!-- JavaScript -->
-<script src="member.js?v=8d311990"></script>
+<script src="member.js?v=17224789"></script>
 
 </body>
 </html>

@@ -1,0 +1,73 @@
+{
+  "rules": {
+    "settings": {
+      ".read": "auth != null",
+      ".write": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'admin'"
+    },
+    "notifyLog": {
+      ".read": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'admin'",
+      ".write": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'admin'"
+    },
+    "slots": {
+      ".read": true,
+      ".write": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'admin'"
+    },
+    "groupSessions": {
+      ".read": true,
+      ".write": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'admin'"
+    },
+    "courses": {
+      ".read": "auth != null",
+      ".write": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'admin'"
+    },
+    "users": {
+      ".indexOn": ["lineUserId"],
+      ".read": "(auth != null && root.child('users').child(auth.uid).child('role').val() === 'admin') || (query.orderByChild === 'lineUserId' && query.equalTo != null)",
+      "$uid": {
+        ".read": "auth != null && (auth.uid === $uid || root.child('users').child(auth.uid).child('role').val() === 'admin')",
+        ".write": "auth != null && (auth.uid === $uid || root.child('users').child(auth.uid).child('role').val() === 'admin' || (data.exists() && (data.child('email').val().toLowerCase() === auth.token.email.toLowerCase() || auth.token.email === 'line_' + data.child('lineUserId').val() + '@singbowl.com')))",
+        "points": {
+          ".write": "auth != null && (root.child('users').child(auth.uid).child('role').val() === 'admin' || (auth.uid === $uid && (!data.exists() || newData.val() <= data.val())))"
+        },
+        "giftedPoints": {
+          ".write": "auth != null && (root.child('users').child(auth.uid).child('role').val() === 'admin' || (auth.uid === $uid && (!data.exists() || newData.val() <= data.val())))"
+        },
+        "giftedGroupPoints": {
+          ".write": "auth != null && (root.child('users').child(auth.uid).child('role').val() === 'admin' || (auth.uid === $uid && (!data.exists() || newData.val() <= data.val())))"
+        }
+      }
+    },
+    "bookings": {
+      ".indexOn": "userId",
+      ".read": "auth != null && (root.child('users').child(auth.uid).child('role').val() === 'admin' || (query.orderByChild === 'userId' && query.equalTo === root.child('users').child(auth.uid).child('id').val()))",
+      ".write": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'admin'",
+      "$bookingId": {
+        ".write": "auth != null && (newData.child('firebaseUid').val() === auth.uid || root.child('users').child(auth.uid).child('role').val() === 'admin' || data.child('firebaseUid').val() === auth.uid)"
+      }
+    },
+    "vouchers": {
+      ".indexOn": "userId",
+      ".read": "auth != null && (root.child('users').child(auth.uid).child('role').val() === 'admin' || (query.orderByChild === 'userId' && query.equalTo === root.child('users').child(auth.uid).child('id').val()))",
+      ".write": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'admin'",
+      "$voucherId": {
+        ".write": "auth != null && (newData.child('firebaseUid').val() === auth.uid || root.child('users').child(auth.uid).child('role').val() === 'admin')"
+      }
+    },
+    "transactions": {
+      ".indexOn": "userId",
+      ".read": "auth != null && (root.child('users').child(auth.uid).child('role').val() === 'admin' || (query.orderByChild === 'userId' && query.equalTo === root.child('users').child(auth.uid).child('id').val()))",
+      ".write": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'admin'",
+      "$transactionId": {
+        ".write": "auth != null && (newData.child('firebaseUid').val() === auth.uid || root.child('users').child(auth.uid).child('role').val() === 'admin')"
+      }
+    },
+    "remittances": {
+      ".indexOn": "userId",
+      ".read": "auth != null && (root.child('users').child(auth.uid).child('role').val() === 'admin' || (query.orderByChild === 'userId' && query.equalTo === root.child('users').child(auth.uid).child('id').val()))",
+      ".write": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'admin'",
+      "$remittanceId": {
+        ".write": "auth != null && (newData.child('firebaseUid').val() === auth.uid || root.child('users').child(auth.uid).child('role').val() === 'admin')"
+      }
+    }
+  }
+}

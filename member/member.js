@@ -368,6 +368,56 @@ function getUserPathKey(user) {
   return String(user.id);
 }
 
+/* 讀取 LINE 推播需要的兩個設定。回傳 {webhookUrl, apiSecret}，缺任一個就回傳 null。
+   抽出來是因為自動提醒要一次送很多則，不該每一則都重讀一次 Firebase。 */
+function getLineConfig(alertOnMissing) {
+  return Promise.all([
+    database.ref("settings/lineWebhookUrl").once("value"),
+    database.ref("settings/lineApiSecret").once("value"),
+    database.ref("settings/adminLineUserId").once("value")
+  ]).then(([urlSnap, secretSnap, adminSnap]) => {
+    const webhookUrl = urlSnap.val();
+    const apiSecret = secretSnap.val();
+    if (!webhookUrl) {
+      console.warn("[LINE通知] 未設定 LINE Webhook URL，跳過通知。");
+      if (alertOnMissing) alert("⚠️ LINE 通知發送失敗：尚未設定 LINE Webhook 代理 URL。\n\n請至管理後台 > 時段開放設定 > 展開 LINE 通知設定，貼上您的 Google Apps Script 部署網址。");
+      return null;
+    }
+    if (!apiSecret) {
+      console.warn("[LINE通知] 未設定 lineApiSecret，跳過通知。");
+      if (alertOnMissing) alert("⚠️ LINE 通知發送失敗：Firebase 資料庫中尚未設定 lineApiSecret。\n\n請至 Firebase Console > Realtime Database > Data，在 settings 節點下新增 lineApiSecret（值需與 GAS 後端設定的密鑰一致）。");
+      return null;
+    }
+    // adminLineUserId 只有自動提醒的管理員彙總會用到，沒設定不影響一般通知
+    return { webhookUrl, apiSecret, adminLineUserId: adminSnap.val() || null };
+  }).catch(err => {
+    console.error("[LINE通知] ❌ 無法讀取 Firebase settings:", err);
+    if (alertOnMissing) alert("⚠️ 無法讀取 LINE 通知設定。請確認 Firebase 安全規則已正確部署（settings 節點需允許 auth != null 讀取）。");
+    return null;
+  });
+}
+
+/* 直接對某個 LINE User ID 推播。cfg 由 getLineConfig() 取得。
+   注意 no-cors 模式下讀不到回應內容，送出成功不代表 LINE 端收到。 */
+function pushLineMessage(lineUserId, message, cfg, alertOnFail) {
+  if (!cfg || !lineUserId) return Promise.resolve(false);
+  return fetch(cfg.webhookUrl, {
+    method: "POST",
+    mode: "no-cors",
+    headers: { "Content-Type": "text/plain" },
+    body: JSON.stringify({ lineUserId: lineUserId, message: message, apiSecret: cfg.apiSecret })
+  })
+  .then(res => {
+    console.log("[LINE通知] ✅ 請求已成功送出（no-cors 模式，回應類型:", res.type, "）");
+    return true;
+  })
+  .catch(err => {
+    console.error("[LINE通知] ❌ 網路請求失敗:", err);
+    if (alertOnFail) alert("⚠️ LINE 通知發送失敗：網路請求錯誤。請確認 GAS 部署網址是否正確。");
+    return false;
+  });
+}
+
 // LINE Push Notification Sender Helper (含 API 密鑰驗證)
 function sendLineNotification(userId, message) {
   const member = users.find(u => u.id === userId);
@@ -375,57 +425,165 @@ function sendLineNotification(userId, message) {
     console.warn("[LINE通知] 此會員無 LINE User ID，userId:", userId);
     return;
   }
-  
+
   const isAdmin = currentUser && currentUser.role === "admin";
   console.log(`[LINE通知] 準備發送給 ${member.name} (lineUserId: ${member.lineUserId})...`);
-  
-  // 同時讀取 Webhook URL 與 API 密鑰
-  Promise.all([
-    database.ref("settings/lineWebhookUrl").once("value"),
-    database.ref("settings/lineApiSecret").once("value")
-  ]).then(([urlSnap, secretSnap]) => {
-    const webhookUrl = urlSnap.val();
-    const apiSecret = secretSnap.val();
-    
-    console.log(`[LINE通知] webhookUrl: ${webhookUrl ? '已設定' : '❌ 未設定'}, apiSecret: ${apiSecret ? '已設定' : '❌ 未設定'}`);
-    
-    if (!webhookUrl) {
-      console.warn("[LINE通知] 未設定 LINE Webhook URL，跳過通知。");
-      if (isAdmin) alert("⚠️ LINE 通知發送失敗：尚未設定 LINE Webhook 代理 URL。\n\n請至管理後台 > 時段開放設定 > 展開 LINE 通知設定，貼上您的 Google Apps Script 部署網址。");
-      return;
-    }
-    if (!apiSecret) {
-      console.warn("[LINE通知] 未設定 lineApiSecret，跳過通知。");
-      if (isAdmin) alert("⚠️ LINE 通知發送失敗：Firebase 資料庫中尚未設定 lineApiSecret。\n\n請至 Firebase Console > Realtime Database > Data，在 settings 節點下新增 lineApiSecret（值需與 GAS 後端設定的密鑰一致）。");
-      return;
-    }
-    
+
+  getLineConfig(isAdmin).then(cfg => {
+    if (!cfg) return;
     console.log(`[LINE通知] 正在發送至 GAS Webhook...`);
-    const payload = {
-      lineUserId: member.lineUserId,
-      message: message,
-      apiSecret: apiSecret
-    };
-    
-    fetch(webhookUrl, {
-      method: "POST",
-      mode: "no-cors",
-      headers: {
-        "Content-Type": "text/plain"
-      },
-      body: JSON.stringify(payload)
-    })
-    .then(res => {
-      console.log("[LINE通知] ✅ 請求已成功送出（no-cors 模式，回應類型:", res.type, "）");
-    })
-    .catch(err => {
-      console.error("[LINE通知] ❌ 網路請求失敗:", err);
-      if (isAdmin) alert("⚠️ LINE 通知發送失敗：網路請求錯誤。請確認 GAS 部署網址是否正確。");
-    });
-  }).catch(err => {
-    console.error("[LINE通知] ❌ 無法讀取 Firebase settings:", err);
-    if (isAdmin) alert("⚠️ 無法讀取 LINE 通知設定。請確認 Firebase 安全規則已正確部署（settings 節點需允許 auth != null 讀取）。");
+    pushLineMessage(member.lineUserId, message, cfg, isAdmin);
   });
+}
+
+// ==========================================
+// 2.5 自動提醒（明日預約 ＋ 點數即將到期）
+// ==========================================
+/* 這是 GitHub Pages 靜態網站，沒有後端，所以同一套規則有兩個執行點：
+     1. tools/gas-daily-reminder.gs —— GAS 每日觸發器，沒人開網頁也會跑（主力）
+     2. 本檔的 runReminderSweep() —— 管理員開後台時補跑一次（保險）
+   兩邊都先查 notifyLog 再送，同一則通知只會送出一次，所以重複執行是安全的。
+   notifyLog 的 key 設計與 GAS 端必須一致，改這裡就要一起改那支。 */
+
+const REMIND_BEFORE_DAYS = 1;          // 預約提醒：前一天
+const POINT_EXPIRY_NOTICE_MONTHS = 1;  // 點數到期通知：到期日 1 個月前
+let reminderSweepDone = false;         // 同一次登入只掃一次
+/* 兩個雲端監聽器各自回來的時間不固定，而 bookings 初始就是空陣列 ——
+   若只看「是不是陣列」，users 先到時會在零筆預約的狀態下掃完並標記完成，
+   當天的預約提醒就整批漏掉。所以要等兩邊都真的回報過一次才動。 */
+const reminderDataReady = { users: false, bookings: false };
+
+function dateStrOffset(days) {
+  const d = new Date();
+  d.setDate(d.getDate() + days);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+// 提醒只送已確認的預約 —— 還沒確認的不該叫會員準時到，那些改列在管理員清單裡待處理
+function isRemindableBooking(b, targetDate) {
+  return b && b.date === targetDate && b.status === "已確認";
+}
+
+function bookingLabel(b) {
+  return b.type === "group" ? (b.title || "團體頌缽") : "1對1 頌缽體驗";
+}
+
+function buildMemberBookingReminder(b) {
+  return `🔔 明日預約提醒\n\n` +
+         `親愛的會員，提醒您明天有一場預約：\n\n` +
+         `📅 日期：${b.date}\n` +
+         `⏰ 時間：${b.time}\n` +
+         `🧘 項目：${bookingLabel(b)}\n\n` +
+         `期待明天與您見面。若需調整時間，請儘早私訊官方 LINE 讓我們知道。`;
+}
+
+function buildAdminDailyDigest(targetDate, confirmed, pending) {
+  let msg = `📋 明日預約清單（${targetDate}）\n\n`;
+  if (confirmed.length === 0 && pending.length === 0) {
+    return msg + `明天沒有任何預約，可以安心休息。`;
+  }
+  if (confirmed.length > 0) {
+    msg += `✅ 已確認 ${confirmed.length} 筆\n`;
+    confirmed.forEach(b => {
+      const m = users.find(u => u.id === b.userId);
+      msg += `　${b.time}｜${m ? m.name : "未知會員"}｜${bookingLabel(b)}\n`;
+      if (b.notes) msg += `　　備註：${b.notes}\n`;
+    });
+  }
+  if (pending.length > 0) {
+    msg += `\n⚠️ 尚未確認 ${pending.length} 筆（會員不會收到提醒）\n`;
+    pending.forEach(b => {
+      const m = users.find(u => u.id === b.userId);
+      msg += `　${b.time}｜${m ? m.name : "未知會員"}｜${bookingLabel(b)}\n`;
+    });
+  }
+  return msg;
+}
+
+function buildPointExpiryNotice(member, batches) {
+  const lines = batches.map(b =>
+    `　${POINT_TYPE_LABEL[b.type] || b.type} ${b.remaining} 次 — ${b.expiresAt}（剩 ${daysUntil(b.expiresAt)} 天）`
+  ).join("\n");
+  return `⏳ 點數即將到期提醒\n\n` +
+         `${member.name} 您好，您有點數將在一個月內到期：\n\n` +
+         `${lines}\n\n` +
+         `到期後將自動失效，系統會「先到期的先扣」。\n` +
+         `若想在期限內使用，歡迎到會員中心預約時段。\n\n` +
+         `如對效期有疑問，請詢問官方 LINE，我們會協助確認。`;
+}
+
+/* 管理員開後台時補跑一次。GAS 若已送過，這裡會因 notifyLog 有紀錄而跳過。 */
+function runReminderSweep(source) {
+  if (source) reminderDataReady[source] = true;
+  if (reminderSweepDone) return;
+  if (!currentUser || currentUser.role !== "admin") return;
+  if (!reminderDataReady.users || !reminderDataReady.bookings) return;
+  reminderSweepDone = true;
+
+  const target = dateStrOffset(REMIND_BEFORE_DAYS);
+  const today = todayStr();
+  const expiryDeadline = addMonthsStr(today, POINT_EXPIRY_NOTICE_MONTHS);
+
+  getLineConfig(false).then(cfg => {
+    if (!cfg) {
+      console.warn("[自動提醒] LINE 設定不完整，略過本次掃描。");
+      return;
+    }
+    return database.ref("notifyLog").once("value").then(snap => {
+      const log = snap.val() || {};
+      const sentBooking = log.booking || {};
+      const sentExpiry = log.pointExpiry || {};
+      const sentDigest = log.adminDigest || {};
+      const writes = {};
+      let count = 0;
+
+      // ── 1. 明日預約：通知會員 ──
+      const confirmed = bookings.filter(b => isRemindableBooking(b, target));
+      const pending = bookings.filter(b => b && b.date === target && b.status === "待確認");
+
+      confirmed.forEach(b => {
+        if (sentBooking[b.id]) return;                 // GAS 或先前已送過
+        const member = users.find(u => u.id === b.userId);
+        if (!member || !member.lineUserId) return;      // 沒綁 LINE 的送不了
+        pushLineMessage(member.lineUserId, buildMemberBookingReminder(b), cfg, false);
+        writes[`booking/${b.id}`] = target;
+        count++;
+      });
+
+      // ── 2. 明日預約：通知管理員（每天一則彙總，含未確認的）──
+      // 沒設定 adminLineUserId 時不寫 log，這樣設定好之後下次進後台還會補送。
+      if (!sentDigest[target] && cfg.adminLineUserId) {
+        pushLineMessage(cfg.adminLineUserId, buildAdminDailyDigest(target, confirmed, pending), cfg, false);
+        writes[`adminDigest/${target}`] = Date.now();
+        count++;
+      } else if (!sentDigest[target]) {
+        console.warn("[自動提醒] 未設定 settings/adminLineUserId，管理員彙總未發送。");
+      }
+
+      // ── 3. 點數到期：到期日在一個月內、且尚未通知過的批次 ──
+      users.forEach(member => {
+        if (!member.lineUserId) return;
+        ensureBatches(member);
+        const due = (member.pointBatches || []).filter(b =>
+          b.expiresAt &&
+          !isExpired(b.expiresAt) &&
+          String(b.expiresAt) <= expiryDeadline &&
+          (Number(b.remaining) || 0) > 0 &&
+          !sentExpiry[`${member.id}_${b.id}`]
+        );
+        if (due.length === 0) return;
+        pushLineMessage(member.lineUserId, buildPointExpiryNotice(member, due), cfg, false);
+        due.forEach(b => { writes[`pointExpiry/${member.id}_${b.id}`] = today; });
+        count++;
+      });
+
+      if (Object.keys(writes).length > 0) {
+        return database.ref("notifyLog").update(writes)
+          .then(() => console.log(`[自動提醒] 本次補送 ${count} 則通知。`));
+      }
+      console.log("[自動提醒] 沒有需要補送的通知（GAS 應已處理）。");
+    });
+  }).catch(err => console.error("[自動提醒] 掃描失敗:", err));
 }
 
 // Google Calendar URL Generator
@@ -4322,9 +4480,14 @@ async function runMockLineLogin() {
       alert("請輸入有效的 LINE Webhook 代理 URL！");
       return;
     }
-    database.ref("settings/lineWebhookUrl").set(webhookUrl)
+    const adminLineId = (document.getElementById("txtAdminLineUserId")?.value || "").trim();
+    Promise.all([
+      database.ref("settings/lineWebhookUrl").set(webhookUrl),
+      // 留空代表不要管理員通知，寫 null 讓節點消失
+      database.ref("settings/adminLineUserId").set(adminLineId || null)
+    ])
       .then(() => {
-        alert("🎉 LINE Webhook 代理 URL 設定已成功儲存！");
+        alert("🎉 LINE 通知設定已成功儲存！");
         document.getElementById("divLineConfigForm").style.display = "none";
         const btn = document.getElementById("btnToggleLineConfig");
         if (btn) btn.innerHTML = '<i data-lucide="message-square"></i> 展開 LINE 通知設定';
@@ -4863,6 +5026,14 @@ function startRealtimeSync() {
     if (input) input.value = lineWebhookUrl;
   });
   activeListeners.push(lineWebhookUrlRef);
+
+  // 1.3 監聽管理員 LINE User ID（自動提醒的「明日預約清單」收件人）
+  const adminLineUserIdRef = database.ref("settings/adminLineUserId");
+  adminLineUserIdRef.on("value", (snapshot) => {
+    const input = document.getElementById("txtAdminLineUserId");
+    if (input) input.value = snapshot.val() || "";
+  });
+  activeListeners.push(adminLineUserIdRef);
   
   // 2. 角色權限隔離節點監聽
   if (currentUserId) {
@@ -4878,15 +5049,17 @@ function startRealtimeSync() {
         dbSet("users", users, false);
         syncCurrentUser();
         triggerViewRender();
+        runReminderSweep("users");   // 兩邊都回報過才會真的開跑
       });
       activeListeners.push(usersRef);
-      
+
       const bookingsRef = database.ref("bookings");
       bookingsRef.on("value", (snapshot) => {
         const val = snapshot.val();
         bookings = val ? (Array.isArray(val) ? val.filter(Boolean) : Object.values(val)).sort((a,b) => a.id - b.id) : [];
         dbSet("bookings", bookings, false);
         triggerViewRender();
+        runReminderSweep("bookings");
       });
       activeListeners.push(bookingsRef);
       
