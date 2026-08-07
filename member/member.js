@@ -702,7 +702,22 @@ const VIEWS = [
   "courses", "course-detail", "lesson-player", "admin-edit-course"
 ];
 
+/* 手機的滑動返回 / 上一頁
+   ------------------------------------------------------------------
+   這是單頁式網站，navigateTo() 只是把區塊顯示／隱藏，本來完全沒有寫入
+   瀏覽器歷史。所以從 LINE 開啟時，整站在歷史上只有「一頁」，使用者一按
+   上一頁就直接離開網站、跳回 LINE 對話 —— 而不是回到站內的前一頁。
+
+   作法：每次切換頁面就 pushState 留一筆，並監聽 popstate 在返回時切回去。
+   fromPopstate 是為了避免「返回時又推一筆新紀錄」造成上一頁按不動。 */
+let fromPopstate = false;
+
 function navigateTo(viewId) {
+  // 返回造成的切換不能再推一筆，否則上一頁會按不動（推一筆、退一筆，原地打轉）
+  if (!fromPopstate && (!history.state || history.state.view !== viewId)) {
+    history.pushState({ view: viewId }, "", "#" + viewId);
+  }
+
   if (viewId === "auth") {
     const optionsContainer = document.getElementById("authOptionsContainer");
     const emailForm = document.getElementById("formEmailAuth");
@@ -758,6 +773,23 @@ function navigateTo(viewId) {
   if (viewId === "lesson-player") renderLessonPlayerPage();
   if (viewId === "admin") renderAdminDashboard("overview");
 }
+
+/* 按下手機返回 / 上一頁時切回站內的前一頁。
+   已登出卻返回到會員專屬頁面時，導回首頁而不是顯示空白內容。 */
+window.addEventListener("popstate", (e) => {
+  const viewId = (e.state && e.state.view) || "landing";
+  const el = document.getElementById("view-" + viewId);
+  if (!el) return;
+
+  const memberOnly = ["member", "admin", "buy-points", "book", "edit-profile",
+                      "admin-points", "admin-add-member", "admin-edit-member",
+                      "admin-reschedule", "courses", "course-detail",
+                      "lesson-player", "admin-edit-course"];
+  const target = (!currentUser && memberOnly.includes(viewId)) ? "landing" : viewId;
+
+  fromPopstate = true;
+  try { navigateTo(target); } finally { fromPopstate = false; }
+});
 
 function updateNavState(viewId) {
   // Highlight navigation item
@@ -3037,6 +3069,12 @@ window.openAdminRejectRemittance = function(remittanceId) {
 // ==========================================
 
 document.addEventListener("DOMContentLoaded", () => {
+
+  /* 種下第一筆歷史狀態。view-landing 在 HTML 裡預設就是 active，載入時不會
+     經過 navigateTo()，history.state 會是 null —— 少了這一筆，第一次切頁時
+     popstate 拿不到 view，返回就會直接離站。
+     這裡只帶兩個參數（不動 URL），避免影響 LINE LIFF 的登入導轉。 */
+  if (!history.state) history.replaceState({ view: "landing" }, "");
 
   // 0. 先把首屏（未登入的會員中心介紹頁）的 lucide 圖示畫出來。
   // 登入後的各個 render 函式各自也會再呼叫一次；缺了這一次，未登入畫面上的

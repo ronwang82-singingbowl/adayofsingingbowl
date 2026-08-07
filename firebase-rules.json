@@ -4,6 +4,10 @@
       ".read": "auth != null",
       ".write": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'admin'"
     },
+    "couponTemplates": {
+      ".read": "auth != null",
+      ".write": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'admin'"
+    },
     "notifyLog": {
       ".read": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'admin'",
       ".write": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'admin'"
