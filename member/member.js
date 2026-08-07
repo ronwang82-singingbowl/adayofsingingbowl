@@ -1510,26 +1510,13 @@ function updateGroupCost() {
 function renderBuyPointsPage() {
   if (!currentUser) return;
   
-  // Update user bank info display
-  const bankName = currentUser.paymentBankName || "";
-  const bankLast5 = currentUser.paymentBankLast5 || "";
-  
-  document.getElementById("buyUserBankName").value = bankName || "尚未設定 (請先至個人資料填寫並綁定)";
-  document.getElementById("buyUserBankLast5").value = bankLast5 || "尚未設定 (請先至個人資料填寫並綁定)";
-
-  // 沒綁定常用匯款帳戶就提醒去綁 —— 表單送出時本來就會擋，先講比較不會白填
-  const bankWarning = document.getElementById("buyPointsBankWarning");
-  if (bankWarning) {
-    bankWarning.style.display = (bankName && bankLast5) ? "none" : "flex";
-  }
-  
-  // Reset selected package
-  document.querySelectorAll(".package-card").forEach(c => c.classList.remove("selected"));
-  document.getElementById("buyPackageId").value = "";
-  document.getElementById("buyPointsCount").value = "";
-  document.getElementById("buyPointsAmount").value = "";
+  /* 匯出銀行與後五碼改成在對帳回條裡直接填，不再要求先去個人資料綁定 ——
+     原本沒綁就整個擋住送不出去，客人得跳到別頁填完再走回來。
+     填過的自動帶入，之後只要確認即可。 */
+  document.getElementById("buyUserBankName").value = currentUser.paymentBankName || "";
+  document.getElementById("buyUserBankLast5").value = currentUser.paymentBankLast5 || "";
   document.getElementById("buyActualAmount").value = "";
-  
+
   // Render user remittance history
   renderRemittanceHistory();
 }
@@ -1578,11 +1565,14 @@ function renderRemittanceHistory() {
   }).join("");
 }
 
+/* 固定方案（1/8/15 點）已取消，金額改為逐筆議定。
+   保留這個函式是為了讓「取消之前」送出的舊紀錄仍顯示得出原本的方案名稱；
+   新紀錄的 packageId 是 null，顯示成「自訂金額」。 */
 function getPackageName(packageId) {
   if (packageId === 1 || packageId === "1") return "加購 1 點";
   if (packageId === 8 || packageId === "8") return "加購 8 點 (加贈1次團體)";
   if (packageId === 15 || packageId === "15") return "加購 15 點 (加贈2次團體)";
-  return "未知方案";
+  return "自訂金額";
 }
 
 // ==========================================
@@ -2951,10 +2941,26 @@ window.adminApproveRemittance = async function(remittanceId) {
     return;
   }
   
-  if (confirm(`確定已收到會員 ${member.name} 的匯款，並發放 ${remit.points} 點數嗎？`)) {
+  /* 已無固定方案，發幾點由管理員當下決定（金額是逐筆談的）。
+     舊資料若帶有 points 就沿用當預設值，不影響歷史紀錄。 */
+  const suggested = Number(remit.points) || "";
+  const inputPts = prompt(
+    `會員：${member.name}\n匯款金額：$${remit.amount}\n銀行：${remit.bankName} / 後五碼 ${remit.last5}\n\n要發放幾點「通用點數」？`,
+    suggested
+  );
+  if (inputPts === null) return;                 // 取消
+  const pts = parseInt(inputPts, 10);
+  if (!pts || pts <= 0) { alert("請輸入大於 0 的點數。"); return; }
+
+  const inputBonus = prompt("要加贈幾張「團體頌缽」票券？（沒有就填 0）", "0");
+  if (inputBonus === null) return;
+  const bonusInput = Math.max(0, parseInt(inputBonus, 10) || 0);
+
+  if (confirm(`確定已收到會員 ${member.name} 的匯款 $${remit.amount}，\n發放 ${pts} 點通用點數${bonusInput > 0 ? `、加贈 ${bonusInput} 張團體票券` : ""}？`)) {
+    remit.points = pts;
     // Grant points (1on1 points) — 帶入效期
     const remitExpiry = remit.expiresAt || defaultExpiryStr();
-    grantPoints(member, "points", remit.points, remitExpiry, `加購點數 (${getPackageName(remit.packageId)})`);
+    grantPoints(member, "points", pts, remitExpiry, `加購點數（匯款 $${remit.amount}）`);
 
     // Write point transaction log
     const newTx = {
@@ -2962,20 +2968,15 @@ window.adminApproveRemittance = async function(remittanceId) {
       id: await getFreshNextId("transactions", transactions, 5001),
       userId: member.id,
       type: "add",
-      amount: remit.points,
-      reason: `加購點數審核通過 (方案: ${getPackageName(remit.packageId)})`,
+      amount: pts,
+      reason: `加購點數審核通過（匯款 $${remit.amount}）`,
       date: getNowDateTimeString(),
       balance: member.points
     };
     transactions.push(newTx);
 
-    // Add group session vouchers if applicable
-    let bonusGroupVouchers = 0;
-    if (remit.packageId === 8 || remit.packageId === "8") {
-      bonusGroupVouchers = 1;
-    } else if (remit.packageId === 15 || remit.packageId === "15") {
-      bonusGroupVouchers = 2;
-    }
+    // 加贈的團體票券張數由管理員在上面輸入，不再依方案推算
+    let bonusGroupVouchers = bonusInput;
 
     if (bonusGroupVouchers > 0) {
       // 修正：先前這裡誤寫入從未被預約邏輯讀取的 member.groupPoints，
@@ -3168,49 +3169,23 @@ document.addEventListener("DOMContentLoaded", () => {
   
   document.getElementById("btnCancelEditProfile").addEventListener("click", () => navigateTo("member"));
 
-  // Package Card Selection Listeners
-  document.querySelectorAll(".package-card").forEach(card => {
-    card.addEventListener("click", () => {
-      document.querySelectorAll(".package-card").forEach(c => c.classList.remove("selected"));
-      card.classList.add("selected");
-      
-      const packageId = card.getAttribute("data-package-id");
-      const points = card.getAttribute("data-points");
-      const amount = card.getAttribute("data-amount");
-      
-      document.getElementById("buyPackageId").value = packageId;
-      document.getElementById("buyPointsCount").value = points;
-      document.getElementById("buyPointsAmount").value = amount;
-      document.getElementById("buyActualAmount").value = amount;
+  /* 原本這裡有 1/8/15 點三張方案卡的選取邏輯（順帶產生一組假的「虛擬帳號」）。
+     收款改成中信社群收款、連結逐筆開立、金額逐筆談，固定方案已不適用，
+     所以方案卡整組移除，發放幾點改由管理員在核准時輸入。 */
 
-      // 收款帳號不公開在網站上，統一由官方 LINE 個別提供，所以三個方案都連同一個窗口
-      // （原本這裡還會產生一組「虛擬帳號」顯示給會員 —— 那是範本的假號碼，
-      //   用 (userId*17 + packageId*31 + 47) % 100000 算出來的，已整段移除。）
-    });
-  });
-
-  // Warning banner click jump to edit profile
-  document.getElementById("buyPointsBankWarning")?.addEventListener("click", () => {
-    document.getElementById("btnEditProfile")?.click();
-  });
 
   // Remittance Slip Submit Listener
   document.getElementById("formSubmitRemittance")?.addEventListener("submit", async (e) => {
     e.preventDefault();
     if (!currentUser) return;
     
-    // Check bank binding first
-    if (!currentUser.paymentBankName || !currentUser.paymentBankLast5) {
-      alert("儲值前請先至「個人資料」填寫常用匯款銀行名稱與帳號後五碼以進行防詐綁定。");
+    const bankName = document.getElementById("buyUserBankName").value.trim();
+    const last5 = document.getElementById("buyUserBankLast5").value.trim();
+    if (!bankName || !/^\d{5}$/.test(last5)) {
+      alert("請填寫您的匯出銀行名稱，以及帳號後五碼（五位數字）。");
       return;
     }
-    
-    const packageId = document.getElementById("buyPackageId").value;
-    if (!packageId) {
-      alert("請先選擇您欲加購的點數套票方案。");
-      return;
-    }
-    
+
     const chkAgree = document.getElementById("chkAgreeTerms").checked;
     if (!chkAgree) {
       alert("您必須同意消費者購買與服務契約以進行交易。");
@@ -3218,9 +3193,18 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     
     const amount = parseInt(document.getElementById("buyActualAmount").value);
+    if (!amount || amount <= 0) {
+      alert("請填寫實際匯款金額。");
+      return;
+    }
     const remitTime = document.getElementById("buyRemitTime").value.replace("T", " ");
     const note = document.getElementById("buyRemitNote").value.trim();
-    
+
+    // 順手存回個人資料，下次填對帳回條會自動帶入
+    currentUser.paymentBankName = bankName;
+    currentUser.paymentBankLast5 = last5;
+    dbSet("users", users);
+
     const newRemit = {
       // 原本是 remittances.length + 1，兩位會員同時回報匯款就會撞號、其中一筆被靜默蓋掉
       id: await getFreshNextId("remittances", remittances, 1),
@@ -3228,11 +3212,13 @@ document.addEventListener("DOMContentLoaded", () => {
       firebaseUid: auth.currentUser ? auth.currentUser.uid : null,
       userName: currentUser.name,
       userPhone: currentUser.phone,
-      packageId: parseInt(packageId),
-      points: parseInt(document.getElementById("buyPointsCount").value),
+      // 已無固定方案（收款連結逐筆開立），要發幾點由管理員核准時輸入
+      packageId: null,
+      points: 0,
       amount: amount,
-      bankName: currentUser.paymentBankName,
-      last5: currentUser.paymentBankLast5,
+      bankName: bankName,
+      last5: last5,
+      note: note,
       remittedAt: remitTime,
       status: "pending",
       rejectReason: "",
@@ -3245,6 +3231,7 @@ document.addEventListener("DOMContentLoaded", () => {
     alert("匯款對帳回條已提交，管理員將儘速進行審核，感謝您的耐心等待。");
     
     // Clear form inputs
+    document.getElementById("buyActualAmount").value = "";
     document.getElementById("buyRemitTime").value = "";
     document.getElementById("buyRemitNote").value = "";
     document.getElementById("chkAgreeTerms").checked = false;

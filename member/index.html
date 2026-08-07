@@ -367,7 +367,7 @@
       <section id="view-buy-points" class="view-section">
         <div class="buy-points-container">
           <h2>加購服務點數</h2>
-          <p class="auth-subtitle">選擇方案 → 私訊官方 LINE 取得匯款帳號 → 匯款後回到此頁填寫對帳回條</p>
+          <p class="auth-subtitle">私訊官方 LINE 取得匯款帳號 → 完成匯款 → 回到此頁填寫對帳回條</p>
 
           <!-- Anti-Fraud Banner -->
           <div class="anti-fraud-banner">
@@ -376,30 +376,8 @@
               <ul>
                 <li>為防範詐騙洗錢，<strong>本平台限制僅能使用您登記的本人帳戶進行匯款</strong>。</li>
                 <li>禁止使用他人帳戶、ATM現金存款、無摺存款，若查有非本人帳號之匯款將無法審核，原款項將退回。</li>
-                <li>若您尚未綁定常用匯款帳號，請先至「會員資料」完成綁定再進行購買。</li>
+                <li>請於下方對帳回條填寫您實際匯款的帳戶資訊，以利核對款項。</li>
               </ul>
-            </div>
-          </div>
-
-          <!-- Points Packages -->
-          <div class="packages-grid">
-            <div class="package-card" data-package-id="1" data-points="1" data-amount="2000">
-              <div class="package-tag">單點體驗</div>
-              <div class="package-points">1 點</div>
-              <div class="package-price">$2,000</div>
-              <div class="package-desc">1對1 或 團體頌缽體驗皆適用</div>
-            </div>
-            <div class="package-card featured" data-package-id="8" data-points="8" data-amount="15000">
-              <div class="package-tag hot">超值套票 (省$1,000 + 加贈)</div>
-              <div class="package-points">8 點</div>
-              <div class="package-price">$15,000</div>
-              <div class="package-desc">再加贈 1 次團體頌缽療癒</div>
-            </div>
-            <div class="package-card" data-package-id="15" data-points="15" data-amount="29000">
-              <div class="package-tag">深度療癒 (省$1,000 + 加贈)</div>
-              <div class="package-points">15 點</div>
-              <div class="package-price">$29,000</div>
-              <div class="package-desc">再加贈 2 次團體頌缽療癒</div>
             </div>
           </div>
 
@@ -413,36 +391,25 @@
 
           <!-- 收款帳號不顯示在網站上，由官方 LINE 個別提供 -->
 
-          <!-- Anti-Fraud Binding Link Warning -->
-          <div id="buyPointsBankWarning" class="alert-box-warning" style="display: none;">
-            <i data-lucide="help-circle"></i>
-            <span>您尚未填寫常用匯出帳戶資訊，<strong>請點此前往「個人資料」綁定常用銀行與後五碼</strong>，以完成點數購買。</span>
-          </div>
-
           <!-- Remittance Form -->
           <form id="formSubmitRemittance" class="remittance-form">
-            <input type="hidden" id="buyPackageId" value="">
-            <input type="hidden" id="buyPointsCount" value="">
-            <input type="hidden" id="buyPointsAmount" value="">
-
             <h3>填寫匯款對帳回條</h3>
-            
+
             <div class="form-row-2">
               <div class="form-group">
-                <label class="form-label">您登記的匯出銀行名稱</label>
-                <input type="text" class="form-input" id="buyUserBankName" readonly>
+                <label class="form-label">您的匯出銀行名稱 *</label>
+                <input type="text" class="form-input" id="buyUserBankName" placeholder="例如：國泰世華銀行" required>
               </div>
               <div class="form-group">
-                <label class="form-label">您登記的帳號後五碼</label>
-                <input type="text" class="form-input" id="buyUserBankLast5" readonly>
+                <label class="form-label">您的帳號後五碼 *</label>
+                <input type="text" class="form-input" id="buyUserBankLast5" placeholder="例如：12345" maxlength="5" pattern="\d{5}" inputmode="numeric" required>
               </div>
             </div>
 
             <div class="form-row-2">
               <div class="form-group">
                 <label class="form-label">實際匯款金額 *</label>
-                <input type="number" class="form-input" id="buyActualAmount" placeholder="請輸入您實際匯款的總額" required readonly>
-              </div>
+                <input type="number" class="form-input" id="buyActualAmount" placeholder="請輸入您實際匯款的總額" required>
               <div class="form-group">
                 <label class="form-label">匯款日期與時間 *</label>
                 <input type="datetime-local" class="form-input" id="buyRemitTime" required>
@@ -1517,7 +1484,7 @@
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 
   <!-- JavaScript -->
-<script src="member.js?v=f4cad71f"></script>
+<script src="member.js?v=6e7bc59b"></script>
 
 </body>
 </html>
