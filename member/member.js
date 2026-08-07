@@ -1326,7 +1326,7 @@ function update1on1Cost() {
   
   if (!hasPoints) {
     warning.style.display = "flex";
-    warning.innerHTML = `<i data-lucide="alert-triangle"></i> ⚠️ 次數不足，請先<a href="https://adayofsingingbowl.my1shop.com/aby1kw" target="_blank" style="color:var(--brass-soft);text-decoration:underline;">購買點數</a>，並截圖購買證明到官方LINE上，請小幫手為您新增點數唷！`;
+    warning.innerHTML = `<i data-lucide="alert-triangle"></i> ⚠️ 次數不足，請先<a href="#buy-points" style="color:var(--brass-soft);text-decoration:underline;">購買點數</a>，並截圖購買證明到官方LINE上，請小幫手為您新增點數唷！`;
     submitBtn.disabled = true;
     submitBtn.classList.add("disabled");
   } else if (!selectedSlotId) {
@@ -1484,7 +1484,7 @@ function updateGroupCost() {
 
   if (!hasPoints) {
     warning.style.display = "flex";
-    warning.innerHTML = `<i data-lucide="alert-triangle"></i> ⚠️ 次數不足，請先<a href="https://adayofsingingbowl.my1shop.com/aby1kw" target="_blank" style="color:var(--brass-soft);text-decoration:underline;">購買點數</a>，並截圖購買證明到官方LINE上，請小幫手為您新增點數唷！`;
+    warning.innerHTML = `<i data-lucide="alert-triangle"></i> ⚠️ 次數不足，請先<a href="#buy-points" style="color:var(--brass-soft);text-decoration:underline;">購買點數</a>，並截圖購買證明到官方LINE上，請小幫手為您新增點數唷！`;
     submitBtn.disabled = true;
     submitBtn.classList.add("disabled");
   } else if (!selectedSlotId) {
@@ -3090,7 +3090,24 @@ document.addEventListener("DOMContentLoaded", () => {
     e.preventDefault();
     navigateTo("member");
   });
-  // 購買點數已改為直接連到外部商店頁面（my1shop），不再導向站內購買頁，故不攔截預設連結行為
+  // 購買點數改回站內頁面 —— 收款連結無法預先產生（中信社群收款是逐筆開的），
+  // 所以站內頁的角色是「說明方案 + 匯款後回報對帳」，不是導購到外部商店。
+  document.getElementById("btnNavBuyPoints").addEventListener("click", (e) => {
+    e.preventDefault();
+    navigateTo("buy-points");
+  });
+
+  /* 「次數不足，請先加購點數」那類提示是動態塞進 innerHTML 的行內連結，
+     沒辦法一個個綁事件；這個站也沒有 hash 路由，單純改 #hash 不會切頁。
+     所以用事件委派統一接手所有 <a href="#view-id">。 */
+  document.addEventListener("click", (e) => {
+    const link = e.target.closest('a[href^="#"]');
+    if (!link) return;
+    const viewId = link.getAttribute("href").slice(1);
+    if (!viewId || !document.getElementById("view-" + viewId)) return;
+    e.preventDefault();
+    navigateTo(viewId);
+  });
   document.getElementById("btnNavAdmin").addEventListener("click", (e) => {
     e.preventDefault();
     navigateTo("admin");
