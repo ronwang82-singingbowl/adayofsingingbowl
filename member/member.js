@@ -436,6 +436,27 @@ function sendLineNotification(userId, message) {
   });
 }
 
+/* 會員送出匯款對帳回條時，立刻通知管理員。
+   沒設定 adminLineUserId 就靜靜跳過 —— 這是附加通知，不該影響會員送出流程，
+   所以全程不對會員跳任何錯誤訊息。 */
+function notifyAdminNewRemittance(remit) {
+  getLineConfig(false).then(cfg => {
+    if (!cfg || !cfg.adminLineUserId) {
+      console.warn("[匯款通知] 未設定 settings/adminLineUserId，略過管理員通知。");
+      return;
+    }
+    const msg =
+      `💰 有新的匯款待審核\n\n` +
+      `👤 會員：${remit.userName}（${remit.userPhone || "無電話"}）\n` +
+      `💵 金額：$${remit.amount}\n` +
+      `🏦 匯出：${remit.bankName} / 後五碼 ${remit.last5}\n` +
+      `🕒 匯款時間：${remit.remittedAt || "未填"}\n` +
+      (remit.note ? `📝 備註：${remit.note}\n` : "") +
+      `\n請到管理後台 →「匯款對帳審核」核對款項後發放點數。`;
+    pushLineMessage(cfg.adminLineUserId, msg, cfg, false);
+  }).catch(err => console.error("[匯款通知] 發送失敗:", err));
+}
+
 // ==========================================
 // 2.5 自動提醒（明日預約 ＋ 點數即將到期）
 // ==========================================
@@ -3262,7 +3283,12 @@ document.addEventListener("DOMContentLoaded", () => {
     
     remittances.push(newRemit);
     dbSet("remittances", remittances);
-    
+
+    /* 通知管理員有新的待審核匯款。收件人是 settings/adminLineUserId，
+       跟每日提醒共用同一個設定；沒設定就只是不送，不影響會員送出。
+       這裡是會員身分在送，讀得到 settings 是因為該節點對登入者開放讀取。 */
+    notifyAdminNewRemittance(newRemit);
+
     alert("匯款對帳回條已提交，管理員將儘速進行審核，感謝您的耐心等待。");
     
     // Clear form inputs
