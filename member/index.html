@@ -12,7 +12,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;500;600;700&family=Noto+Sans+TC:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   
   <!-- CSS -->
-  <link rel="stylesheet" href="member.css?v=899fca88">
+  <link rel="stylesheet" href="member.css?v=3391cde3">
   
   <!-- Lucide Icons (CDN) -->
   <!-- 鎖定版號並加上 SRI：這一頁同時持有 Firebase 登入 session，
@@ -138,7 +138,7 @@
           </div>
           
           <form id="formEmailAuth" style="display: none;">
-            <h3 style="font-size: 15px; margin-bottom: 15px; color: var(--brass-soft); text-align: left;">管理員登入</h3>
+            <h3 style="font-size: 15px; margin-bottom: 15px; color:var(--brass-dim); text-align: left;">管理員登入</h3>
             <div class="form-group">
               <label class="form-label" for="authEmail">電子郵件 *</label>
               <input type="email" class="form-input" id="authEmail" required placeholder="example@email.com">
@@ -253,7 +253,7 @@
                 <div class="balance-item-sub" style="border-left: 1px solid var(--hairline); padding-left: 24px;">
                   <span style="font-size:12px; color:var(--mist); display:block; margin-bottom:4px;">團體頌缽</span>
                   <div class="points-value" style="margin: 0;">
-                    <span class="num" id="lblMemberGroupPoints" style="font-size:32px; color: var(--brass-soft);">0</span>
+                    <span class="num" id="lblMemberGroupPoints" style="font-size:32px; color:var(--brass-dim);">0</span>
                     <span class="unit" style="font-size:14px; margin-left:2px;">次</span>
                   </div>
                 </div>
@@ -521,7 +521,7 @@
                   <span class="summary-points"><strong id="lblBook1on1Cost">1</strong> 次</span>
                 </div>
                 <div class="booking-warning" id="lblBook1on1Warning" style="display: none;">
-                  <i data-lucide="alert-triangle"></i> ⚠️ 次數不足，請先<a href="#buy-points" style="color:var(--brass-soft);text-decoration:underline;">購買點數</a>，並截圖購買證明到官方LINE上，請小幫手為您新增點數唷！
+                  <i data-lucide="alert-triangle"></i> ⚠️ 次數不足，請先<a href="#buy-points" style="color:var(--brass-dim);text-decoration:underline;">購買點數</a>，並截圖購買證明到官方LINE上，請小幫手為您新增點數唷！
                 </div>
               </div>
 
@@ -582,7 +582,7 @@
                   <span class="summary-points"><strong id="lblBookGroupCost">0</strong> 次</span>
                 </div>
                 <div class="booking-warning" id="lblBookGroupWarning" style="display: none;">
-                  <i data-lucide="alert-triangle"></i> ⚠️ 次數不足，請先<a href="#buy-points" style="color:var(--brass-soft);text-decoration:underline;">購買點數</a>，並截圖購買證明到官方LINE上，請小幫手為您新增點數唷！
+                  <i data-lucide="alert-triangle"></i> ⚠️ 次數不足，請先<a href="#buy-points" style="color:var(--brass-dim);text-decoration:underline;">購買點數</a>，並截圖購買證明到官方LINE上，請小幫手為您新增點數唷！
                 </div>
               </div>
 
@@ -761,14 +761,14 @@
                   <button class="filter-tab" data-filter="已取消">已取消 / 拒絕</button>
                 </div>
                 <div style="display: flex; align-items: center; gap: 8px;">
-                  <label style="font-size: 13px; color: var(--brass-soft); font-weight: 500;">📅 日期篩選：</label>
+                  <label style="font-size: 13px; color:var(--brass-dim); font-weight: 500;">📅 日期篩選：</label>
                   <input type="date" id="adminBookingDateFilter" style="background: var(--ink-2); color: #fff; border: 1px solid var(--hairline); border-radius: 4px; padding: 4px 8px; font-size: 12px; outline: none; height: auto; width: 140px;">
                   <button type="button" class="quick-slot-btn" id="btnClearAdminBookingDateFilter" style="padding: 2px 6px; font-size: 11px; height: auto;">清除</button>
                 </div>
               </div>
 
               <div style="display: flex; justify-content: space-between; align-items: center; gap: 15px; margin-bottom: 15px; flex-wrap: wrap;">
-                <label style="display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--brass-soft); font-weight: 500; cursor: pointer;">
+                <label style="display: flex; align-items: center; gap: 6px; font-size: 13px; color:var(--brass-dim); font-weight: 500; cursor: pointer;">
                   <input type="checkbox" id="chkHideCancelledBookings" style="width: auto; margin: 0; cursor: pointer;">
                   隱藏已取消 / 已拒絕的紀錄
                 </label>
@@ -801,7 +801,7 @@
 
               <div class="coupon-log-card" style="padding: 20px;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                  <h4 style="margin: 0; color: var(--brass-soft); font-size: 15px; display: flex; align-items: center; gap: 6px;">
+                  <h4 style="margin: 0; color:var(--brass-dim); font-size: 15px; display: flex; align-items: center; gap: 6px;">
                     <i data-lucide="calendar-clock" style="width: 16px; height: 16px;"></i> 預約狀態總覽
                   </h4>
                   <div style="display: flex; gap: 8px; align-items: center;">
@@ -829,7 +829,7 @@
 
                 <!-- Day bookings details -->
                 <div id="divAdminCalendarDayDetail" style="margin-top: 15px; padding: 12px; background: rgba(255,255,255,0.02); border-radius: 6px; border: 1px dashed var(--hairline); display: none;">
-                  <h5 id="lblAdminCalendarSelectedDate" style="margin: 0 0 10px 0; font-size: 12px; color: var(--brass-soft); font-weight: 600;">預約詳情</h5>
+                  <h5 id="lblAdminCalendarSelectedDate" style="margin: 0 0 10px 0; font-size: 12px; color:var(--brass-dim); font-weight: 600;">預約詳情</h5>
                   <div id="adminCalendarDayBookingsList" style="display: flex; flex-direction: column; gap: 6px;">
                     <!-- Booking details list -->
                   </div>
@@ -953,13 +953,13 @@
 
                   <!-- Google Calendar Sync Card -->
                   <div class="google-sync-card" style="margin-top: 20px; padding-top: 15px; border-top: 1px dashed var(--hairline);">
-                    <h4 style="font-size: 14px; margin-bottom: 8px; color: var(--brass-soft); font-family: 'Noto Serif TC', serif;">Google 日曆同步防衝突</h4>
+                    <h4 style="font-size: 14px; margin-bottom: 8px; color:var(--brass-dim); font-family: 'Noto Serif TC', serif;">Google 日曆同步防衝突</h4>
                     <div class="google-sync-status" style="display: flex; align-items: center; gap: 8px; font-size: 12px; margin-bottom: 12px;">
                       <span class="status-indicator-dot red" id="googleSyncDot" style="width: 8px; height: 8px; border-radius: 50%; background: #ff4d4f; display: inline-block;"></span>
                       <span id="lblGoogleSyncStatus" style="color: var(--mist);">狀態：未連結</span>
                     </div>
                     <div style="display: flex; gap: 8px; margin-bottom: 8px;">
-                      <button type="button" class="cta-btn small-btn w-100" id="btnGoogleAuth" style="background:var(--ink-4); border:1px solid var(--hairline); color:#fff; font-size: 12px; height: 32px;">
+                      <button type="button" class="cta-btn small-btn w-100" id="btnGoogleAuth" style="background:var(--ink-3); border:1px solid var(--hairline); color:var(--paper); font-size: 12px; height: 32px;">
                         <i data-lucide="link" style="width: 14px; height: 14px; margin-right: 4px;"></i> 連結 Google
                       </button>
                       <button type="button" class="cta-btn primary-btn small-btn w-100" id="btnGoogleSync" disabled style="font-size: 12px; height: 32px;">
@@ -968,7 +968,7 @@
                     </div>
                     
                     <div style="display: flex; justify-content: space-between; align-items: center;">
-                      <button type="button" class="back-link small-text" id="btnToggleGoogleConfig" style="font-size: 11px; padding: 0; background: none; border: none; color: var(--brass-soft); cursor: pointer; text-decoration: underline;">
+                      <button type="button" class="back-link small-text" id="btnToggleGoogleConfig" style="font-size: 11px; padding: 0; background: none; border: none; color:var(--brass-dim); cursor: pointer; text-decoration: underline;">
                         <i data-lucide="settings" style="width: 11px; height: 11px; vertical-align: middle;"></i> 展開 Client ID 設定
                       </button>
                     </div>
@@ -983,7 +983,7 @@
                     </div>
 
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px;">
-                      <button type="button" class="back-link small-text" id="btnToggleLineConfig" style="font-size: 11px; padding: 0; background: none; border: none; color: var(--brass-soft); cursor: pointer; text-decoration: underline;">
+                      <button type="button" class="back-link small-text" id="btnToggleLineConfig" style="font-size: 11px; padding: 0; background: none; border: none; color:var(--brass-dim); cursor: pointer; text-decoration: underline;">
                         <i data-lucide="message-square" style="width: 11px; height: 11px; vertical-align: middle;"></i> 展開 LINE 通知設定
                       </button>
                     </div>
@@ -1179,6 +1179,52 @@
       </section>
 
       <!-- Reject Remittance Modal Dialog -->
+      <!-- 核准匯款：選票券類型自動帶入，或手動填 -->
+      <section id="view-admin-approve-remittance" class="view-section">
+        <div class="auth-card">
+          <h2>核准匯款並發放點數</h2>
+          <p class="auth-subtitle" id="lblApproveRemitInfo">—</p>
+          <form id="formAdminApproveRemittance">
+            <input type="hidden" id="approveRemittanceId" value="">
+
+            <div class="form-group">
+              <label class="form-label" for="approveTemplate">套用票券類型</label>
+              <select class="form-input" id="approveTemplate"></select>
+              <p class="section-subtitle" style="margin-top:6px;margin-bottom:0;font-size:11.5px;">與「票券發放」共用同一份清單，在那邊新增後這裡也會出現。選「自訂」可自行輸入。</p>
+            </div>
+
+            <div class="form-row-2">
+              <div class="form-group">
+                <label class="form-label" for="approvePoints">發放點數 *</label>
+                <input type="number" class="form-input" id="approvePoints" min="1" required>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="approvePointType">點數種類 *</label>
+                <select class="form-input" id="approvePointType">
+                  <option value="points">通用點數（1對1、團體皆可）</option>
+                  <option value="giftedPoints">贈送-1對1（只能預約1對1）</option>
+                  <option value="giftedGroupPoints">贈送-團體（只能預約團體頌缽）</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="approveExpiry">點數到期日</label>
+              <input type="date" class="form-input" id="approveExpiry">
+              <label class="terms-checkbox-label" style="margin-top:8px;">
+                <input type="checkbox" id="approveNoExpiry">
+                <span>此批點數永不過期</span>
+              </label>
+            </div>
+
+            <div class="btn-row">
+              <button type="button" class="cta-btn secondary-btn" id="btnCancelApproveRemittance">取消</button>
+              <button type="submit" class="cta-btn primary-btn">確認核准並發放</button>
+            </div>
+          </form>
+        </div>
+      </section>
+
       <section id="view-admin-reject-remittance" class="view-section">
         <div class="auth-card">
           <h2>駁回匯款申請</h2>
@@ -1484,7 +1530,7 @@
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 
   <!-- JavaScript -->
-<script src="member.js?v=96111523"></script>
+<script src="member.js?v=72625276"></script>
 
 </body>
 </html>

@@ -698,7 +698,8 @@ runExpirySweep();
 
 const VIEWS = [
   "landing", "auth", "register", "member", "edit-profile", "book",
-  "admin", "admin-points", "admin-add-member", "admin-edit-member", "buy-points", "admin-reject-remittance", "admin-reschedule",
+  "admin", "admin-points", "admin-add-member", "admin-edit-member", "buy-points",
+  "admin-approve-remittance", "admin-reject-remittance", "admin-reschedule",
   "courses", "course-detail", "lesson-player", "admin-edit-course"
 ];
 
@@ -978,12 +979,12 @@ function renderDashboard() {
         `<ul style="margin:0;padding-left:18px;line-height:1.9;">${rows}</ul>` +
         `<div style="margin-top:8px;color:var(--mist);font-size:12.5px;line-height:1.7;">` +
         `點數到期後將自動失效，系統會依「先到期的先扣」自動使用。<br>` +
-        `如對點數效期有任何疑問，歡迎詢問<a href="${POINT_HELP_LINE_URL}" target="_blank" rel="noopener" style="color:var(--brass-soft);text-decoration:underline;">官方 LINE</a>，我們會協助您確認。` +
+        `如對點數效期有任何疑問，歡迎詢問<a href="${POINT_HELP_LINE_URL}" target="_blank" rel="noopener" style="color:var(--brass-dim);text-decoration:underline;">官方 LINE</a>，我們會協助您確認。` +
         `</div></div>`;
     } else {
       expiryHtml =
         `<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--hairline);color:var(--mist);font-size:12.5px;line-height:1.7;">` +
-        `如對點數效期有任何疑問，歡迎詢問<a href="${POINT_HELP_LINE_URL}" target="_blank" rel="noopener" style="color:var(--brass-soft);text-decoration:underline;">官方 LINE</a>，我們會協助您確認。` +
+        `如對點數效期有任何疑問，歡迎詢問<a href="${POINT_HELP_LINE_URL}" target="_blank" rel="noopener" style="color:var(--brass-dim);text-decoration:underline;">官方 LINE</a>，我們會協助您確認。` +
         `</div>`;
     }
 
@@ -1358,7 +1359,7 @@ function update1on1Cost() {
   
   if (!hasPoints) {
     warning.style.display = "flex";
-    warning.innerHTML = `<i data-lucide="alert-triangle"></i> ⚠️ 次數不足，請先<a href="#buy-points" style="color:var(--brass-soft);text-decoration:underline;">購買點數</a>，並截圖購買證明到官方LINE上，請小幫手為您新增點數唷！`;
+    warning.innerHTML = `<i data-lucide="alert-triangle"></i> ⚠️ 次數不足，請先<a href="#buy-points" style="color:var(--brass-dim);text-decoration:underline;">購買點數</a>，並截圖購買證明到官方LINE上，請小幫手為您新增點數唷！`;
     submitBtn.disabled = true;
     submitBtn.classList.add("disabled");
   } else if (!selectedSlotId) {
@@ -1516,7 +1517,7 @@ function updateGroupCost() {
 
   if (!hasPoints) {
     warning.style.display = "flex";
-    warning.innerHTML = `<i data-lucide="alert-triangle"></i> ⚠️ 次數不足，請先<a href="#buy-points" style="color:var(--brass-soft);text-decoration:underline;">購買點數</a>，並截圖購買證明到官方LINE上，請小幫手為您新增點數唷！`;
+    warning.innerHTML = `<i data-lucide="alert-triangle"></i> ⚠️ 次數不足，請先<a href="#buy-points" style="color:var(--brass-dim);text-decoration:underline;">購買點數</a>，並截圖購買證明到官方LINE上，請小幫手為您新增點數唷！`;
     submitBtn.disabled = true;
     submitBtn.classList.add("disabled");
   } else if (!selectedSlotId) {
@@ -1792,7 +1793,7 @@ function renderAdminMemberList() {
       
       row.innerHTML = `
         <td><strong>${u.name}</strong> ${isTargetAdmin ? '<span class="status-badge status-approved" style="font-size:10px;padding:2px 4px;margin-left:4px;">管理員</span>' : ''}<br><span style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--mist);">ID: ${u.id}</span></td>
-        <td>${u.phone}<br><span style="font-size:11px;color:var(--mist);">${u.email}</span><br><span style="font-size:11px;color:var(--brass-soft);font-weight:500;">${loginText}</span></td>
+        <td>${u.phone}<br><span style="font-size:11px;color:var(--mist);">${u.email}</span><br><span style="font-size:11px;color:var(--brass-dim);font-weight:500;">${loginText}</span></td>
         <td>${u.gender}</td>
         <td>${u.joinDate}</td>
         <td>${pointsText}</td>
@@ -2084,7 +2085,7 @@ function showAdminCalendarDayDetail(dateStr) {
         <div style="text-align: left;">
           <div style="font-weight: 600; font-size: 13px; color: var(--paper);">${b.time} - ${name}</div>
           <div style="font-size: 11px; color: var(--mist); margin-top: 2px;">項目: ${label} | #ID: ${b.id}</div>
-          ${b.notes ? `<div style="font-size: 11px; color: var(--brass-soft); margin-top: 4px; border-left: 2px solid var(--brass); padding-left: 6px;">備註: ${b.notes}</div>` : ''}
+          ${b.notes ? `<div style="font-size: 11px; color:var(--brass-dim); margin-top: 4px; border-left: 2px solid var(--brass); padding-left: 6px;">備註: ${b.notes}</div>` : ''}
         </div>
         <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 6px;">
           <span class="status-badge ${statusClass}" style="margin: 0; padding: 2px 6px; font-size: 10px;">${b.status}</span>
@@ -2173,7 +2174,7 @@ function renderAdminBookingList() {
         <td><strong>${memberName}</strong></td>
         <td>${label}</td>
         <td>${timeDetail}${Array.isArray(b.rescheduleHistory) && b.rescheduleHistory.length > 0
-          ? `<br><span style="font-size:11px;color:var(--brass-soft);">🔄 已改期 ${b.rescheduleHistory.length} 次（原 ${esc(b.rescheduleHistory[0].from)}）</span>`
+          ? `<br><span style="font-size:11px;color:var(--brass-dim);">🔄 已改期 ${b.rescheduleHistory.length} 次（原 ${esc(b.rescheduleHistory[0].from)}）</span>`
           : ""}</td>
         <td>${b.cost} 次</td>
         <td><span class="status-badge ${statusClass}">${b.status}</span></td>
@@ -2963,36 +2964,47 @@ function renderAdminRemittancesPanel() {
   }
 }
 
-window.adminApproveRemittance = async function(remittanceId) {
+/* 開啟核准畫面。方案清單直接讀 couponTemplates —— 跟「票券發放」共用同一份，
+   你在那邊新增票券類型，這裡的下拉就會同步出現，不用維護兩份。 */
+window.adminApproveRemittance = function(remittanceId) {
   const remit = remittances.find(r => r.id === remittanceId);
   if (!remit) return;
-  
   const member = users.find(u => u.id === remit.userId);
-  if (!member) {
-    alert("找不到對應的會員，核准失敗。");
-    return;
-  }
-  
-  /* 已無固定方案，發幾點由管理員當下決定（金額是逐筆談的）。
-     舊資料若帶有 points 就沿用當預設值，不影響歷史紀錄。 */
-  const suggested = Number(remit.points) || "";
-  const inputPts = prompt(
-    `會員：${member.name}\n匯款金額：$${remit.amount}\n銀行：${remit.bankName} / 後五碼 ${remit.last5}\n\n要發放幾點「通用點數」？`,
-    suggested
-  );
-  if (inputPts === null) return;                 // 取消
-  const pts = parseInt(inputPts, 10);
-  if (!pts || pts <= 0) { alert("請輸入大於 0 的點數。"); return; }
+  if (!member) { alert("找不到對應的會員，核准失敗。"); return; }
 
-  const inputBonus = prompt("要加贈幾張「團體頌缽」票券？（沒有就填 0）", "0");
-  if (inputBonus === null) return;
-  const bonusInput = Math.max(0, parseInt(inputBonus, 10) || 0);
+  document.getElementById("approveRemittanceId").value = remittanceId;
+  document.getElementById("lblApproveRemitInfo").textContent =
+    `${member.name}｜匯款 $${remit.amount}｜${remit.bankName} 後五碼 ${remit.last5}｜匯款時間 ${remit.remittedAt || "未填"}`;
 
-  if (confirm(`確定已收到會員 ${member.name} 的匯款 $${remit.amount}，\n發放 ${pts} 點通用點數${bonusInput > 0 ? `、加贈 ${bonusInput} 張團體票券` : ""}？`)) {
+  const sel = document.getElementById("approveTemplate");
+  sel.innerHTML = '<option value="">自訂（自行輸入下方欄位）</option>' +
+    couponTemplates.map(t =>
+      `<option value="${t.id}">${esc(t.name)}（${t.bonusPoints} 點・${POINT_TYPE_LABEL[t.pointType] || t.pointType}・${t.validMonths} 個月）</option>`
+    ).join("");
+  sel.value = "";
+
+  document.getElementById("approvePoints").value = Number(remit.points) || "";
+  document.getElementById("approvePointType").value = "points";
+  document.getElementById("approveNoExpiry").checked = false;
+  document.getElementById("approveExpiry").value = defaultExpiryStr();
+
+  navigateTo("admin-approve-remittance");
+};
+
+/* 真正執行發放。pts / pointType / expiry 由核准表單決定。 */
+async function doApproveRemittance(remittanceId, pts, pointType, expiry) {
+  const remit = remittances.find(r => r.id === remittanceId);
+  if (!remit) return;
+  const member = users.find(u => u.id === remit.userId);
+  if (!member) { alert("找不到對應的會員，核准失敗。"); return; }
+
+  {
     remit.points = pts;
-    // Grant points (1on1 points) — 帶入效期
-    const remitExpiry = remit.expiresAt || defaultExpiryStr();
-    grantPoints(member, "points", pts, remitExpiry, `加購點數（匯款 $${remit.amount}）`);
+    remit.pointType = pointType;
+    remit.expiresAt = expiry;
+    const bonusInput = 0;
+    const remitExpiry = expiry;
+    grantPoints(member, pointType, pts, remitExpiry, `加購點數（匯款 $${remit.amount}）`);
 
     // Write point transaction log
     const newTx = {
@@ -3007,15 +3019,12 @@ window.adminApproveRemittance = async function(remittanceId) {
     };
     transactions.push(newTx);
 
-    // 加贈的團體票券張數由管理員在上面輸入，不再依方案推算
-    let bonusGroupVouchers = bonusInput;
+    /* 發放的若是「贈送-團體」，額外建立對應的票券紀錄，讓會員在票券列表看得到。
+       可預約的額度在上面 grantPoints 時就已經加進 giftedGroupPoints，
+       這裡只補票券的顯示用紀錄，不再重複加點。 */
+    const bonusGroupVouchers = (pointType === "giftedGroupPoints") ? pts : 0;
 
     if (bonusGroupVouchers > 0) {
-      // 修正：先前這裡誤寫入從未被預約邏輯讀取的 member.groupPoints，
-      // 導致會員票券列表看得到贈送票券、但實際可預約團體頌缽的贈送額度 (giftedGroupPoints) 卻沒有增加。
-      grantPoints(member, "giftedGroupPoints", bonusGroupVouchers, remitExpiry, "加購方案贈送團體場次");
-
-      // Push bonus group session voucher(s)
       for (let i = 0; i < bonusGroupVouchers; i++) {
         const nextVoucherId = await getFreshNextId("vouchers", vouchers, 1);
         const randomCode = Math.random().toString(36).substring(2, 8).toUpperCase();
@@ -3029,34 +3038,22 @@ window.adminApproveRemittance = async function(remittanceId) {
         });
       }
 
-      // Log group transaction
-      const nextTxId = await getFreshNextId("transactions", transactions, 5001);
-      transactions.push({
-        id: nextTxId,
-        userId: member.id,
-        type: "add",
-        amount: bonusGroupVouchers,
-        reason: `加購套票加贈 - 團體頌缽次數`,
-        date: getNowDateTimeString(),
-        balance: member.giftedGroupPoints
-      });
-
       dbSet("vouchers", vouchers, false);
     }
-    
+
     // Update remittance status
     remit.status = "approved";
-    
+
     // Save to database
     dbSet("transactions", transactions, false);
     dbSet("users", users, false);
     dbSet("remittances", remittances, true); // Trigger cloud sync here
-    
-    let bonusMsg = bonusGroupVouchers > 0 ? `，並加贈 ${bonusGroupVouchers} 次團體頌缽次數` : "";
-    alert(`成功核准！已將 ${remit.points} 點數加至 ${member.name} 的帳戶中${bonusMsg}。`);
+
+    const expiryMsg = expiry ? `，效期至 ${expiry}` : "，永不過期";
+    alert(`成功核准！已發放 ${pts} 點「${POINT_TYPE_LABEL[pointType] || pointType}」給 ${member.name}${expiryMsg}。`);
     renderAdminDashboard("remittances");
   }
-};
+}
 
 window.openAdminRejectRemittance = function(remittanceId) {
   document.getElementById("rejectRemittanceId").value = remittanceId;
@@ -3712,6 +3709,41 @@ document.addEventListener("DOMContentLoaded", () => {
     renderAdminBookingList();
     renderAdminDashboard("bookings");
     alert(`已刪除 ${doomed.length} 筆已取消 / 已拒絕的預約紀錄。`);
+  });
+
+  // 核准匯款：選票券類型自動帶入點數／種類／到期日
+  document.getElementById("approveTemplate")?.addEventListener("change", (e) => {
+    const tpl = couponTemplates.find(t => String(t.id) === String(e.target.value));
+    if (!tpl) return;                       // 選「自訂」就保留目前欄位不動
+    document.getElementById("approvePoints").value = tpl.bonusPoints;
+    document.getElementById("approvePointType").value = tpl.pointType;
+    const months = Number(tpl.validMonths);
+    const noExp = document.getElementById("approveNoExpiry");
+    noExp.checked = (months === 0);
+    document.getElementById("approveExpiry").value = months === 0 ? "" : addMonthsStr(todayStr(), months);
+  });
+
+  document.getElementById("approveNoExpiry")?.addEventListener("change", (e) => {
+    const d = document.getElementById("approveExpiry");
+    d.disabled = e.target.checked;
+    if (e.target.checked) d.value = "";
+    else if (!d.value) d.value = defaultExpiryStr();
+  });
+
+  document.getElementById("btnCancelApproveRemittance")?.addEventListener("click", () => {
+    navigateTo("admin");
+    renderAdminDashboard("remittances");
+  });
+
+  document.getElementById("formAdminApproveRemittance")?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const id = parseInt(document.getElementById("approveRemittanceId").value, 10);
+    const pts = parseInt(document.getElementById("approvePoints").value, 10);
+    if (!pts || pts <= 0) { alert("發放點數必須大於 0。"); return; }
+    const pointType = document.getElementById("approvePointType").value;
+    const noExpiry = document.getElementById("approveNoExpiry").checked;
+    const expiry = noExpiry ? null : (document.getElementById("approveExpiry").value || defaultExpiryStr());
+    await doApproveRemittance(id, pts, pointType, expiry);
   });
 
   // Submit: Admin reject remittance slip
@@ -4867,20 +4899,20 @@ function adminFormAddLessonRow(lesson = null) {
     <div style="font-size:11px; font-weight:600; color:var(--paper); margin-bottom:8px;">單元 ${count}</div>
     <div style="display:grid; grid-template-columns: 1fr 120px; gap:10px; margin-bottom:8px;">
       <div>
-        <label style="font-size:11px; color:var(--brass-soft); display:block; margin-bottom:4px;">單元影片標題 *</label>
+        <label style="font-size:11px; color:var(--brass-dim); display:block; margin-bottom:4px;">單元影片標題 *</label>
         <input type="text" class="form-input" name="formLessonTitle" placeholder="例：第1堂 基礎入門" required value="${lesson ? lesson.title : ''}">
       </div>
       <div>
-        <label style="font-size:11px; color:var(--brass-soft); display:block; margin-bottom:4px;">時長 *</label>
+        <label style="font-size:11px; color:var(--brass-dim); display:block; margin-bottom:4px;">時長 *</label>
         <input type="text" class="form-input" name="formLessonDuration" placeholder="例：40:00" required value="${lesson ? lesson.duration : ''}">
       </div>
     </div>
     <div style="margin-bottom:8px;">
-      <label style="font-size:11px; color:var(--brass-soft); display:block; margin-bottom:4px;">YouTube 影片連結 *</label>
+      <label style="font-size:11px; color:var(--brass-dim); display:block; margin-bottom:4px;">YouTube 影片連結 *</label>
       <input type="url" class="form-input" name="formLessonVideoUrl" placeholder="貼上 YouTube 影片網址" required value="${lesson ? lesson.videoUrl : ''}">
     </div>
     <div>
-      <label style="font-size:11px; color:var(--brass-soft); display:block; margin-bottom:4px;">單元簡介 (選填)</label>
+      <label style="font-size:11px; color:var(--brass-dim); display:block; margin-bottom:4px;">單元簡介 (選填)</label>
       <textarea class="form-input textarea-input" name="formLessonDesc" rows="2" placeholder="這堂單元的簡短介紹...">${lesson ? (lesson.description || '') : ''}</textarea>
     </div>
   `;
