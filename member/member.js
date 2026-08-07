@@ -154,7 +154,7 @@ function esc(str) {
    ============================================================ */
 
 // 【設定】點數預設效期（月）。想改全站預設效期，改這個數字就好。
-const POINT_VALIDITY_MONTHS = 2;
+const POINT_VALIDITY_MONTHS = 3;
 
 // 官方 LINE（點數相關疑問請洽此處）
 const POINT_HELP_LINE_URL = "https://line.me/R/ti/p/%40197nfdme";
@@ -1517,10 +1517,10 @@ function renderBuyPointsPage() {
   document.getElementById("buyUserBankName").value = bankName || "尚未設定 (請先至個人資料填寫並綁定)";
   document.getElementById("buyUserBankLast5").value = bankLast5 || "尚未設定 (請先至個人資料填寫並綁定)";
 
-  // Show/Hide warning if bank info not set (Disabled, since payment/remittance info is hidden)
+  // 沒綁定常用匯款帳戶就提醒去綁 —— 表單送出時本來就會擋，先講比較不會白填
   const bankWarning = document.getElementById("buyPointsBankWarning");
   if (bankWarning) {
-    bankWarning.style.display = "none";
+    bankWarning.style.display = (bankName && bankLast5) ? "none" : "flex";
   }
   
   // Reset selected package
@@ -1529,9 +1529,6 @@ function renderBuyPointsPage() {
   document.getElementById("buyPointsCount").value = "";
   document.getElementById("buyPointsAmount").value = "";
   document.getElementById("buyActualAmount").value = "";
-  
-  const lblVirtual = document.getElementById("lblVirtualAccount");
-  if (lblVirtual) lblVirtual.textContent = "請點選上方方案自動分配帳號";
   
   // Render user remittance history
   renderRemittanceHistory();
@@ -1586,13 +1583,6 @@ function getPackageName(packageId) {
   if (packageId === 8 || packageId === "8") return "加購 8 點 (加贈1次團體)";
   if (packageId === 15 || packageId === "15") return "加購 15 點 (加贈2次團體)";
   return "未知方案";
-}
-
-function generateVirtualAccount(userId, packageId) {
-  const padUser = String(userId).padStart(3, '0');
-  const padPack = String(packageId).padStart(2, '0');
-  const hash = String((userId * 17 + packageId * 31 + 47) % 100000).padStart(5, '0');
-  return `9527-${padUser}-${padPack}${hash}`;
 }
 
 // ==========================================
@@ -3176,24 +3166,9 @@ document.addEventListener("DOMContentLoaded", () => {
       document.getElementById("buyPointsAmount").value = amount;
       document.getElementById("buyActualAmount").value = amount;
 
-      // 預留：將來您可以將不同的方案對應到不同的購買連結
-      const btnGo = document.getElementById("btnGoToPurchase");
-      if (btnGo) {
-        if (packageId === "1") {
-          btnGo.href = "https://lin.ee/5FUzEjg"; // 1點 購買連結 (目前預設官方 LINE)
-        } else if (packageId === "8") {
-          btnGo.href = "https://lin.ee/5FUzEjg"; // 8點 購買連結 (目前預設官方 LINE)
-        } else if (packageId === "15") {
-          btnGo.href = "https://lin.ee/5FUzEjg"; // 15點 購買連結 (目前預設官方 LINE)
-        }
-      }
-
-      // Dynamic virtual account generation (kept for DB compatibility)
-      if (currentUser) {
-        const vAcc = generateVirtualAccount(currentUser.id, parseInt(packageId));
-        const lblVirtual = document.getElementById("lblVirtualAccount");
-        if (lblVirtual) lblVirtual.textContent = vAcc;
-      }
+      // 收款帳號不公開在網站上，統一由官方 LINE 個別提供，所以三個方案都連同一個窗口
+      // （原本這裡還會產生一組「虛擬帳號」顯示給會員 —— 那是範本的假號碼，
+      //   用 (userId*17 + packageId*31 + 47) % 100000 算出來的，已整段移除。）
     });
   });
 

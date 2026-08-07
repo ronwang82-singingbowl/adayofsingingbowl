@@ -367,10 +367,10 @@
       <section id="view-buy-points" class="view-section">
         <div class="buy-points-container">
           <h2>加購服務點數</h2>
-          <p class="auth-subtitle">選擇適合您的點數方案，點選下方按鈕前往購買</p>
+          <p class="auth-subtitle">選擇方案 → 私訊官方 LINE 取得匯款帳號 → 匯款後回到此頁填寫對帳回條</p>
 
           <!-- Anti-Fraud Banner -->
-          <div class="anti-fraud-banner" style="display: none !important;">
+          <div class="anti-fraud-banner">
             <div class="banner-title"><i data-lucide="shield-alert"></i> 防範三方詐騙與帳戶交易安全聲明</div>
             <div class="banner-body">
               <ul>
@@ -406,29 +406,21 @@
           <!-- Purchase Action Button -->
           <div class="purchase-btn-container" style="margin-top: 35px; text-align: center;">
             <a href="https://lin.ee/5FUzEjg" target="_blank" class="cta-btn primary-btn large-btn" id="btnGoToPurchase" style="display: inline-flex; align-items: center; justify-content: center; padding: 14px 48px; font-size: 16px; font-weight: 600; text-decoration: none; border-radius: 30px; box-shadow: 0 4px 12px rgba(115, 132, 107, 0.3); transition: all 0.3s ease;">
-              <i data-lucide="shopping-bag" style="width: 18px; height: 18px; margin-right: 8px;"></i> 前往購買
+              <i data-lucide="message-circle" style="width: 18px; height: 18px; margin-right: 8px;"></i> 私訊官方 LINE 取得匯款帳號
             </a>
+            <p class="text-muted" style="margin-top: 10px; font-size: 12.5px; line-height: 1.7;">為維護交易安全，收款帳號不公開於網站，由專人於官方 LINE 個別提供。<br>完成匯款後請回到本頁填寫下方的對帳回條。</p>
           </div>
 
-          <!-- Bank Account Details -->
-          <div class="bank-info-card" style="display: none !important;">
-            <div class="card-title"><i data-lucide="landmark"></i> 專屬匯款虛擬帳號 (對帳專用)</div>
-            <div class="bank-details">
-              <div class="bank-detail-item"><strong>收款銀行：</strong> 國泰世華銀行 (代碼 013)</div>
-              <div class="bank-detail-item"><strong>帳戶名稱：</strong> 缽日線上預約平台 (對帳專戶)</div>
-              <div class="bank-detail-item"><strong>專屬虛擬帳號：</strong> <span id="lblVirtualAccount" style="font-family: monospace; font-weight: bold; color: var(--brass-soft); font-size: 16px;">請點選上方方案自動分配帳號</span></div>
-              <div class="bank-detail-item text-muted">※ 此為防詐騙安全專屬帳號。每一筆加購皆會生成一組專屬的虛擬對帳號，維護交易安全。</div>
-            </div>
-          </div>
+          <!-- 收款帳號不顯示在網站上，由官方 LINE 個別提供 -->
 
           <!-- Anti-Fraud Binding Link Warning -->
-          <div id="buyPointsBankWarning" class="alert-box-warning" style="display: none !important;">
+          <div id="buyPointsBankWarning" class="alert-box-warning" style="display: none;">
             <i data-lucide="help-circle"></i>
             <span>您尚未填寫常用匯出帳戶資訊，<strong>請點此前往「個人資料」綁定常用銀行與後五碼</strong>，以完成點數購買。</span>
           </div>
 
           <!-- Remittance Form -->
-          <form id="formSubmitRemittance" class="remittance-form" style="display: none !important;">
+          <form id="formSubmitRemittance" class="remittance-form">
             <input type="hidden" id="buyPackageId" value="">
             <input type="hidden" id="buyPointsCount" value="">
             <input type="hidden" id="buyPointsAmount" value="">
@@ -466,7 +458,7 @@
             <div class="consumer-terms-box">
               <h4>【消費者點數購買與服務契約】</h4>
               <div class="terms-content">
-                1. 本平台提供之頌缽療癒與身心對話預約點數，均無使用期限限制。<br>
+                1. 點數使用期限：本平台之頌缽療癒與身心對話預約點數，自發放日起 <strong>3 個月</strong>內有效，逾期未使用將自動失效。系統會在到期前一個月以 LINE 通知您，會員中心亦可隨時查看各批點數的到期日。若對效期有任何疑問，歡迎私訊缽日官方 LINE 帳號，我們會協助您確認。<br>
                 2. 7天鑑賞退費政策：自購買日起 7 天內，若點數完全未使用，可申請全額退款。超過 7 天申請退款者，將扣除 10% 專案行政與金流手續費後，退還其餘額款項。已扣除使用之點數不予退還。<br>
                 3. 對帳審核流程：匯款後請確實填寫此回條，管理員將於 24 小時內核對銀行帳款，核對無誤後系統將自動發放點數至您的會員帳戶。<br>
                 4. 安全防詐防線：為防止三方詐騙，本平台只接受會員本人登記帳戶之匯款。若有冒用他人帳戶或涉及洗錢者，本平台有權凍結帳戶並報警處理。
@@ -481,8 +473,8 @@
           </form>
 
           <!-- History List -->
-          <div class="history-section mt-5" style="display: none !important;">
-            <h3>歷史儲值審核紀錄</h3>
+          <div class="history-section mt-5">
+            <h3>我的儲值審核紀錄</h3>
             <div class="table-container">
               <table class="history-table">
                 <thead>
@@ -1525,7 +1517,7 @@
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 
   <!-- JavaScript -->
-<script src="member.js?v=17224789"></script>
+<script src="member.js?v=6c8a4531"></script>
 
 </body>
 </html>

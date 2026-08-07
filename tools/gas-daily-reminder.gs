@@ -18,7 +18,7 @@
  * ── 安裝步驟 ───────────────────────────────────────────
  * 1. 打開你現有的 Apps Script 專案（就是 LINE Webhook 代理那一支）
  * 2. 新增一個檔案，把這份程式碼整段貼進去
- * 3. 填好下面 CONFIG 的三個值
+ * 3. 填好下面 REMINDER_CONFIG 的三個值
  * 4. 左側「觸發條件」→ 新增觸發條件
  *      執行的函式：dailyReminder
  *      事件來源：時間驅動
@@ -29,8 +29,8 @@
  * 建議先用 DRY_RUN = true 跑一次，只看記錄不真的發送。
  */
 
-// ── CONFIG ────────────────────────────────────────────
-var CONFIG = {
+// ── REMINDER_CONFIG ────────────────────────────────────────────
+var REMINDER_CONFIG = {
   // Firebase Realtime Database 網址（結尾不要加斜線）
   DB_URL: 'https://adayofsingingbowl-default-rtdb.firebaseio.com',
 
@@ -59,7 +59,7 @@ function dailyReminder() {
   var today = dateStr(0);
   var target = dateStr(REMIND_BEFORE_DAYS);
   var expiryDeadline = addMonths(today, POINT_EXPIRY_NOTICE_MONTHS);
-  log('=== 開始 === 今天 ' + today + '，提醒目標日 ' + target + '，到期門檻 ' + expiryDeadline);
+  rlog('=== 開始 === 今天 ' + today + '，提醒目標日 ' + target + '，到期門檻 ' + expiryDeadline);
 
   var users = toArray(fbGet('users'));
   var bookings = toArray(fbGet('bookings'));
@@ -83,12 +83,12 @@ function dailyReminder() {
   var pending = bookings.filter(function (b) {
     return b && b.date === target && b.status === '待確認';
   });
-  log('明日預約：已確認 ' + confirmed.length + ' 筆、待確認 ' + pending.length + ' 筆');
+  rlog('明日預約：已確認 ' + confirmed.length + ' 筆、待確認 ' + pending.length + ' 筆');
 
   confirmed.forEach(function (b) {
-    if (sentBooking[b.id]) { log('  預約 #' + b.id + ' 已送過，跳過'); return; }
+    if (sentBooking[b.id]) { rlog('  預約 #' + b.id + ' 已送過，跳過'); return; }
     var m = userById[b.userId];
-    if (!m || !m.lineUserId) { log('  預約 #' + b.id + ' 的會員沒有綁定 LINE，跳過'); return; }
+    if (!m || !m.lineUserId) { rlog('  預約 #' + b.id + ' 的會員沒有綁定 LINE，跳過'); return; }
     pushLine(m.lineUserId, memberBookingReminder(b));
     writes['booking/' + b.id] = target;
     sentCount++;
@@ -103,7 +103,7 @@ function dailyReminder() {
       sentCount++;
     } else {
       // 不寫 log，這樣設定好之後下次執行還會補送
-      log('  未設定 settings/adminLineUserId，管理員彙總未發送');
+      rlog('  未設定 settings/adminLineUserId，管理員彙總未發送');
     }
   }
 
@@ -124,10 +124,10 @@ function dailyReminder() {
   });
 
   // ── 寫回已發送紀錄 ──
-  if (Object.keys(writes).length > 0 && !CONFIG.DRY_RUN) {
+  if (Object.keys(writes).length > 0 && !REMINDER_CONFIG.DRY_RUN) {
     fbPatch('notifyLog', writes);
   }
-  log('=== 結束 === 共發送 ' + sentCount + ' 則' + (CONFIG.DRY_RUN ? '（DRY_RUN，實際未送出）' : ''));
+  rlog('=== 結束 === 共發送 ' + sentCount + ' 則' + (REMINDER_CONFIG.DRY_RUN ? '（DRY_RUN，實際未送出）' : ''));
 }
 
 
@@ -185,7 +185,7 @@ function pointExpiryNotice(m, batches, today) {
 
 // ── Firebase REST ─────────────────────────────────────
 function fbGet(path) {
-  var url = CONFIG.DB_URL + '/' + path + '.json?auth=' + encodeURIComponent(CONFIG.DB_SECRET);
+  var url = REMINDER_CONFIG.DB_URL + '/' + path + '.json?auth=' + encodeURIComponent(REMINDER_CONFIG.DB_SECRET);
   var res = UrlFetchApp.fetch(url, { muteHttpExceptions: true });
   if (res.getResponseCode() !== 200) {
     throw new Error('讀取 ' + path + ' 失敗（' + res.getResponseCode() + '）：' + res.getContentText());
@@ -194,7 +194,7 @@ function fbGet(path) {
 }
 
 function fbPatch(path, obj) {
-  var url = CONFIG.DB_URL + '/' + path + '.json?auth=' + encodeURIComponent(CONFIG.DB_SECRET);
+  var url = REMINDER_CONFIG.DB_URL + '/' + path + '.json?auth=' + encodeURIComponent(REMINDER_CONFIG.DB_SECRET);
   var res = UrlFetchApp.fetch(url, {
     method: 'patch',
     contentType: 'application/json',
@@ -209,22 +209,22 @@ function fbPatch(path, obj) {
 
 // ── LINE Push ─────────────────────────────────────────
 function pushLine(lineUserId, text) {
-  if (CONFIG.DRY_RUN) {
-    log('  [DRY_RUN] → ' + lineUserId + '\n' + text);
+  if (REMINDER_CONFIG.DRY_RUN) {
+    rlog('  [DRY_RUN] → ' + lineUserId + '\n' + text);
     return;
   }
   var res = UrlFetchApp.fetch('https://api.line.me/v2/bot/message/push', {
     method: 'post',
     contentType: 'application/json',
-    headers: { Authorization: 'Bearer ' + CONFIG.LINE_TOKEN },
+    headers: { Authorization: 'Bearer ' + REMINDER_CONFIG.LINE_TOKEN },
     payload: JSON.stringify({ to: lineUserId, messages: [{ type: 'text', text: text }] }),
     muteHttpExceptions: true
   });
   if (res.getResponseCode() !== 200) {
     // 單一則失敗不中斷整批 —— 記下來就好，避免一個壞掉的 LINE ID 擋住其他人的通知
-    log('  ❌ 發送失敗（' + res.getResponseCode() + '）→ ' + lineUserId + '：' + res.getContentText());
+    rlog('  ❌ 發送失敗（' + res.getResponseCode() + '）→ ' + lineUserId + '：' + res.getContentText());
   } else {
-    log('  ✅ 已發送 → ' + lineUserId);
+    rlog('  ✅ 已發送 → ' + lineUserId);
   }
 }
 
@@ -260,6 +260,75 @@ function toArray(v) {
 
 // 只用 console.log —— 新版 Apps Script 執行環境會把 Logger.log 與 console.log
 // 導到同一份執行記錄，兩個都呼叫會讓每一行重複出現。
-function log(msg) {
+function rlog(msg) {
   console.log(msg);
+}
+
+
+// ── 維護工具（平常不會執行，需要時從下拉選單手動選）─────────────
+// 這幾支是 2026-08-06 排查通知失效時做出來的，留著以後好用。
+
+/* 檢查 settings 節點的內容。通知怪怪的時候先跑這支。 */
+function checkSettings() {
+  var s = fbGet('settings') || {};
+  var keys = Object.keys(s);
+  rlog('settings 底下實際存在的節點：' + (keys.length ? keys.join('、') : '（整個是空的）'));
+
+  var url = s.lineWebhookUrl ? String(s.lineWebhookUrl) : '';
+  if (!url) {
+    rlog('lineWebhookUrl：❌ 不存在');
+  } else if (url.indexOf('https://script.google.com/') !== 0 || url.indexOf('/exec') === -1) {
+    // 2026-08-06 就是這裡被填成了 LINE User ID，導致所有通知靜默失效
+    rlog('lineWebhookUrl：⚠️ 格式不對！應為 https://script.google.com/…/exec，目前是 ' + url.slice(0, 40) + '…');
+  } else {
+    rlog('lineWebhookUrl：✅ 格式正確');
+  }
+
+  var id = s.adminLineUserId ? String(s.adminLineUserId) : '';
+  if (!id) rlog('adminLineUserId：❌ 不存在');
+  else if (id.charAt(0) !== 'U' || id.length !== 33) rlog('adminLineUserId：⚠️ 格式不對（應為 U 開頭 33 碼），目前長度 ' + id.length);
+  else rlog('adminLineUserId：✅ 格式正確（' + id.slice(0, 2) + '…）');
+}
+
+/* 列出所有會員與他們的 LINE 綁定狀態（只印前 6 碼）。 */
+function listLineIds() {
+  toArray(fbGet('users')).forEach(function (u) {
+    if (!u) return;
+    rlog((u.name || '?') + '｜' + (u.email || '') + '｜lineUserId: ' +
+      (u.lineUserId ? String(u.lineUserId).slice(0, 6) + '…（' + String(u.lineUserId).length + ' 碼）' : '無'));
+  });
+}
+
+/* 設定「明日預約清單」的收件人。TARGET_EMAIL 要填有綁 LINE 的那個帳號，
+   不是 admin@singbowl.com —— 純 Email 建立的管理帳號沒有 lineUserId。 */
+function setAdminLineUserId() {
+  var TARGET_EMAIL = 'azsxdc30502@gmail.com';
+  var me = toArray(fbGet('users')).filter(function (u) {
+    return u && u.email === TARGET_EMAIL && u.lineUserId;
+  })[0];
+  if (!me) { rlog('❌ 找不到 email 為 ' + TARGET_EMAIL + ' 且有 lineUserId 的會員'); return; }
+  fbPut('settings/adminLineUserId', me.lineUserId);
+  rlog('✅ 已寫入 settings/adminLineUserId（' + me.name + '，開頭 ' + String(me.lineUserId).slice(0, 2) + '…）');
+}
+
+/* 還原 webhook 網址。網址從「部署 → 管理部署作業」複製，結尾必須是 /exec。
+   注意不能用 ScriptApp.getService().getUrl() —— 那取到的是 /dev 開發網址，
+   只有你自己呼叫得動，member.js 打不通。 */
+function setWebhookUrl() {
+  var EXEC_URL = '貼上部署網址（/exec 結尾）';
+  if (EXEC_URL.indexOf('https://script.google.com/') !== 0 || EXEC_URL.indexOf('/exec') === -1) {
+    rlog('❌ 這不是有效的 /exec 部署網址');
+    return;
+  }
+  fbPut('settings/lineWebhookUrl', EXEC_URL);
+  rlog('✅ 已還原 lineWebhookUrl = ' + EXEC_URL);
+}
+
+function fbPut(path, value) {
+  var url = REMINDER_CONFIG.DB_URL + '/' + path + '.json?auth=' + encodeURIComponent(REMINDER_CONFIG.DB_SECRET);
+  var res = UrlFetchApp.fetch(url, {
+    method: 'put', contentType: 'application/json',
+    payload: JSON.stringify(value), muteHttpExceptions: true
+  });
+  if (res.getResponseCode() !== 200) throw new Error('寫入 ' + path + ' 失敗：' + res.getContentText());
 }
