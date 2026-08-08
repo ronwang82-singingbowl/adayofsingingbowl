@@ -498,27 +498,40 @@ function buildMemberBookingReminder(b) {
          `期待明天與您見面。若需調整時間，請儘早私訊官方 LINE 讓我們知道。`;
 }
 
+/* 每日彙總尾巴的匯款待審核筆數。
+   會員送出回條時的即時推播是用 fetch no-cors 送的，送不到也不會回報錯誤，
+   所以每天再報一次數字當安全網 —— 就算漏接，最多晚一天發現，不會石沉大海。
+   GAS 端有一份一樣的，改這裡要一起改那支。 */
+function remittancePendingTail(list) {
+  const n = (list || []).filter(r => r && r.status === "pending").length;
+  return n > 0
+    ? `\n\n💰 另有 ${n} 筆匯款待審核，請到後台處理。`
+    : `\n\n💰 目前沒有待審核的匯款。`;
+}
+
 function buildAdminDailyDigest(targetDate, confirmed, pending) {
   let msg = `📋 明日預約清單（${targetDate}）\n\n`;
   if (confirmed.length === 0 && pending.length === 0) {
-    return msg + `明天沒有任何預約，可以安心休息。`;
+    msg += `明天沒有任何預約，可以安心休息。`;
+  } else {
+    if (confirmed.length > 0) {
+      msg += `✅ 已確認 ${confirmed.length} 筆\n`;
+      confirmed.forEach(b => {
+        const m = users.find(u => u.id === b.userId);
+        msg += `　${b.time}｜${m ? m.name : "未知會員"}｜${bookingLabel(b)}\n`;
+        if (b.notes) msg += `　　備註：${b.notes}\n`;
+      });
+    }
+    if (pending.length > 0) {
+      msg += `\n⚠️ 尚未確認 ${pending.length} 筆（會員不會收到提醒）\n`;
+      pending.forEach(b => {
+        const m = users.find(u => u.id === b.userId);
+        msg += `　${b.time}｜${m ? m.name : "未知會員"}｜${bookingLabel(b)}\n`;
+      });
+    }
   }
-  if (confirmed.length > 0) {
-    msg += `✅ 已確認 ${confirmed.length} 筆\n`;
-    confirmed.forEach(b => {
-      const m = users.find(u => u.id === b.userId);
-      msg += `　${b.time}｜${m ? m.name : "未知會員"}｜${bookingLabel(b)}\n`;
-      if (b.notes) msg += `　　備註：${b.notes}\n`;
-    });
-  }
-  if (pending.length > 0) {
-    msg += `\n⚠️ 尚未確認 ${pending.length} 筆（會員不會收到提醒）\n`;
-    pending.forEach(b => {
-      const m = users.find(u => u.id === b.userId);
-      msg += `　${b.time}｜${m ? m.name : "未知會員"}｜${bookingLabel(b)}\n`;
-    });
-  }
-  return msg;
+  // 預約清單每行結尾都有 \n，尾巴自己也帶 \n\n，不去掉會多空一行
+  return msg.replace(/\n+$/, "") + remittancePendingTail(remittances);
 }
 
 function buildPointExpiryNotice(member, batches) {
@@ -3880,10 +3893,28 @@ document.addEventListener("DOMContentLoaded", () => {
     
     remit.status = "rejected";
     remit.rejectReason = reason;
-    
+
     dbSet("remittances", remittances, true); // Trigger cloud sync
-    
-    alert("已成功駁回該筆申請。");
+
+    /* 通知會員。被駁回比核准更需要講一聲 —— 他匯了款卻什麼都沒收到，
+       只會覺得石沉大海。措辭刻意不寫「你沒匯款」，因為駁回多半是資料對不上，
+       錢可能已經匯出去了，要留一條讓他來找我們核對的路。 */
+    const rejMember = users.find(u => u.id === remit.userId);
+    if (rejMember) {
+      sendLineNotification(remit.userId,
+        `⚠️ 加購申請待確認\n\n` +
+        `${rejMember.name} 您好，您於 ${remit.createdAt} 送出的加購對帳回條，核對後尚未能完成。\n\n` +
+        `💵 申報金額：$${remit.amount}\n` +
+        `🏦 匯出：${remit.bankName} 後五碼 ${remit.last5}\n` +
+        `📝 說明：${reason || "資料不符"}\n\n` +
+        `這筆申請目前不會發放點數。\n` +
+        `若您確實已完成匯款，請私訊缽日官方帳號，我們會一起把它核對清楚。`);
+    }
+
+    const rejLineMsg = (rejMember && rejMember.lineUserId)
+      ? "已同步發送 LINE 通知。"
+      : "（此會員未綁定 LINE，未發送通知，請自行私訊告知。）";
+    alert(`已成功駁回該筆申請。\n${rejLineMsg}`);
     navigateTo("admin");
     renderAdminDashboard("remittances");
   });

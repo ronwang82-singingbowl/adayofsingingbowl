@@ -63,6 +63,7 @@ function dailyReminder() {
 
   var users = toArray(fbGet('users'));
   var bookings = toArray(fbGet('bookings'));
+  var remittances = toArray(fbGet('remittances'));
   var settings = fbGet('settings') || {};
   var notifyLog = fbGet('notifyLog') || {};
   var sentBooking = notifyLog.booking || {};
@@ -94,11 +95,16 @@ function dailyReminder() {
     sentCount++;
   });
 
-  // ── 2. 明日預約：管理員彙總（每天一則，含未確認的）──
+  // ── 2. 明日預約：管理員彙總（每天一則，含未確認的＋匯款待審核筆數）──
+  var pendingRemits = remittances.filter(function (r) {
+    return r && r.status === 'pending';
+  }).length;
+  rlog('匯款待審核：' + pendingRemits + ' 筆');
+
   if (!sentDigest[target]) {
     var adminId = settings.adminLineUserId;
     if (adminId) {
-      pushLine(adminId, adminDigest(target, confirmed, pending, userById));
+      pushLine(adminId, adminDigest(target, confirmed, pending, userById, pendingRemits));
       writes['adminDigest/' + target] = new Date().getTime();
       sentCount++;
     } else {
@@ -145,27 +151,38 @@ function memberBookingReminder(b) {
          '期待明天與您見面。若需調整時間，請儘早私訊官方 LINE 讓我們知道。';
 }
 
-function adminDigest(target, confirmed, pending, userById) {
+/* 匯款待審核筆數。會員送出回條時的即時推播是瀏覽器用 no-cors 送的，
+   送不到也不會回報錯誤，所以每天再報一次數字當安全網。
+   member.js 的 remittancePendingTail() 是同一份，改這裡要一起改那邊。 */
+function remittancePendingTail(n) {
+  return n > 0
+    ? '\n\n💰 另有 ' + n + ' 筆匯款待審核，請到後台處理。'
+    : '\n\n💰 目前沒有待審核的匯款。';
+}
+
+function adminDigest(target, confirmed, pending, userById, pendingRemits) {
   var msg = '📋 明日預約清單（' + target + '）\n\n';
   if (confirmed.length === 0 && pending.length === 0) {
-    return msg + '明天沒有任何預約，可以安心休息。';
+    msg += '明天沒有任何預約，可以安心休息。';
+  } else {
+    if (confirmed.length > 0) {
+      msg += '✅ 已確認 ' + confirmed.length + ' 筆\n';
+      confirmed.forEach(function (b) {
+        var m = userById[b.userId];
+        msg += '　' + b.time + '｜' + (m ? m.name : '未知會員') + '｜' + bookingLabel(b) + '\n';
+        if (b.notes) msg += '　　備註：' + b.notes + '\n';
+      });
+    }
+    if (pending.length > 0) {
+      msg += '\n⚠️ 尚未確認 ' + pending.length + ' 筆（會員不會收到提醒）\n';
+      pending.forEach(function (b) {
+        var m = userById[b.userId];
+        msg += '　' + b.time + '｜' + (m ? m.name : '未知會員') + '｜' + bookingLabel(b) + '\n';
+      });
+    }
   }
-  if (confirmed.length > 0) {
-    msg += '✅ 已確認 ' + confirmed.length + ' 筆\n';
-    confirmed.forEach(function (b) {
-      var m = userById[b.userId];
-      msg += '　' + b.time + '｜' + (m ? m.name : '未知會員') + '｜' + bookingLabel(b) + '\n';
-      if (b.notes) msg += '　　備註：' + b.notes + '\n';
-    });
-  }
-  if (pending.length > 0) {
-    msg += '\n⚠️ 尚未確認 ' + pending.length + ' 筆（會員不會收到提醒）\n';
-    pending.forEach(function (b) {
-      var m = userById[b.userId];
-      msg += '　' + b.time + '｜' + (m ? m.name : '未知會員') + '｜' + bookingLabel(b) + '\n';
-    });
-  }
-  return msg;
+  // 預約清單每行結尾都有 \n，尾巴自己也帶 \n\n，不去掉會多空一行
+  return msg.replace(/\n+$/, '') + remittancePendingTail(pendingRemits || 0);
 }
 
 function pointExpiryNotice(m, batches, today) {
