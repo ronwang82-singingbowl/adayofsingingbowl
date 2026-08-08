@@ -3062,7 +3062,9 @@ async function doApproveRemittance(remittanceId, pts, pointType, expiry) {
       amount: pts,
       reason: `加購點數審核通過（匯款 $${remit.amount}）`,
       date: getNowDateTimeString(),
-      balance: member.points
+      // 餘額要記「這一種」點數的餘額。原本寫死 member.points，
+      // 發的若是贈送-1對1／贈送-團體，記錄下來的數字會對不上。
+      balance: member[pointType] || 0
     };
     transactions.push(newTx);
 
@@ -3085,16 +3087,20 @@ async function doApproveRemittance(remittanceId, pts, pointType, expiry) {
         });
       }
 
-      dbSet("vouchers", vouchers, false);
+      dbSet("vouchers", vouchers);
     }
 
     // Update remittance status
     remit.status = "approved";
 
-    // Save to database
-    dbSet("transactions", transactions, false);
-    dbSet("users", users, false);
-    dbSet("remittances", remittances, true); // Trigger cloud sync here
+    /* 三個節點都必須上雲。dbSet 的第三個參數 false = 只寫 localStorage，
+       原本 users 與 transactions 都帶了 false，結果是：匯款狀態變成「已核准」
+       同步上去了，但點數只留在管理員自己的瀏覽器裡，會員端永遠收不到；
+       而且雲端 users 監聽器一回來就會把本機陣列整個換掉，剛發的點數直接消失。
+       其他發點路徑（票券發放、管理員調整、預約取消退回）都是同步的，只有這裡漏了。 */
+    dbSet("transactions", transactions);
+    dbSet("users", users);
+    dbSet("remittances", remittances);
 
     const expiryMsg = expiry ? `，效期至 ${expiry}` : "，永不過期";
     alert(`成功核准！已發放 ${pts} 點「${POINT_TYPE_LABEL[pointType] || pointType}」給 ${member.name}${expiryMsg}。`);
