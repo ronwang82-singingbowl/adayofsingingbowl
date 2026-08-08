@@ -22,7 +22,11 @@
   --paper: #4E5E48;
   --mist: #5F6F5A;
   --hairline: #D8D4CC;
-  --error: #E57373;
+  /* 警示紅。原本是 #E57373，在卡片底 #F1EDE4 上只有 2.56:1、在危險按鈕的
+     淡紅底上 2.57:1 —— 最需要被看清楚的文字反而全站最難讀。
+     加深後在這兩種底色上分別是 5.04 / 5.07:1；.table-action-btn.danger 的
+     hover（米色字壓在此色上）也從 2.75:1 拉到 5.42:1。 */
+  --error: #B33A31;
   --success: #81C784;
   --terra: #C1745A;
   --terra-bg: rgba(193, 116, 90, 0.12);
@@ -1907,7 +1911,9 @@ button {
   align-items: center;
   gap: 8px;
   margin-bottom: 10px;
-  color: #c94040;
+  /* 原本寫死 #c94040，在防詐橫幅的淡紅底上 4.12:1 沒到 4.5。
+     改用同一個變數，順便讓全站的警示紅只有一個來源。 */
+  color: var(--error);
 }
 .anti-fraud-banner .banner-body ul {
   margin: 0;
