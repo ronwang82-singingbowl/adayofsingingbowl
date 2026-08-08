@@ -2547,12 +2547,38 @@ function renderCouponTemplateList() {
     tr.innerHTML = `
       <td><strong>${esc(t.name)}</strong></td>
       <td><span class="tx-add">+${t.bonusPoints}</span> ${esc(POINT_TYPE_LABEL[t.pointType] || t.pointType)}</td>
-      <td>${vm > 0 ? vm + " 個月" : "永久"}</td>
-      <td><button type="button" class="table-action-btn danger" onclick="deleteCouponTemplate(${t.id})">刪除</button></td>
+      <td>${vm > 0 ? vm + " 個月" : "<strong style='color:var(--terra)'>永久</strong>"}</td>
+      <td style="white-space:nowrap;">
+        <button type="button" class="table-action-btn" onclick="editCouponTemplateExpiry(${t.id})">改效期</button>
+        <button type="button" class="table-action-btn danger" onclick="deleteCouponTemplate(${t.id})">刪除</button>
+      </td>
     `;
     box.appendChild(tr);
   });
 }
+
+/* 修改既有票券類型的效期。
+   原本建立後完全不能改，填錯只能刪掉重建 —— 而「填 0 代表永不過期」很容易誤觸，
+   實際上就發生過（把 3 個月的類型建成了永久）。 */
+window.editCouponTemplateExpiry = function (id) {
+  const tpl = couponTemplates.find(t => t.id === id);
+  if (!tpl) return;
+  const now = Number(tpl.validMonths) || 0;
+  const input = prompt(
+    `「${tpl.name}」目前的效期：${now > 0 ? now + " 個月" : "永久"}\n\n` +
+    `請輸入新的有效月數（填 0 代表永不過期）：`,
+    now
+  );
+  if (input === null) return;
+  const months = parseInt(input, 10);
+  if (isNaN(months) || months < 0) { alert("請輸入 0 或正整數。"); return; }
+  if (months === 0 && !confirm(`確定要把「${tpl.name}」設成「永不過期」嗎？\n\n這批發出去的點數將永遠不會失效。`)) return;
+
+  tpl.validMonths = months;
+  dbSet("couponTemplates", couponTemplates);
+  renderAdminCouponsPanel();
+  alert(`已將「${tpl.name}」的效期改為 ${months > 0 ? months + " 個月" : "永不過期"}。`);
+};
 
 /* 刪除票券類型（已發出去的票券不受影響） */
 function deleteCouponTemplate(id) {
@@ -4381,6 +4407,11 @@ async function runMockLineLogin() {
 
       if (!name) { alert("請輸入票券名稱。"); return; }
       if (!(bonusPoints > 0)) { alert("點數必須大於 0。"); return; }
+      // 0 = 永不過期，是很容易誤觸的值（實際發生過），送出前先確認一次
+      if (validMonths === 0 &&
+          !confirm(`有效期限填的是 0，代表這個票券類型發出去的點數「永不過期」。\n\n確定要這樣設定嗎？\n（想設 3 個月請取消後改成 3）`)) {
+        return;
+      }
       if (couponTemplates.some(t => t.name === name)) {
         alert("已經有同名的票券類型了，請換一個名稱。");
         return;
