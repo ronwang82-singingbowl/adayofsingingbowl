@@ -3102,8 +3102,22 @@ async function doApproveRemittance(remittanceId, pts, pointType, expiry) {
     dbSet("users", users);
     dbSet("remittances", remittances);
 
+    /* 通知會員。他匯了款、送出回條後就在等，沒有通知只能自己一直回來看。
+       放在資料寫入之後，避免通知說入帳了、實際卻沒存進去。
+       沒綁 LINE 的會員 sendLineNotification 內部會自己跳過，不影響核准流程。 */
+    const typeLabel = POINT_TYPE_LABEL[pointType] || pointType;
+    sendLineNotification(member.id,
+      `💰 加購點數已入帳\n\n` +
+      `${member.name} 您好，您的匯款已核對完成！\n\n` +
+      `💵 匯款金額：$${remit.amount}\n` +
+      `✨ 入帳次數：${pts} 次（${typeLabel}）\n` +
+      `📅 有效期限：${expiry || "永不過期"}\n\n` +
+      `可直接到會員中心預約時段，期待與您相見。\n` +
+      `如有任何疑問，歡迎私訊缽日官方帳號。`);
+
     const expiryMsg = expiry ? `，效期至 ${expiry}` : "，永不過期";
-    alert(`成功核准！已發放 ${pts} 點「${POINT_TYPE_LABEL[pointType] || pointType}」給 ${member.name}${expiryMsg}。`);
+    const lineMsg = member.lineUserId ? "已同步發送 LINE 通知。" : "（此會員未綁定 LINE，未發送通知。）";
+    alert(`成功核准！已發放 ${pts} 點「${typeLabel}」給 ${member.name}${expiryMsg}。\n${lineMsg}`);
     renderAdminDashboard("remittances");
   }
 }
