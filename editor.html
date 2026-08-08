@@ -20,7 +20,10 @@ html,body{ margin:0; height:100%; font-family:"Noto Sans TC",sans-serif; backgro
   width: 440px; flex-shrink:0; background:var(--ui-panel); border-right:1px solid var(--ui-line);
   overflow-y:auto; padding: 22px 22px 60px;
 }
-.preview-pane{ flex:1; overflow-y:auto; background:#0d0f13; }
+/* transform 讓這個窗格成為 position:fixed 的定位基準 ——
+   波紋才會釘在「預覽區」中央而不是整個編輯器視窗中央，預覽才貼近實際線上效果。
+   這條沒有 .stage，不會被 stageOnlyCSS() 抓進發布的檔案，只在編輯器內生效。 */
+.preview-pane{ flex:1; overflow-y:auto; background:#0d0f13; transform: translateZ(0); }
 .preview-pane .stage{ transform-origin: top center; }
 
 .topbar{
@@ -109,6 +112,9 @@ input.f:focus, textarea.f:focus{ outline:2px solid var(--ui-accent-soft); border
   --maxw: 760px;
   background: var(--ink); color: var(--paper);
   font-family: "Noto Sans TC", sans-serif; font-weight:300; line-height:1.9;
+  /* 開一個堆疊脈絡，讓 .ripple-field 的 z-index:-1 停在「底色之上、內容之下」。
+     拿掉這兩行波紋就會整片消失（被 .stage 的底色蓋住）。 */
+  position: relative; z-index: 0;
 }
 .stage .wrap{ max-width: var(--maxw); margin:0 auto; padding:0 28px; }
 .stage a{ color:inherit; }
@@ -120,7 +126,10 @@ input.f:focus, textarea.f:focus{ outline:2px solid var(--ui-accent-soft); border
 .stage h1,.stage h2,.stage h3{ font-family:"Noto Serif TC", serif; font-weight:600; margin:0; color:var(--paper); }
 .stage .hero{ position:relative; min-height:92vh; display:flex; align-items:center; justify-content:center; overflow:hidden; padding:100px 28px 70px; text-align:center; }
 .stage .hero-inner{ position: relative; z-index: 1; }
-.stage .ripple-field{ position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; z-index: 0; pointer-events: none; }
+/* fixed + z-index:-1 ＝ 釘在視窗中央、且永遠在文字底下。
+   -1 能蓋過 .stage 的底色是因為 .stage 自己開了堆疊脈絡（position:relative; z-index:0），
+   負層級的子元素會畫在「父層背景之上、內容之下」。動 .stage 那條時要記得這件事。 */
+.stage .ripple-field{ position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; z-index: -1; pointer-events: none; }
 .stage .ripple-field svg{ width: min(900px, 140vw); height: min(900px, 140vw); }
 .stage .ripple-ring{ fill: none; stroke: var(--brass-dim); stroke-width: 1; opacity: 0; transform-box: fill-box;
   transform-origin: center;
@@ -671,8 +680,8 @@ function renderPreview(){
       </svg>
     </div>`;
   document.getElementById("stage").innerHTML = `
+    ${rings}
     <section class="hero">
-      ${rings}
       <div class="hero-inner">
         <div class="eyebrow">${esc(s.hero.eyebrow)}</div>
         <h1>${esc(s.hero.title)}</h1>
@@ -895,23 +904,25 @@ function buildFullSiteHTML(){
 ${bodyMarkup}
 </div>
 <script>
-/* 首頁波紋背景的捲動視差。
-   這段原本只寫在 index.html 裡、沒有進這個範本，所以 2026-08-02
-   那次發布把它整段蓋掉了。放進範本後，之後再怎麼發布都不會再消失。
-   （尊重使用者的「減少動態效果」系統設定，開啟時直接不做視差。） */
-(function () {
-  var rippleField = document.querySelector('.ripple-field');
-  if (!rippleField) return;
-  var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  if (reduceMotion) return;
+/* 波紋背景。2026-08-08 起改為 position:fixed 釘在視窗中央，
+   不管捲到哪一段都看得見，所以原本的捲動視差已經沒有意義，整段移除。
+   （原視差程式曾在 2026-08-02 因為沒進這個範本而被發布蓋掉，
+    現在的做法純 CSS，index.html 與這裡也都同步了，不會再有那個問題。）
 
-  function update() {
-    var y = window.scrollY || window.pageYOffset || 0;
-    rippleField.style.transform = 'translateY(' + (y * 0.25) + 'px)';
-  }
-  window.addEventListener('scroll', update, { passive: true });
-  window.addEventListener('resize', update, { passive: true });
-  update();
+   這裡只剩一件事：尊重「減少動態效果」的系統設定。
+   波紋現在是全頁常駐，一直擴散對這些使用者會很吃力，
+   所以偵測到就停掉動畫，改成四圈靜止的淡淡漣漪。 */
+(function () {
+  var field = document.querySelector('.ripple-field');
+  if (!field) return;
+  if (!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches)) return;
+
+  var scales = [4, 8, 13, 19];
+  Array.prototype.forEach.call(field.querySelectorAll('.ripple-ring'), function (ring, i) {
+    ring.style.animation = 'none';
+    ring.style.opacity = '0.22';
+    ring.style.transform = 'scale(' + scales[i % scales.length] + ')';
+  });
 })();
 <\/script>
 

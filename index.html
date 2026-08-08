@@ -38,7 +38,7 @@
   .stage{ min-height:100vh; }
   
   .preview-pane .stage { transform-origin: center top; }
-.stage { --ink: #F8F5EE; --ink-2: #FFFFFF; --ink-3: #F1EDE4; --brass: #73846B; --brass-soft: #E4C778; --brass-dim: #8A6A49; --jade: #DCC6A4; --paper: #4E5E48; --mist: #5F6F5A; --hairline: #D8D4CC; --maxw: 760px; background: var(--ink); color: var(--paper); font-family: "Noto Sans TC", sans-serif; font-weight: 300; line-height: 1.9; }
+.stage { --ink: #F8F5EE; --ink-2: #FFFFFF; --ink-3: #F1EDE4; --brass: #73846B; --brass-soft: #E4C778; --brass-dim: #8A6A49; --jade: #DCC6A4; --paper: #4E5E48; --mist: #5F6F5A; --hairline: #D8D4CC; --maxw: 760px; background: var(--ink); color: var(--paper); font-family: "Noto Sans TC", sans-serif; font-weight: 300; line-height: 1.9; position: relative; z-index: 0; }
 .stage .wrap { max-width: var(--maxw); margin: 0px auto; padding: 0px 28px; }
 .stage a { color: inherit; }
 .stage .eyebrow { font-family: "JetBrains Mono", monospace; font-size: 12px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--brass); display: inline-flex; align-items: center; gap: 10px; margin-bottom: 22px; }
@@ -46,7 +46,7 @@
 .stage h1, .stage h2, .stage h3 { font-family: "Noto Serif TC", serif; font-weight: 600; margin: 0px; color: var(--paper); }
 .stage .hero { position: relative; min-height: 92vh; display: flex; align-items: center; justify-content: center; overflow: hidden; padding: 100px 28px 70px; text-align: center; }
 .stage .hero-inner { position: relative; z-index: 1; }
-.stage .ripple-field { position: absolute; inset: 0px; display: flex; align-items: center; justify-content: center; z-index: 0; pointer-events: none; }
+.stage .ripple-field { position: fixed; inset: 0px; display: flex; align-items: center; justify-content: center; z-index: -1; pointer-events: none; }
 .stage .ripple-field svg { width: min(900px, 140vw); height: min(900px, 140vw); }
 .stage .ripple-ring { fill: none; stroke: var(--brass-dim); stroke-width: 1; opacity: 0; transform-box: fill-box; transform-origin: center center; vector-effect: non-scaling-stroke; animation: 7s cubic-bezier(0.2, 0.6, 0.35, 1) 0s infinite normal none running ripple; }
 .stage .ripple-ring.r2 { animation-delay: 1.75s; }
@@ -153,8 +153,6 @@
 <body>
 <div class="stage">
 
-    <section class="hero">
-      
     <div class="ripple-field" aria-hidden="true">
       <svg viewBox="0 0 500 500">
         <circle class="ripple-ring r1" cx="250" cy="250" r="20"></circle>
@@ -163,6 +161,8 @@
         <circle class="ripple-ring r4" cx="250" cy="250" r="20"></circle>
       </svg>
     </div>
+
+    <section class="hero">
       <div class="hero-inner">
         <div class="eyebrow">頌缽 · 對話 · 覺察</div>
         <h1>缽日｜台北頌缽身心整合體驗</h1>
@@ -356,24 +356,25 @@
   
 </div>
 <script>
-/* 首頁波紋背景的捲動視差。
-   這段原本只寫在 index.html 裡、沒有進 editor.html 的輸出範本，所以
-   2026-08-02 那次發布把它整段蓋掉了。現在範本裡也有同一份，
-   之後再怎麼發布都不會再消失。
-   （尊重使用者的「減少動態效果」系統設定，開啟時直接不做視差。） */
-(function () {
-  var rippleField = document.querySelector('.ripple-field');
-  if (!rippleField) return;
-  var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  if (reduceMotion) return;
+/* 波紋背景。2026-08-08 起改為 position:fixed 釘在視窗中央，
+   不管捲到哪一段都看得見，所以原本的捲動視差已經沒有意義，整段移除。
+   （原視差程式曾在 2026-08-02 因為沒進 editor.html 範本而被發布蓋掉，
+    現在的做法純 CSS，兩邊範本也都同步了，不會再有那個問題。）
 
-  function update() {
-    var y = window.scrollY || window.pageYOffset || 0;
-    rippleField.style.transform = 'translateY(' + (y * 0.25) + 'px)';
-  }
-  window.addEventListener('scroll', update, { passive: true });
-  window.addEventListener('resize', update, { passive: true });
-  update();
+   這裡只剩一件事：尊重「減少動態效果」的系統設定。
+   波紋現在是全頁常駐，一直擴散對這些使用者會很吃力，
+   所以偵測到就停掉動畫，改成四圈靜止的淡淡漣漪。 */
+(function () {
+  var field = document.querySelector('.ripple-field');
+  if (!field) return;
+  if (!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches)) return;
+
+  var scales = [4, 8, 13, 19];
+  Array.prototype.forEach.call(field.querySelectorAll('.ripple-ring'), function (ring, i) {
+    ring.style.animation = 'none';
+    ring.style.opacity = '0.22';
+    ring.style.transform = 'scale(' + scales[i % scales.length] + ')';
+  });
 })();
 </script>
 
