@@ -26,8 +26,11 @@
      淡紅底上 2.57:1 —— 最需要被看清楚的文字反而全站最難讀。
      加深後在這兩種底色上分別是 5.04 / 5.07:1；.table-action-btn.danger 的
      hover（米色字壓在此色上）也從 2.75:1 拉到 5.42:1。 */
-  --error: #B33A31;
-  --success: #81C784;
+  --error: #A83329;
+  /* 成功綠。原本是 #81C784，全站最糟的一組：「+1」記號在卡片底上 1.72:1、
+     「確認」按鈕文字 1.82:1，hover 時米色字壓在此色上更只有 1.85:1
+     —— 滑上去反而比不滑更看不清楚。加深後分別是 5.49 / 5.84 / 5.90。 */
+  --success: #2F6B33;
   --terra: #C1745A;
   --terra-bg: rgba(193, 116, 90, 0.12);
 
@@ -1040,7 +1043,9 @@ button {
 
 .status-badge.status-confirmed {
   background: rgba(111, 156, 139, 0.15);
-  color:var(--brass-dim);
+  /* 原本是褐色 --brass-dim 配綠色底，在這層淡綠上只有 4.17:1，配色本身也不搭。
+     改用成功綠，語意一致，對比 4.85:1。 */
+  color: var(--success);
 }
 
 .status-badge.status-completed {
