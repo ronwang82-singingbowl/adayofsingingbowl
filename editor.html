@@ -120,7 +120,11 @@ input.f:focus, textarea.f:focus{ outline:2px solid var(--ui-accent-soft); border
 /* ============ SITE PREVIEW STYLES (copied from live site) ============ */
 .stage{
   --ink: #F8F5EE; --ink-2: #FFFFFF; --ink-3: #F1EDE4;
-  --brass: #73846B; --brass-soft: #E4C778; --brass-dim: #8A6A49;
+  /* 品牌綠原本是 #73846B，卡在明度中段，兩個方向同時不合格：當 eyebrow 等
+     小標文字只有 3.43～3.68:1，當 CTA 按鈕底色、上面壓 --ink 米色字也是 3.68:1。
+     加深後兩邊一起過關（首頁未達標從 21 處降到 8 處，剩下的全是金色系）。
+     與會員系統 member.css 的 --brass 是同一個值，要改請兩邊一起改。 */
+  --brass: #546C4C; --brass-soft: #E4C778; --brass-dim: #8A6A49;
   --jade: #DCC6A4; --paper: #4E5E48; --mist: #5F6F5A; --hairline: #D8D4CC;
   --maxw: 760px;
   background: var(--ink); color: var(--paper);
@@ -877,7 +881,7 @@ function buildFullSiteHTML(){
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;500;600;700&family=Noto+Sans+TC:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
-  :root { --ink: #F8F5EE; --ink-2: #FFFFFF; --ink-3: #F1EDE4; --brass: #73846B; --brass-soft: #E4C778; --brass-dim: #8A6A49; --jade: #DCC6A4; --paper: #4E5E48; --mist: #5F6F5A; --hairline: #D8D4CC; --maxw: 760px; }
+  :root { --ink: #F8F5EE; --ink-2: #FFFFFF; --ink-3: #F1EDE4; --brass: #546C4C; --brass-soft: #E4C778; --brass-dim: #8A6A49; --jade: #DCC6A4; --paper: #4E5E48; --mist: #5F6F5A; --hairline: #D8D4CC; --maxw: 760px; }
   body{ margin:0; background: var(--ink); }
   .stage{ min-height:100vh; }
   ${document.getElementById("stage") ? "" : ""}
