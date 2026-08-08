@@ -2952,16 +2952,31 @@ function renderAdminRemittancesPanel() {
   if (pendings.length === 0) {
     pendingContainer.innerHTML = `<tr><td colspan="8" class="text-center text-muted" style="text-align:center;">目前沒有待審核的匯款申請。</td></tr>`;
   } else {
+    /* 方案下拉直接長在「購買方案」那一欄，選完按確認就發放，不用再跳一頁。
+       清單讀 couponTemplates —— 跟「票券發放」共用同一份，那邊新增這裡就會出現。
+       想改點數種類或自訂效期時再選「自訂」，才進詳細設定畫面。 */
+    const tplOptions = couponTemplates.map(t => {
+      const exp = Number(t.validMonths) > 0 ? `${t.validMonths} 個月` : "永久";
+      return `<option value="${t.id}">${esc(t.name)}（${t.bonusPoints} 次・${POINT_TYPE_LABEL[t.pointType] || t.pointType}・${exp}）</option>`;
+    }).join("");
+
     // Sort oldest first for pending so admin processes in order
     const sortedPendings = [...pendings].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
     sortedPendings.forEach(r => {
       const row = document.createElement("tr");
       const packageName = getPackageName(r.packageId);
-      
+
       row.innerHTML = `
         <td>${r.createdAt}</td>
         <td><strong>${esc(r.userName)}</strong><br><span style="font-size:11px;color:var(--mist);">${esc(r.userPhone)}</span></td>
-        <td><strong>${packageName}</strong> (${r.points} 點)</td>
+        <td>
+          <select class="form-input" id="remitTpl_${r.id}" style="min-width:190px;padding:6px 8px;font-size:12.5px;">
+            <option value="">— 請選擇要發放的方案 —</option>
+            ${tplOptions}
+            <option value="custom">自訂（開啟詳細設定）</option>
+          </select>
+          <div style="font-size:11px;color:var(--mist);margin-top:4px;">會員申報：${packageName}（${r.points} 點）</div>
+        </td>
         <td>$${r.amount}</td>
         <td>${esc(r.bankName)}</td>
         <td><strong class="text-brass" style="font-family:'JetBrains Mono';font-size:14px;">${r.last5}</strong></td>
@@ -2997,10 +3012,17 @@ function renderAdminRemittancesPanel() {
         detailCell = `<span style="font-size:11px;color:var(--mist);">原因: ${esc(r.rejectReason || "資料不符")}</span>`;
       }
       
+      /* 已核准的顯示「實際發了什麼」，而不是會員申報的方案 ——
+         會員只填金額，方案是核准當下才決定的，寫申報值會看不出到底發了哪一種。 */
+      const planCell = (r.status === "approved" && r.pointType)
+        ? `<strong>${r.points} 次</strong>「${POINT_TYPE_LABEL[r.pointType] || r.pointType}」` +
+          `<br><span style="font-size:11px;color:var(--mist);">${r.expiresAt ? "效期至 " + r.expiresAt : "永不過期"}</span>`
+        : `${packageName} (${r.points} 點)`;
+
       row.innerHTML = `
         <td>${r.createdAt}</td>
         <td><strong>${esc(r.userName)}</strong></td>
-        <td>${packageName} (${r.points} 點)</td>
+        <td>${planCell}</td>
         <td>$${r.amount}</td>
         <td>${r.last5} (${esc(r.bankName)})</td>
         <td>${statusBadge}</td>
@@ -3011,13 +3033,42 @@ function renderAdminRemittancesPanel() {
   }
 }
 
-/* 開啟核准畫面。方案清單直接讀 couponTemplates —— 跟「票券發放」共用同一份，
-   你在那邊新增票券類型，這裡的下拉就會同步出現，不用維護兩份。 */
+/* 按下「確認」。先看同一列「購買方案」欄選了什麼：
+     選了方案 → 直接照方案發放（跳一個確認框說清楚要發什麼）
+     選了自訂 → 才進詳細設定畫面，可以改點數種類與效期
+   方案清單與「票券發放」共用 couponTemplates，那邊新增這裡就會出現。 */
 window.adminApproveRemittance = function(remittanceId) {
   const remit = remittances.find(r => r.id === remittanceId);
   if (!remit) return;
   const member = users.find(u => u.id === remit.userId);
   if (!member) { alert("找不到對應的會員，核准失敗。"); return; }
+
+  const rowSel = document.getElementById(`remitTpl_${remittanceId}`);
+  const choice = rowSel ? rowSel.value : "custom";
+
+  if (choice === "") {
+    alert("請先在「購買方案」欄選擇要發放的方案。\n\n若想自訂點數種類或效期，請選「自訂（開啟詳細設定）」。");
+    if (rowSel) rowSel.focus();
+    return;
+  }
+
+  if (choice !== "custom") {
+    const tpl = couponTemplates.find(t => String(t.id) === String(choice));
+    if (!tpl) { alert("找不到這個票券類型，請重新選擇。"); return; }
+    const months = Number(tpl.validMonths);
+    const expiry = months > 0 ? addMonthsStr(todayStr(), months) : null;
+    const ok = confirm(
+      `確定核准這筆匯款嗎？\n\n` +
+      `會員：${member.name}\n` +
+      `匯款：$${remit.amount}（${remit.bankName} 後五碼 ${remit.last5}）\n` +
+      `發放：${tpl.bonusPoints} 次「${POINT_TYPE_LABEL[tpl.pointType] || tpl.pointType}」\n` +
+      `效期：${expiry || "永不過期"}\n\n` +
+      `核准後會立即入帳，並發送 LINE 通知給會員。`
+    );
+    if (!ok) return;
+    doApproveRemittance(remittanceId, tpl.bonusPoints, tpl.pointType, expiry);
+    return;
+  }
 
   document.getElementById("approveRemittanceId").value = remittanceId;
   document.getElementById("lblApproveRemitInfo").textContent =
