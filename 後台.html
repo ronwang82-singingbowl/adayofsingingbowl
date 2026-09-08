@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>缽日 BORI｜抽獎後台</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@500;600;700&family=Noto+Sans+TC:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root {
+    --cream: #F8F5EE; --deep-green: #4E5E48; --gold: #E4C778;
+    --home-green: #73846B; --sand: #DCC6A4; --wood: #8A6A49; --ink: #33291C;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--cream); color: var(--ink);
+    font-family: 'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', sans-serif;
+    line-height: 1.6;
+  }
+  .page { max-width: 920px; margin: 0 auto; padding: 40px 24px 64px; }
+  header { text-align: center; margin-bottom: 28px; }
+  h1 {
+    font-family: 'Noto Serif TC', serif; font-weight: 700;
+    font-size: clamp(1.7rem, 4vw, 2.2rem); color: var(--deep-green); margin: 0 0 8px;
+  }
+  .subhead { color: var(--wood); font-size: 0.92rem; }
+
+  .setup-note {
+    background: #fff8e6; border: 1px solid var(--gold); border-radius: 14px;
+    padding: 18px; font-size: 0.9rem; margin-bottom: 24px;
+  }
+
+  section.card {
+    background: #fff; border: 1px solid var(--sand); border-radius: 18px;
+    padding: 24px; margin-bottom: 24px;
+  }
+  section.card h2 {
+    font-family: 'Noto Serif TC', serif; font-weight: 600; font-size: 1.15rem;
+    color: var(--deep-green); margin: 0 0 4px;
+  }
+  .card .hint { font-size: 0.82rem; color: var(--wood); margin: 0 0 16px; }
+
+  .upload-btn {
+    display: inline-block; border: 1px solid var(--deep-green); background: var(--deep-green);
+    color: var(--cream); border-radius: 999px; padding: 8px 16px; font-weight: 600;
+    font-size: 0.84rem; cursor: pointer;
+  }
+  .upload-status { font-size: 0.8rem; color: var(--deep-green); margin-top: 8px; min-height: 1.2em; }
+
+  input[type="text"], input[type="number"], input[type="email"], select {
+    border: 1px solid var(--sand); border-radius: 10px; padding: 8px 10px;
+    font-family: inherit; font-size: 0.9rem; color: var(--ink); background: #fff; width: 100%;
+  }
+
+  .row-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+  .row-basic { display: grid; grid-template-columns: 1fr auto auto; gap: 8px; align-items: center; }
+
+  .prize-row { display: grid; grid-template-columns: 1fr 56px 60px auto auto auto; gap: 6px; align-items: center; }
+
+  .name-card {
+    border: 1px solid var(--sand); border-radius: 12px; padding: 12px; display: flex;
+    flex-direction: column; gap: 8px;
+  }
+  .name-card .fields { display: grid; grid-template-columns: 1.2fr 1fr 1.3fr; gap: 8px; }
+  .name-card .tags-row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+  .name-card .tags-left { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+
+  .icon-btn {
+    border: none; background: none; color: var(--wood); font-size: 1.1rem; cursor: pointer; line-height: 1;
+    padding: 4px 6px;
+  }
+  .icon-btn:hover { color: var(--ink); }
+  .icon-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+  .text-btn {
+    border: none; background: none; color: var(--home-green); font-size: 0.78rem; cursor: pointer;
+    text-decoration: underline; padding: 2px 0;
+  }
+
+  .status-tag { font-size: 0.74rem; padding: 3px 8px; border-radius: 999px; white-space: nowrap; }
+  .status-tag.drawn { background: var(--sand); color: var(--ink); }
+  .status-tag.pending { background: rgba(115,132,107,0.15); color: var(--home-green); }
+  .status-tag.checked { background: var(--gold); color: var(--ink); }
+  .status-tag.notchecked { background: rgba(138,106,73,0.12); color: var(--wood); }
+  .status-tag.sent { background: rgba(78,94,72,0.12); color: var(--deep-green); }
+
+  .active-tag {
+    font-size: 0.74rem; padding: 3px 8px; border-radius: 999px; background: var(--gold); color: var(--ink);
+    white-space: nowrap;
+  }
+
+  .add-btn {
+    border: 1px solid var(--home-green); background: none; color: var(--deep-green);
+    border-radius: 999px; padding: 7px 16px; font-family: inherit; font-weight: 500;
+    font-size: 0.85rem; cursor: pointer;
+  }
+  .add-btn:hover { background: rgba(115,132,107,0.1); }
+
+  .primary-btn {
+    border: none; background: var(--deep-green); color: var(--cream);
+    border-radius: 999px; padding: 9px 20px; font-family: inherit; font-weight: 600;
+    font-size: 0.88rem; cursor: pointer;
+  }
+  .primary-btn:hover { opacity: 0.9; }
+
+  .walkin-form { display: grid; grid-template-columns: 1.3fr 1fr auto; gap: 10px; align-items: center; }
+
+  .reset-row { display: flex; gap: 12px; flex-wrap: wrap; }
+  .reset-btn {
+    border: 1px solid var(--wood); background: none; color: var(--wood); border-radius: 999px;
+    padding: 9px 18px; font-family: inherit; font-weight: 500; font-size: 0.88rem; cursor: pointer;
+  }
+  .reset-btn.danger { border-color: #a8443a; color: #a8443a; }
+  .reset-btn:hover { background: rgba(138,106,73,0.08); }
+
+  table.history { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+  table.history th, table.history td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--sand); }
+  table.history th { color: var(--wood); font-weight: 500; font-size: 0.8rem; }
+  .empty-note { color: var(--wood); font-size: 0.9rem; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header>
+    <h1>抽獎後台</h1>
+    <p class="subhead">清單管理、報到、通行證寄送、完整紀錄。抽獎畫面請開另一個檔案（抽獎.html）。</p>
+  </header>
+
+  <div id="setupNote" class="setup-note" style="display:none;">
+    這個頁面還沒有連到你的 Google 試算表。請打開這個檔案，把最上方 <code>API_URL</code> 換成部署後拿到的網址（結尾是 <code>/exec</code>），存檔後重新整理。
+  </div>
+
+  <div id="mainArea" style="display:none;">
+
+    <section class="card">
+      <h2>匯入名單</h2>
+      <p class="hint">CSV 或 Excel，第一列放標題，欄位名稱用「部門」「姓名」「信箱」「獎品」「名額」，有哪幾欄放哪幾欄即可。姓名跟部門會綁在一起；上傳後會直接取代對應清單。</p>
+      <label class="upload-btn" for="uploadInput">上傳檔案</label>
+      <input type="file" id="uploadInput" accept=".csv,.xlsx,.xls" style="display:none">
+      <div id="uploadStatus" class="upload-status"></div>
+    </section>
+
+    <section class="card">
+      <h2>現場報到（臨時加人）</h2>
+      <p class="hint">沒有事先在名單上的人，現場直接加進來，加入後立刻視為已報到，馬上可以被抽到。</p>
+      <div class="walkin-form">
+        <input type="text" id="walkinName" placeholder="姓名" maxlength="20">
+        <input type="text" id="walkinDept" list="deptOptions" placeholder="部門" maxlength="20">
+        <button class="primary-btn" id="walkinBtn" type="button">加入並報到</button>
+      </div>
+      <datalist id="deptOptions"></datalist>
+    </section>
+
+    <section class="card">
+      <h2>通行證寄送</h2>
+      <p class="hint">寄出後對方信箱會收到專屬 QR，活動當天出示給工作人員掃描即完成報到。已經寄過的人再按一次不會重複寄。</p>
+      <button class="primary-btn" id="sendPassesBtn" type="button">寄送給尚未收到的人</button>
+      <div id="sendStatus" class="upload-status"></div>
+    </section>
+
+    <section class="card">
+      <h2>獎品</h2>
+      <p class="hint">由上到下排隊發放，可以用上下箭頭排序，也能直接點「設為目前」跳過順序。</p>
+      <div id="prizeList" class="row-list"></div>
+      <button class="add-btn" id="addPrizeBtn" type="button">新增獎品</button>
+    </section>
+
+    <section class="card">
+      <h2>部門選項</h2>
+      <p class="hint">現場臨時加人時可以選的部門，匯入或新增姓名時用到新的部門名稱也會自動加進來。</p>
+      <div id="deptList" class="row-list"></div>
+      <button class="add-btn" id="addDeptBtn" type="button">新增部門</button>
+    </section>
+
+    <section class="card">
+      <h2>姓名</h2>
+      <div id="nameList" class="row-list"></div>
+      <button class="add-btn" id="addNameBtn" type="button">新增姓名</button>
+    </section>
+
+    <section class="card">
+      <h2>重設</h2>
+      <p class="hint">兩種重設程度都會影響共用資料，動手前確認一下。</p>
+      <div class="reset-row">
+        <button class="reset-btn" id="resetProgressBtn" type="button">重設抽獎進度</button>
+        <button class="reset-btn danger" id="resetAllBtn" type="button">清空全部重建</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>抽獎紀錄</h2>
+      <div id="historyWrap"></div>
+    </section>
+
+  </div>
+
+</div>
+
+<script>
+(function () {
+  // 貼上你部署 Apps Script 後拿到的網址（結尾是 /exec）
+  const API_URL = '';
+
+  let state = { depts: [], names: [], prizes: [], currentPrizeId: '', history: [] };
+
+  const setupNote = document.getElementById('setupNote');
+  const mainArea = document.getElementById('mainArea');
+  const prizeListEl = document.getElementById('prizeList');
+  const deptListEl = document.getElementById('deptList');
+  const nameListEl = document.getElementById('nameList');
+  const deptOptionsEl = document.getElementById('deptOptions');
+  const historyWrapEl = document.getElementById('historyWrap');
+  const uploadInput = document.getElementById('uploadInput');
+  const uploadStatusEl = document.getElementById('uploadStatus');
+  const sendStatusEl = document.getElementById('sendStatus');
+
+  function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+  function remainingOf(item) {
+    return Math.max(0, (Number(item.quota) || 0) - (Number(item.drawn) || 0));
+  }
+  function sortedPrizes() {
+    return [...state.prizes].sort((a, b) => Number(a.order) - Number(b.order));
+  }
+
+  async function apiPost(action, payload) {
+    const res = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(Object.assign({ action }, payload))
+    });
+    return res.json();
+  }
+  async function apiGet() {
+    const res = await fetch(API_URL + '?action=getState');
+    return res.json();
+  }
+
+  async function loadState() {
+    state = await apiGet();
+    renderAll();
+  }
+
+  function renderAll() {
+    renderPrizeList();
+    renderDeptList();
+    renderNameList();
+    renderDeptOptions();
+    renderHistory();
+  }
+
+  function renderDeptOptions() {
+    deptOptionsEl.innerHTML = state.depts.map((d) => '<option value="' + escapeHtml(d.name) + '">').join('');
+  }
+
+  // ---------- 獎品 ----------
+  function renderPrizeList() {
+    const sorted = sortedPrizes();
+    prizeListEl.innerHTML = '';
+    sorted.forEach((item, idx) => {
+      const row = document.createElement('div');
+      row.className = 'prize-row';
+
+      const nameInput = document.createElement('input');
+      nameInput.type = 'text'; nameInput.value = item.name; nameInput.maxLength = 24;
+      nameInput.addEventListener('change', async () => {
+        state = await apiPost('updateItem', { type: 'prize', id: item.id, name: nameInput.value });
+        renderPrizeList();
+      });
+
+      const quotaInput = document.createElement('input');
+      quotaInput.type = 'number'; quotaInput.min = '1'; quotaInput.title = '名額'; quotaInput.value = item.quota;
+      quotaInput.addEventListener('change', async () => {
+        const v = Math.max(1, Math.round(Number(quotaInput.value) || 1));
+        state = await apiPost('updateItem', { type: 'prize', id: item.id, quota: v });
+        renderPrizeList();
+      });
+
+      const remainLabel = document.createElement('div');
+      remainLabel.textContent = '剩 ' + remainingOf(item);
+      remainLabel.style.fontSize = '0.78rem'; remainLabel.style.color = 'var(--wood)'; remainLabel.style.textAlign = 'center';
+
+      const upBtn = document.createElement('button');
+      upBtn.className = 'icon-btn'; upBtn.type = 'button'; upBtn.textContent = '↑'; upBtn.disabled = idx === 0;
+      upBtn.addEventListener('click', async () => {
+        const other = sorted[idx - 1];
+        await apiPost('updateItem', { type: 'prize', id: item.id, order: other.order });
+        state = await apiPost('updateItem', { type: 'prize', id: other.id, order: item.order });
+        renderPrizeList();
+      });
+
+      const downBtn = document.createElement('button');
+      downBtn.className = 'icon-btn'; downBtn.type = 'button'; downBtn.textContent = '↓'; downBtn.disabled = idx === sorted.length - 1;
+      downBtn.addEventListener('click', async () => {
+        const other = sorted[idx + 1];
+        await apiPost('updateItem', { type: 'prize', id: item.id, order: other.order });
+        state = await apiPost('updateItem', { type: 'prize', id: other.id, order: item.order });
+        renderPrizeList();
+      });
+
+      const tailWrap = document.createElement('div');
+      tailWrap.style.display = 'flex'; tailWrap.style.gap = '6px'; tailWrap.style.alignItems = 'center';
+
+      if (item.id === state.currentPrizeId) {
+        const tag = document.createElement('span');
+        tag.className = 'active-tag'; tag.textContent = '目前';
+        tailWrap.appendChild(tag);
+      } else {
+        const setBtn = document.createElement('button');
+        setBtn.className = 'icon-btn'; setBtn.type = 'button'; setBtn.style.fontSize = '0.76rem';
+        setBtn.textContent = '設為目前';
+        setBtn.addEventListener('click', async () => {
+          state = await apiPost('setCurrentPrize', { id: item.id });
+          renderPrizeList();
+        });
+        tailWrap.appendChild(setBtn);
+      }
+
+      const removeBtn = document.createElement('button');
+      removeBtn.className = 'icon-btn'; removeBtn.type = 'button'; removeBtn.textContent = '×';
+      removeBtn.disabled = sorted.length <= 1;
+      removeBtn.addEventListener('click', async () => {
+        state = await apiPost('removeItem', { type: 'prize', id: item.id });
+        renderPrizeList();
+      });
+      tailWrap.appendChild(removeBtn);
+
+      row.appendChild(nameInput);
+      row.appendChild(quotaInput);
+      row.appendChild(remainLabel);
+      row.appendChild(upBtn);
+      row.appendChild(downBtn);
+      row.appendChild(tailWrap);
+      prizeListEl.appendChild(row);
+    });
+  }
+
+  document.getElementById('addPrizeBtn').addEventListener('click', async () => {
+    state = await apiPost('addItem', { type: 'prize', name: '', quota: 1 });
+    renderPrizeList();
+  });
+
+  // ---------- 部門選項 ----------
+  function renderDeptList() {
+    deptListEl.innerHTML = '';
+    state.depts.forEach((item) => {
+      const row = document.createElement('div');
+      row.className = 'row-basic';
+
+      const input = document.createElement('input');
+      input.type = 'text'; input.value = item.name; input.maxLength = 20;
+      input.addEventListener('change', async () => {
+        state = await apiPost('updateItem', { type: 'dept', id: item.id, name: input.value });
+        renderDeptList(); renderDeptOptions();
+      });
+
+      const spacer = document.createElement('div');
+
+      const removeBtn = document.createElement('button');
+      removeBtn.className = 'icon-btn'; removeBtn.type = 'button'; removeBtn.textContent = '×';
+      removeBtn.disabled = state.depts.length <= 1;
+      removeBtn.addEventListener('click', async () => {
+        state = await apiPost('removeItem', { type: 'dept', id: item.id });
+        renderDeptList(); renderDeptOptions();
+      });
+
+      row.appendChild(input); row.appendChild(spacer); row.appendChild(removeBtn);
+      deptListEl.appendChild(row);
+    });
+  }
+
+  document.getElementById('addDeptBtn').addEventListener('click', async () => {
+    state = await apiPost('addItem', { type: 'dept', name: '' });
+    renderDeptList(); renderDeptOptions();
+  });
+
+  // ---------- 姓名 ----------
+  function renderNameList() {
+    nameListEl.innerHTML = '';
+    state.names.forEach((item) => {
+      const card = document.createElement('div');
+      card.className = 'name-card';
+
+      const fields = document.createElement('div');
+      fields.className = 'fields';
+
+      const nameInput = document.createElement('input');
+      nameInput.type = 'text'; nameInput.value = item.name; nameInput.maxLength = 20; nameInput.placeholder = '姓名';
+      nameInput.addEventListener('change', async () => {
+        state = await apiPost('updateItem', { type: 'name', id: item.id, name: nameInput.value });
+      });
+
+      const deptInput = document.createElement('input');
+      deptInput.type = 'text'; deptInput.value = item.dept || ''; deptInput.maxLength = 20;
+      deptInput.placeholder = '部門'; deptInput.setAttribute('list', 'deptOptions');
+      deptInput.addEventListener('change', async () => {
+        state = await apiPost('updateItem', { type: 'name', id: item.id, dept: deptInput.value });
+        renderDeptOptions();
+      });
+
+      const emailInput = document.createElement('input');
+      emailInput.type = 'email'; emailInput.value = item.email || ''; emailInput.placeholder = '信箱（選填）';
+      emailInput.addEventListener('change', async () => {
+        state = await apiPost('updateItem', { type: 'name', id: item.id, email: emailInput.value });
+      });
+
+      fields.appendChild(nameInput); fields.appendChild(deptInput); fields.appendChild(emailInput);
+
+      const tagsRow = document.createElement('div');
+      tagsRow.className = 'tags-row';
+
+      const tagsLeft = document.createElement('div');
+      tagsLeft.className = 'tags-left';
+
+      const checkTag = document.createElement('span');
+      const isChecked = item.checkinStatus === '已報到';
+      checkTag.className = 'status-tag ' + (isChecked ? 'checked' : 'notchecked');
+      checkTag.textContent = isChecked ? '已報到' : '未報到';
+      tagsLeft.appendChild(checkTag);
+
+      const toggleCheckBtn = document.createElement('button');
+      toggleCheckBtn.className = 'text-btn'; toggleCheckBtn.type = 'button';
+      toggleCheckBtn.textContent = isChecked ? '設為未報到' : '設為已報到';
+      toggleCheckBtn.addEventListener('click', async () => {
+        state = await apiPost('updateItem', { type: 'name', id: item.id, checkinStatus: isChecked ? '' : '已報到' });
+        renderNameList();
+      });
+      tagsLeft.appendChild(toggleCheckBtn);
+
+      const drawTag = document.createElement('span');
+      const isDrawn = item.drawStatus === '已抽';
+      drawTag.className = 'status-tag ' + (isDrawn ? 'drawn' : 'pending');
+      drawTag.textContent = isDrawn ? '已抽' : '未抽';
+      tagsLeft.appendChild(drawTag);
+
+      if (isDrawn) {
+        const restoreBtn = document.createElement('button');
+        restoreBtn.className = 'text-btn'; restoreBtn.type = 'button'; restoreBtn.textContent = '恢復未抽';
+        restoreBtn.addEventListener('click', async () => {
+          state = await apiPost('updateItem', { type: 'name', id: item.id, drawStatus: '' });
+          renderNameList();
+        });
+        tagsLeft.appendChild(restoreBtn);
+      }
+
+      if (item.passSentAt) {
+        const sentTag = document.createElement('span');
+        sentTag.className = 'status-tag sent'; sentTag.textContent = '通行證已寄';
+        tagsLeft.appendChild(sentTag);
+      }
+      if (item.email) {
+        const resendBtn = document.createElement('button');
+        resendBtn.className = 'text-btn'; resendBtn.type = 'button';
+        resendBtn.textContent = item.passSentAt ? '重寄通行證' : '寄送通行證';
+        resendBtn.addEventListener('click', async () => {
+          resendBtn.textContent = '寄送中…';
+          state = await apiPost('resendPass', { id: item.id });
+          renderNameList();
+        });
+        tagsLeft.appendChild(resendBtn);
+      }
+
+      const removeBtn = document.createElement('button');
+      removeBtn.className = 'icon-btn'; removeBtn.type = 'button'; removeBtn.textContent = '×';
+      removeBtn.disabled = state.names.length <= 1;
+      removeBtn.addEventListener('click', async () => {
+        state = await apiPost('removeItem', { type: 'name', id: item.id });
+        renderNameList();
+      });
+
+      tagsRow.appendChild(tagsLeft);
+      tagsRow.appendChild(removeBtn);
+
+      card.appendChild(fields);
+      card.appendChild(tagsRow);
+      nameListEl.appendChild(card);
+    });
+  }
+
+  document.getElementById('addNameBtn').addEventListener('click', async () => {
+    state = await apiPost('addItem', { type: 'name', name: '' });
+    renderNameList();
+  });
+
+  // ---------- 現場報到（臨時加人） ----------
+  document.getElementById('walkinBtn').addEventListener('click', async () => {
+    const nameEl = document.getElementById('walkinName');
+    const deptEl = document.getElementById('walkinDept');
+    const name = nameEl.value.trim();
+    const dept = deptEl.value.trim();
+    if (!name || !dept) { alert('姓名跟部門都要填'); return; }
+    state = await apiPost('addWalkIn', { name, dept });
+    nameEl.value = ''; deptEl.value = '';
+    renderNameList(); renderDeptList(); renderDeptOptions();
+  });
+
+  // ---------- 通行證寄送 ----------
+  document.getElementById('sendPassesBtn').addEventListener('click', async () => {
+    sendStatusEl.textContent = '寄送中…';
+    const result = await apiPost('sendPasses', {});
+    state = result;
+    renderNameList();
+    if (result.sendSummary) {
+      sendStatusEl.textContent = '已寄出 ' + result.sendSummary.sent + ' 封，略過 ' + result.sendSummary.skipped + ' 位（沒有信箱或已寄過）。';
+    } else {
+      sendStatusEl.textContent = '寄送完成。';
+    }
+  });
+
+  // ---------- 紀錄 ----------
+  function renderHistory() {
+    if (!state.history || state.history.length === 0) {
+      historyWrapEl.innerHTML = '<p class="empty-note">尚無抽獎紀錄</p>';
+      return;
+    }
+    let html = '<table class="history"><thead><tr><th>時間</th><th>部門</th><th>姓名</th><th>獎品</th><th>第幾位</th></tr></thead><tbody>';
+    state.history.forEach((h) => {
+      const t = h.time ? new Date(h.time).toLocaleString('zh-TW', { hour12: false }) : '';
+      html += '<tr><td>' + escapeHtml(t) + '</td><td>' + escapeHtml(h.dept) + '</td><td>' +
+        escapeHtml(h.name) + '</td><td>' + escapeHtml(h.prize) + '</td><td>' +
+        h.drawnNumber + '／' + h.quota + '</td></tr>';
+    });
+    html += '</tbody></table>';
+    historyWrapEl.innerHTML = html;
+  }
+
+  // ---------- 重設 ----------
+  document.getElementById('resetProgressBtn').addEventListener('click', async () => {
+    if (!confirm('確定要重設抽獎進度嗎？紀錄會清空、抽獎狀態歸零；報到狀態、部門／姓名／獎品清單本身不會動。')) return;
+    state = await apiPost('resetProgress', {});
+    renderAll();
+  });
+  document.getElementById('resetAllBtn').addEventListener('click', async () => {
+    if (!confirm('這會把部門、姓名、獎品清單和抽獎紀錄全部清空，確定要重新開始嗎？此動作無法復原。')) return;
+    state = await apiPost('resetAll', {});
+    renderAll();
+  });
+
+  // ---------- 上傳 ----------
+  uploadInput.addEventListener('change', (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    uploadStatusEl.textContent = '讀取中…';
+
+    const reader = new FileReader();
+    reader.onload = async function (ev) {
+      try {
+        const data = new Uint8Array(ev.target.result);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+        if (!rows || rows.length < 1) { uploadStatusEl.textContent = '檔案是空的。'; return; }
+
+        const header = rows[0].map((h) => String(h).trim());
+        const dataRows = rows.slice(1);
+        const deptIdx = header.indexOf('部門');
+        const nameIdx = header.indexOf('姓名');
+        const emailIdx = header.indexOf('信箱');
+        const prizeIdx = header.indexOf('獎品');
+        const quotaIdx = header.indexOf('名額');
+        const imported = [];
+
+        if (deptIdx > -1) {
+          const vals = dataRows.map((r) => String(r[deptIdx] || '').trim()).filter(Boolean);
+          const uniqueVals = [...new Set(vals)];
+          if (uniqueVals.length) {
+            state = await apiPost('importList', { type: 'dept', rows: uniqueVals });
+            imported.push('部門選項 ' + uniqueVals.length + ' 項');
+          }
+        }
+        if (nameIdx > -1) {
+          const nameRows = dataRows.map((r) => ({
+            name: String(r[nameIdx] || '').trim(),
+            dept: deptIdx > -1 ? String(r[deptIdx] || '').trim() : '',
+            email: emailIdx > -1 ? String(r[emailIdx] || '').trim() : ''
+          })).filter((r) => r.name);
+          if (nameRows.length) {
+            state = await apiPost('importList', { type: 'name', rows: nameRows });
+            imported.push('姓名 ' + nameRows.length + ' 位');
+          }
+        }
+        if (prizeIdx > -1) {
+          const prizeRows = [];
+          dataRows.forEach((r) => {
+            const pname = String(r[prizeIdx] || '').trim();
+            if (!pname) return;
+            const q = quotaIdx > -1 ? (parseInt(r[quotaIdx], 10) || 1) : 1;
+            prizeRows.push({ name: pname, quota: q });
+          });
+          if (prizeRows.length) {
+            state = await apiPost('importList', { type: 'prize', rows: prizeRows });
+            imported.push('獎品 ' + prizeRows.length + ' 項');
+          }
+        }
+
+        if (imported.length === 0) {
+          uploadStatusEl.textContent = '沒有找到「部門」「姓名」「獎品」任何一個標題欄位，請檢查第一列。';
+          return;
+        }
+        renderAll();
+        uploadStatusEl.textContent = '已匯入：' + imported.join('　');
+      } catch (err) {
+        uploadStatusEl.textContent = '檔案讀取失敗，請確認是 CSV 或 Excel 格式。';
+      }
+    };
+    reader.readAsArrayBuffer(file);
+    uploadInput.value = '';
+  });
+
+  if (!API_URL) {
+    setupNote.style.display = 'block';
+  } else {
+    mainArea.style.display = 'block';
+    loadState();
+  }
+})();
+</script>
+</body>
+</html>

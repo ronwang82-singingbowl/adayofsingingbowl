@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>缽日 BORI｜我的通行證</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@600;700&family=Noto+Sans+TC:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --cream: #F8F5EE; --deep-green: #4E5E48; --gold: #E4C778; --wood: #8A6A49; --ink: #33291C; --sand: #DCC6A4;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center;
+    background: var(--cream); color: var(--ink);
+    font-family: 'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', sans-serif;
+  }
+  .card {
+    background: #fff; border: 2px solid var(--gold); border-radius: 24px; padding: 36px 28px;
+    text-align: center; max-width: 380px; width: 90%; box-shadow: 0 20px 44px rgba(78,94,72,0.18);
+  }
+  .label { color: var(--wood); font-size: 0.8rem; margin-bottom: 6px; }
+  h1 {
+    font-family: 'Noto Serif TC', serif; font-weight: 700; font-size: 1.5rem;
+    color: var(--deep-green); margin: 0 0 4px;
+  }
+  .dept { color: var(--wood); font-size: 0.95rem; margin-bottom: 20px; }
+  .qr-wrap { margin: 0 auto 18px; }
+  .qr-wrap img { display: block; margin: 0 auto; border-radius: 12px; border: 1px solid var(--sand); }
+  .hint { color: var(--wood); font-size: 0.85rem; margin-top: 6px; }
+  .checked-note {
+    margin-top: 16px; font-size: 0.82rem; color: var(--deep-green); background: rgba(78,94,72,0.08);
+    border-radius: 10px; padding: 8px 12px;
+  }
+  .msg { color: var(--wood); font-size: 0.9rem; }
+</style>
+</head>
+<body>
+<div class="card" id="card">
+  <div id="content">
+    <p class="msg">讀取中…</p>
+  </div>
+</div>
+
+<script>
+(function () {
+  // 貼上你部署 Apps Script 後拿到的網址（結尾是 /exec）
+  const API_URL = '';
+  // 貼上「報到.html」部署後的公開網址，QR 會指向這裡
+  const CHECKIN_PAGE_URL = '';
+
+  const contentEl = document.getElementById('content');
+
+  function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  const params = new URLSearchParams(window.location.search);
+  const code = params.get('code');
+
+  if (!API_URL || !CHECKIN_PAGE_URL) {
+    contentEl.innerHTML = '<p class="msg">這個頁面還沒有設定完成，請跟主辦單位確認。</p>';
+    return;
+  }
+  if (!code) {
+    contentEl.innerHTML = '<p class="msg">連結缺少代碼，請確認網址是否正確。</p>';
+    return;
+  }
+
+  fetch(API_URL + '?action=getPass&code=' + encodeURIComponent(code))
+    .then((res) => res.json())
+    .then((data) => {
+      if (data.error) {
+        contentEl.innerHTML = '<p class="msg">找不到這張通行證，請跟主辦單位確認連結是否正確。</p>';
+        return;
+      }
+      const checkinUrl = CHECKIN_PAGE_URL + '?code=' + encodeURIComponent(code);
+      const qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=' + encodeURIComponent(checkinUrl);
+      const checkedNote = data.checkinStatus === '已報到'
+        ? '<div class="checked-note">你已經完成報到</div>'
+        : '';
+      contentEl.innerHTML =
+        '<div class="label">活動通行證</div>' +
+        '<h1>' + escapeHtml(data.name || '') + '</h1>' +
+        '<div class="dept">' + escapeHtml(data.dept || '') + '</div>' +
+        '<div class="qr-wrap"><img src="' + qrUrl + '" width="220" height="220" alt="QR Code"></div>' +
+        '<p class="hint">活動當天請直接出示這個畫面給工作人員掃描</p>' +
+        checkedNote;
+    })
+    .catch(() => {
+      contentEl.innerHTML = '<p class="msg">連線失敗，請檢查網路後重新整理再試一次。</p>';
+    });
+})();
+</script>
+</body>
+</html>

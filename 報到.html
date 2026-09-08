@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>缽日 BORI｜報到</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@600;700&family=Noto+Sans+TC:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --cream: #F8F5EE; --deep-green: #4E5E48; --gold: #E4C778; --wood: #8A6A49; --ink: #33291C;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center;
+    background: var(--cream); color: var(--ink);
+    font-family: 'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', sans-serif;
+  }
+  .card {
+    background: #fff; border-radius: 24px; padding: 40px 32px; text-align: center;
+    max-width: 380px; width: 90%; box-shadow: 0 20px 44px rgba(78,94,72,0.18);
+  }
+  .mark {
+    width: 64px; height: 64px; border-radius: 50%; margin: 0 auto 18px;
+    display: flex; align-items: center; justify-content: center; font-size: 1.8rem; color: #fff;
+  }
+  .mark.ok { background: var(--deep-green); }
+  .mark.warn { background: var(--gold); color: var(--ink); }
+  .mark.err { background: #a8443a; }
+  h1 {
+    font-family: 'Noto Serif TC', serif; font-weight: 700; font-size: 1.5rem;
+    color: var(--deep-green); margin: 0 0 8px;
+  }
+  .dept { color: var(--wood); font-size: 0.95rem; margin-bottom: 6px; }
+  .msg { color: var(--wood); font-size: 0.9rem; }
+</style>
+</head>
+<body>
+<div class="card" id="card">
+  <div class="mark warn" id="mark">…</div>
+  <h1 id="title">處理中</h1>
+  <div class="msg" id="msg">請稍候</div>
+</div>
+
+<script>
+(function () {
+  // 貼上你部署 Apps Script 後拿到的網址（結尾是 /exec）
+  const API_URL = '';
+
+  const markEl = document.getElementById('mark');
+  const titleEl = document.getElementById('title');
+  const msgEl = document.getElementById('msg');
+
+  function setState(kind, mark, title, msg) {
+    markEl.className = 'mark ' + kind;
+    markEl.textContent = mark;
+    titleEl.textContent = title;
+    msgEl.textContent = msg;
+  }
+
+  const params = new URLSearchParams(window.location.search);
+  const code = params.get('code');
+
+  if (!API_URL) {
+    setState('err', '!', '尚未設定', '這個頁面還沒有連到試算表，請跟主辦單位確認。');
+    return;
+  }
+  if (!code) {
+    setState('err', '!', '缺少代碼', '這個連結沒有帶通行證代碼，請確認掃描的 QR 是否正確。');
+    return;
+  }
+
+  fetch(API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({ action: 'checkIn', code: code })
+  })
+    .then((res) => res.json())
+    .then((data) => {
+      if (data.error) {
+        setState('err', '!', '查無此代碼', '請跟工作人員確認通行證是否正確。');
+        return;
+      }
+      if (data.alreadyCheckedIn) {
+        setState('warn', '✓', (data.name || '') + '　已經報到過了', data.dept || '');
+      } else {
+        setState('ok', '✓', (data.name || '') + '　報到成功', data.dept || '');
+      }
+    })
+    .catch(() => {
+      setState('err', '!', '連線失敗', '請檢查網路後重新整理再試一次。');
+    });
+})();
+</script>
+</body>
+</html>

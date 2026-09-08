@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>缽日 BORI｜抽獎</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@500;600;700&family=Noto+Sans+TC:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --cream: #F8F5EE; --deep-green: #4E5E48; --gold: #E4C778;
+    --home-green: #73846B; --sand: #DCC6A4; --wood: #8A6A49; --ink: #33291C;
+    --item-h: 64px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--cream); color: var(--ink);
+    font-family: 'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', sans-serif;
+    line-height: 1.6;
+  }
+  .page { max-width: 720px; margin: 0 auto; padding: 40px 24px 64px; }
+  header { text-align: center; margin-bottom: 28px; position: relative; }
+  h1 {
+    font-family: 'Noto Serif TC', serif; font-weight: 700;
+    font-size: clamp(1.8rem, 4vw, 2.3rem); color: var(--deep-green); margin: 0 0 8px;
+  }
+  .subhead { color: var(--wood); font-size: 0.95rem; }
+  .refresh-btn {
+    position: absolute; top: 0; right: 0; border: 1px solid var(--sand);
+    background: #fff; color: var(--wood); border-radius: 999px;
+    padding: 6px 14px; font-size: 0.8rem; cursor: pointer;
+  }
+  .refresh-btn:hover { background: var(--sand); color: var(--ink); }
+
+  .setup-note {
+    background: #fff8e6; border: 1px solid var(--gold); border-radius: 14px;
+    padding: 18px; font-size: 0.9rem; color: var(--ink); margin-bottom: 24px;
+  }
+
+  .prize-card {
+    background: #fff; border: 2px solid var(--gold); border-radius: 20px;
+    padding: 20px; margin-bottom: 22px; display: flex; align-items: center;
+    justify-content: space-between; gap: 12px;
+  }
+  .prize-card .nav-btn {
+    border: none; background: var(--sand); color: var(--ink);
+    width: 40px; height: 40px; border-radius: 50%; font-size: 1.1rem; cursor: pointer;
+    flex-shrink: 0;
+  }
+  .prize-card .nav-btn:hover:not(:disabled) { background: var(--gold); }
+  .prize-card .nav-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .prize-info { text-align: center; flex: 1; min-width: 0; }
+  .prize-info .label { font-size: 0.78rem; color: var(--wood); margin-bottom: 4px; }
+  .prize-info .name {
+    font-family: 'Noto Serif TC', serif; font-weight: 700; font-size: 1.3rem;
+    color: var(--deep-green); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .prize-info .quota { font-size: 0.85rem; color: var(--wood); margin-top: 4px; }
+
+  .machine { background: var(--deep-green); border-radius: 28px; padding: 22px 18px 30px;
+    box-shadow: 0 20px 44px rgba(78,94,72,0.28); }
+  .reels-row { display: flex; gap: 14px; background: var(--cream); border-radius: 18px; padding: 18px 12px; }
+  .reel-block { display: flex; flex-direction: column; align-items: center; flex: 1; min-width: 0; }
+  .reel-label { color: var(--wood); font-size: 0.82rem; font-weight: 500; margin-bottom: 8px; }
+  .reel-window {
+    position: relative; width: 100%; height: calc(var(--item-h) * 3); overflow: hidden;
+    border-radius: 10px;
+    background: linear-gradient(to bottom, #8A6A49 0%, #DCC6A4 16%, #F8F5EE 50%, #DCC6A4 84%, #8A6A49 100%);
+    box-shadow: inset 0 0 16px rgba(51,41,28,0.4);
+  }
+  .reel-strip { will-change: transform; }
+  .reel-item {
+    height: var(--item-h); display: flex; align-items: center; justify-content: center;
+    text-align: center; padding: 0 6px; font-size: 0.95rem; font-weight: 600; color: var(--ink);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .reel-highlight {
+    position: absolute; top: var(--item-h); left: 0; right: 0; height: var(--item-h);
+    border-top: 2px solid var(--gold); border-bottom: 2px solid var(--gold);
+    background: rgba(228,199,120,0.16); pointer-events: none;
+  }
+
+  .spin-btn {
+    display: block; margin: 26px auto 0; padding: 16px 48px; border: none; border-radius: 999px;
+    background: var(--gold); color: var(--ink); font-weight: 700; font-size: 1.08rem; cursor: pointer;
+    box-shadow: 0 10px 24px rgba(0,0,0,0.28); transition: transform 0.15s ease;
+  }
+  .spin-btn:hover:not(:disabled) { transform: translateY(-2px); }
+  .spin-btn:disabled { background: var(--sand); color: var(--wood); cursor: not-allowed; box-shadow: none; }
+  .spin-btn:focus-visible, button:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
+
+  .result-panel { margin-top: 20px; min-height: 56px; text-align: center; }
+  .result-badges { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; animation: reveal 0.5s ease; }
+  .badge { padding: 8px 18px; border-radius: 999px; font-weight: 700; font-size: 0.98rem; }
+  .badge-prize { background: var(--cream); color: var(--deep-green); border: 1.5px solid var(--deep-green); }
+  .badge-dept { background: var(--sand); color: var(--ink); }
+  .badge-name { background: var(--gold); color: var(--ink); }
+  .result-panel .status-text { color: var(--cream); opacity: 0.85; font-size: 0.85rem; }
+
+  @keyframes reveal {
+    0% { opacity: 0; transform: scale(0.9); }
+    60% { opacity: 1; transform: scale(1.03); }
+    100% { opacity: 1; transform: scale(1); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .reel-strip { transition-duration: 0.4s !important; }
+    .result-badges { animation: none; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header>
+    <h1>抽獎</h1>
+    <p class="subhead">部門會跟著抽到的人一起定格；獎品在上面直接切換。</p>
+    <button class="refresh-btn" id="refreshBtn" type="button">重新整理</button>
+  </header>
+
+  <div id="setupNote" class="setup-note" style="display:none;">
+    這個頁面還沒有連到你的 Google 試算表。請打開這個檔案，把最上方 <code>API_URL</code> 換成部署後拿到的網址（結尾是 <code>/exec</code>），存檔後重新整理。
+  </div>
+
+  <div id="mainArea" style="display:none;">
+    <div class="prize-card">
+      <button class="nav-btn" id="prevPrizeBtn" type="button" aria-label="上一個獎品">‹</button>
+      <div class="prize-info">
+        <div class="label">目前獎品</div>
+        <div class="name" id="prizeName">—</div>
+        <div class="quota" id="prizeQuota">—</div>
+      </div>
+      <button class="nav-btn" id="nextPrizeBtn" type="button" aria-label="下一個獎品">›</button>
+    </div>
+
+    <section class="machine">
+      <div class="reels-row">
+        <div class="reel-block">
+          <div class="reel-label">部門</div>
+          <div class="reel-window">
+            <div class="reel-strip" id="stripDept"></div>
+            <div class="reel-highlight" aria-hidden="true"></div>
+          </div>
+        </div>
+        <div class="reel-block">
+          <div class="reel-label">姓名</div>
+          <div class="reel-window">
+            <div class="reel-strip" id="stripName"></div>
+            <div class="reel-highlight" aria-hidden="true"></div>
+          </div>
+        </div>
+      </div>
+      <button id="spinBtn" class="spin-btn">開始滾動</button>
+      <div id="resultPanel" class="result-panel" aria-live="polite"></div>
+    </section>
+  </div>
+
+</div>
+
+<script>
+(function () {
+  // 貼上你部署 Apps Script 後拿到的網址（結尾是 /exec）
+  const API_URL = '';
+
+  const ITEM_H = 64;
+  let state = { depts: [], names: [], prizes: [], currentPrizeId: '', history: [] };
+  const posState = { dept: 0, name: 0 };
+  let spinning = false;
+
+  const setupNote = document.getElementById('setupNote');
+  const mainArea = document.getElementById('mainArea');
+  const stripEl = { dept: document.getElementById('stripDept'), name: document.getElementById('stripName') };
+  const spinBtn = document.getElementById('spinBtn');
+  const resultPanel = document.getElementById('resultPanel');
+  const prizeNameEl = document.getElementById('prizeName');
+  const prizeQuotaEl = document.getElementById('prizeQuota');
+  const prevPrizeBtn = document.getElementById('prevPrizeBtn');
+  const nextPrizeBtn = document.getElementById('nextPrizeBtn');
+  const refreshBtn = document.getElementById('refreshBtn');
+
+  function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+  function reducedMotion() {
+    return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  }
+  function eligibleNames() {
+    return state.names.filter((n) => n.checkinStatus === '已報到' && n.drawStatus !== '已抽');
+  }
+  function sortedPrizes() {
+    return [...state.prizes].sort((a, b) => Number(a.order) - Number(b.order));
+  }
+  function currentPrize() {
+    return state.prizes.find((p) => p.id === state.currentPrizeId) || null;
+  }
+  function remainingOf(item) {
+    return Math.max(0, (Number(item.quota) || 0) - (Number(item.drawn) || 0));
+  }
+  function deptLabel(n) {
+    return (n && n.dept) ? n.dept : '未指定部門';
+  }
+  function uniqueDeptPool(pool) {
+    const seen = [];
+    pool.forEach((n) => {
+      const d = deptLabel(n);
+      if (!seen.includes(d)) seen.push(d);
+    });
+    return seen.map((d) => ({ name: d }));
+  }
+
+  async function apiGet() {
+    const res = await fetch(API_URL + '?action=getState');
+    return res.json();
+  }
+  async function apiPost(action, payload) {
+    const res = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(Object.assign({ action }, payload))
+    });
+    return res.json();
+  }
+
+  function renderPrizeCard() {
+    const prize = currentPrize();
+    const sorted = sortedPrizes();
+    if (!prize) {
+      prizeNameEl.textContent = sorted.length ? '所有獎品已抽完' : '尚未設定獎品';
+      prizeQuotaEl.textContent = '';
+      prevPrizeBtn.disabled = sorted.length < 2;
+      nextPrizeBtn.disabled = sorted.length < 2;
+      return;
+    }
+    prizeNameEl.textContent = prize.name;
+    prizeQuotaEl.textContent = '剩餘 ' + remainingOf(prize) + '／' + prize.quota;
+    prevPrizeBtn.disabled = sorted.length < 2;
+    nextPrizeBtn.disabled = sorted.length < 2;
+  }
+
+  function buildStrip(key, repeats, pool) {
+    const el = stripEl[key];
+    el.innerHTML = '';
+    for (let r = 0; r < repeats; r++) {
+      pool.forEach((item) => {
+        const div = document.createElement('div');
+        div.className = 'reel-item';
+        div.textContent = item.name || '未命名';
+        el.appendChild(div);
+      });
+    }
+  }
+  function initReelDisplay(key, pool) {
+    const el = stripEl[key];
+    if (pool.length === 0) { el.innerHTML = ''; posState[key] = 0; return; }
+    posState[key] = pool.length;
+    buildStrip(key, 3, pool);
+    el.style.transitionDuration = '0s';
+    el.style.transform = 'translateY(' + (-(posState[key] - 1) * ITEM_H) + 'px)';
+  }
+  function spinReelTo(key, pool, targetIndex, duration, extraLoops) {
+    const listLen = pool.length;
+    const el = stripEl[key];
+    const curMod = ((posState[key] % listLen) + listLen) % listLen;
+    const diff = (targetIndex - curMod + listLen) % listLen;
+    const loops = reducedMotion() ? 1 : extraLoops;
+    const newPos = posState[key] + diff + loops * listLen;
+    const repeatsNeeded = Math.ceil((newPos + 3) / listLen) + 1;
+
+    buildStrip(key, repeatsNeeded, pool);
+    el.style.transitionDuration = '0s';
+    el.style.transitionTimingFunction = 'linear';
+    el.style.transform = 'translateY(' + (-(posState[key] - 1) * ITEM_H) + 'px)';
+    void el.offsetHeight;
+
+    const dur = reducedMotion() ? 0.5 : duration;
+    el.style.transitionDuration = dur + 's';
+    el.style.transitionTimingFunction = 'cubic-bezier(0.12,0.68,0.15,1)';
+    requestAnimationFrame(() => {
+      el.style.transform = 'translateY(' + (-(newPos - 1) * ITEM_H) + 'px)';
+    });
+    posState[key] = newPos;
+  }
+
+  function updateAvailability() {
+    const names = eligibleNames();
+    const nameOk = names.length > 0;
+    const prize = currentPrize();
+    const prizeOk = prize && remainingOf(prize) > 0;
+
+    if (spinning) { spinBtn.disabled = true; return; }
+    if (!nameOk) {
+      spinBtn.disabled = true; spinBtn.textContent = '沒有已報到、還沒抽過的人';
+    } else if (!prizeOk) {
+      spinBtn.disabled = true; spinBtn.textContent = '請先選一個還有名額的獎品';
+    } else {
+      spinBtn.disabled = false; spinBtn.textContent = '開始滾動';
+    }
+  }
+
+  function refreshReelsFromState() {
+    const names = eligibleNames();
+    initReelDisplay('name', names);
+    initReelDisplay('dept', uniqueDeptPool(names));
+  }
+
+  async function loadState() {
+    state = await apiGet();
+    renderPrizeCard();
+    refreshReelsFromState();
+    updateAvailability();
+  }
+
+  async function switchPrize(direction) {
+    const sorted = sortedPrizes();
+    if (sorted.length < 2) return;
+    const idx = sorted.findIndex((p) => p.id === state.currentPrizeId);
+    const nextIdx = direction === 'next'
+      ? (idx + 1 + sorted.length) % sorted.length
+      : (idx - 1 + sorted.length) % sorted.length;
+    state = await apiPost('setCurrentPrize', { id: sorted[nextIdx].id });
+    renderPrizeCard();
+    updateAvailability();
+  }
+
+  function spin() {
+    if (spinning) return;
+    const namePool = eligibleNames();
+    const deptPool = uniqueDeptPool(namePool);
+    const prize = currentPrize();
+    if (namePool.length === 0 || !prize || remainingOf(prize) <= 0) return;
+
+    spinning = true;
+    updateAvailability();
+    resultPanel.innerHTML = '';
+
+    const nameIdx = Math.floor(Math.random() * namePool.length);
+    const chosen = namePool[nameIdx];
+    const chosenDeptLabel = deptLabel(chosen);
+    let deptIdx = deptPool.findIndex((d) => d.name === chosenDeptLabel);
+    if (deptIdx === -1) deptIdx = 0;
+
+    spinReelTo('dept', deptPool, deptIdx, 2.4, 6);
+    spinReelTo('name', namePool, nameIdx, 3.0, 8);
+
+    const maxDuration = reducedMotion() ? 0.5 : 3.0;
+    setTimeout(async () => {
+      resultPanel.innerHTML = '<div class="status-text">登記結果中…</div>';
+      try {
+        const newState = await apiPost('recordDraw', { nameId: chosen.id, prizeId: prize.id });
+        if (newState.error) throw new Error(newState.error);
+        state = newState;
+        resultPanel.innerHTML =
+          '<div class="result-badges">' +
+            '<span class="badge badge-prize">' + escapeHtml(prize.name) + '</span>' +
+            '<span class="badge badge-dept">' + escapeHtml(chosenDeptLabel) + '</span>' +
+            '<span class="badge badge-name">' + escapeHtml(chosen.name) + '</span>' +
+          '</div>';
+        renderPrizeCard();
+        refreshReelsFromState();
+      } catch (err) {
+        resultPanel.innerHTML = '<div class="status-text">紀錄失敗，請按上方「重新整理」後再試一次。</div>';
+      }
+      spinning = false;
+      updateAvailability();
+    }, maxDuration * 1000 + 150);
+  }
+
+  spinBtn.addEventListener('click', spin);
+  prevPrizeBtn.addEventListener('click', () => switchPrize('prev'));
+  nextPrizeBtn.addEventListener('click', () => switchPrize('next'));
+  refreshBtn.addEventListener('click', () => { loadState(); });
+
+  if (!API_URL) {
+    setupNote.style.display = 'block';
+  } else {
+    mainArea.style.display = 'block';
+    loadState();
+  }
+})();
+</script>
+</body>
+</html>
