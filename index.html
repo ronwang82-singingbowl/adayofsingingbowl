@@ -189,14 +189,24 @@
   }
 
 /* Sound sample and brand video */
-.stage .sound-preview{margin-top:34px;padding:28px;background:var(--ink-3);border:1px solid var(--hairline);border-radius:18px;display:grid;grid-template-columns:minmax(0,1fr) 212px;gap:32px;align-items:center}
-.stage .sound-preview h3{font-size:20px;margin:2px 0 8px}
-.stage .sound-preview p{font-size:14px;color:var(--mist);margin:0 0 14px;line-height:1.8}
-.stage .sound-preview audio{width:100%;height:42px;accent-color:var(--brass)}
-.stage .sound-duration{font-size:12px;color:var(--mist);margin-top:8px}
-.stage .scene-player{position:relative;width:100%;max-width:212px}
-.stage .scene-video{display:block;width:100%;max-height:376px;aspect-ratio:9/16;object-fit:cover;border-radius:16px;background:var(--ink-3);border:1px solid var(--hairline)}
-@media(max-width:600px){.stage .sound-preview{grid-template-columns:1fr;gap:24px;padding:20px}.stage .scene-player{width:min(100%,210px);max-width:none;justify-self:center}}
+.stage .sound-section .wrap{max-width:1040px}
+.stage .sound-preview{padding:40px 48px;background:var(--ink-3);border:1px solid var(--hairline);border-radius:18px;display:grid;grid-template-columns:minmax(0,1fr) 280px;gap:44px;align-items:center}
+.stage .sound-preview h3{font-size:30px;line-height:1.45;margin:2px 0 12px}
+.stage .sound-preview p{font-size:17px;color:var(--mist);margin:0 0 22px;line-height:1.8}
+.stage .sound-preview audio{display:block;width:100%;height:48px;accent-color:var(--brass)}
+.stage .sound-duration{font-size:14px;color:var(--mist);margin-top:12px}
+.stage .scene-player{position:relative;width:100%;max-width:280px}
+.stage .scene-video{display:block;width:100%;aspect-ratio:9/16;object-fit:cover;border-radius:16px;background:var(--ink-3);border:1px solid var(--hairline)}
+@media(max-width:760px){
+  .stage .sound-preview{grid-template-columns:1fr;gap:28px;padding:30px}
+  .stage .scene-player{width:min(100%,280px);max-width:none;justify-self:center}
+}
+@media(max-width:600px){
+  .stage .sound-section .wrap{padding-inline:16px}
+  .stage .sound-preview{padding:26px 24px}
+  .stage .sound-preview h3{font-size:clamp(25px,7vw,30px)}
+  .stage .sound-preview p{font-size:16px}
+}
 
 .stage .hero{position:relative;isolation:isolate;min-height:max(700px,90svh);padding:110px 28px 100px;display:flex;align-items:center;justify-content:flex-start;text-align:left;overflow:hidden;background:#293b31}
 .stage .hero-inner{position:relative;z-index:1;width:min(1120px,100%);margin:0 auto;display:block}
@@ -340,7 +350,7 @@
       </div>
     </section>
 
-    <section class="tight"><div class="wrap">
+    <section class="tight sound-section"><div class="wrap">
       <div class="sound-preview">
         <div class="sound-copy">
           <div class="eyebrow">試聽一小段</div>
