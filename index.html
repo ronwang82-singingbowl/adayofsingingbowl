@@ -128,7 +128,6 @@
 
 /* Sound sample and brand video */
 .stage .sound-preview{margin-top:34px;padding:28px;background:var(--ink-3);border:1px solid var(--hairline);border-radius:18px;display:grid;grid-template-columns:minmax(0,1fr) 212px;gap:32px;align-items:center}
-.stage .sound-wave{display:block;width:88px;height:34px;object-fit:contain;margin-bottom:16px;opacity:.9}
 .stage .sound-preview h3{font-size:20px;margin:2px 0 8px}
 .stage .sound-preview p{font-size:14px;color:var(--mist);margin:0 0 14px;line-height:1.8}
 .stage .sound-preview audio{width:100%;height:42px;accent-color:var(--brass)}
@@ -136,7 +135,7 @@
 .stage .scene-player{position:relative;width:100%;max-width:212px}
 .stage .scene-label{position:absolute;top:12px;left:12px;z-index:1;padding:4px 9px;border-radius:99px;background:rgba(248,245,238,.92);font-size:11px;letter-spacing:.04em;color:var(--paper)}
 .stage .scene-video{display:block;width:100%;max-height:376px;aspect-ratio:9/16;object-fit:cover;border-radius:16px;background:var(--ink-3);border:1px solid var(--hairline)}
-@media(max-width:600px){.stage .sound-preview{grid-template-columns:1fr;gap:24px;padding:20px}.stage .sound-wave{width:76px;height:28px;margin-bottom:12px}.stage .scene-player{width:min(100%,210px);max-width:none;justify-self:center}}
+@media(max-width:600px){.stage .sound-preview{grid-template-columns:1fr;gap:24px;padding:20px}.stage .scene-player{width:min(100%,210px);max-width:none;justify-self:center}}
 </style>
 <script type="application/ld+json">
 {
@@ -226,7 +225,6 @@
       </div>
       <div class="sound-preview">
         <div class="sound-copy">
-          <img class="sound-wave" src="assets/media/bowl-sample-waveform.svg" alt="" aria-hidden="true">
           <div class="eyebrow">試聽一小段</div>
           <h3>從敲擊聲開始</h3>
           <p>如果你願意，可以先聽一小段缽聲。錄音僅供參考，現場感受會不同。</p>
