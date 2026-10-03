@@ -136,6 +136,9 @@
 .stage .scene-label{position:absolute;top:12px;left:12px;z-index:1;padding:4px 9px;border-radius:99px;background:rgba(248,245,238,.92);font-size:11px;letter-spacing:.04em;color:var(--paper)}
 .stage .scene-video{display:block;width:100%;max-height:376px;aspect-ratio:9/16;object-fit:cover;border-radius:16px;background:var(--ink-3);border:1px solid var(--hairline)}
 @media(max-width:600px){.stage .sound-preview{grid-template-columns:1fr;gap:24px;padding:20px}.stage .scene-player{width:min(100%,210px);max-width:none;justify-self:center}}
+
+.stage .hero{min-height:auto;justify-content:initial;text-align:left;padding:90px 32px 78px}.stage .hero-inner{width:min(1120px,100%);display:grid;grid-template-columns:minmax(0,1fr) minmax(320px,.9fr);gap:clamp(36px,7vw,92px);align-items:center}.stage .hero-copy{max-width:520px}.stage .hero h1{font-size:clamp(36px,5vw,64px)}.stage .hero-desc{margin-left:0;margin-right:0}.stage .hero-visual,.stage .integration-visual{position:relative;margin:0;overflow:hidden;border-radius:24px;background:var(--ink-3);border:1px solid var(--hairline)}.stage .hero-visual img{display:block;width:100%;aspect-ratio:4/3;object-fit:cover}.stage .hero-visual figcaption,.stage .integration-visual figcaption{position:absolute;right:14px;bottom:14px;padding:5px 10px;border-radius:99px;background:rgba(248,245,238,.94);color:var(--paper);font-size:11px;letter-spacing:.04em}.stage .integration-grid{margin-top:32px;display:grid;grid-template-columns:minmax(0,1fr) minmax(280px,.95fr);gap:clamp(28px,5vw,64px);align-items:center}.stage .integration-copy p{color:var(--mist);font-size:15px;line-height:1.95;margin:0 0 16px}.stage .integration-visual img{width:100%;display:block;aspect-ratio:4/3;object-fit:cover}.stage .text-link{display:inline-flex;gap:10px;margin-top:10px;color:var(--brass);text-decoration:none;border-bottom:1px solid var(--brass-dim);padding-bottom:4px;font-size:14px}
+@media(max-width:700px){.stage .hero{padding:76px 24px 60px}.stage .hero-inner,.stage .integration-grid{grid-template-columns:1fr;gap:28px}.stage .hero-visual{grid-row:2}.stage .hero h1{font-size:clamp(36px,10vw,52px)}.stage .hero-visual img,.stage .integration-visual img{aspect-ratio:4/3}.stage .integration-grid{margin-top:24px}}
 </style>
 <script type="application/ld+json">
 {
@@ -175,13 +178,18 @@
     </div>
     <section class="hero">
       <div class="hero-inner">
-        <div class="eyebrow">頌缽 · 對話 · 覺察</div>
-        <h1>缽日｜台北頌缽身心整合體驗</h1>
-        <div class="hero-sub">用聲音陪你梳理找回內在平衡</div>
-        <p class="hero-desc">一場聲音與對話交織的體驗，陪你穿越卡住的地方
-重新看見自己的下一步</p>
-        <a class="cta-btn" id="heroLineBtn" href="https://lin.ee/5FUzEjg" target="_blank" rel="noopener">加入 LINE，預約體驗</a>
-        <div class="hero-reassure">加好友後，我們一起約時間找回內在的能量</div>
+        <div class="hero-copy">
+          <div class="eyebrow">頌缽 · 對話 · 覺察</div>
+          <h1>缽日｜台北頌缽身心整合體驗</h1>
+          <div class="hero-sub">用聲音陪你梳理，找回內在平衡</div>
+          <p class="hero-desc">一場聲音與對話交織的體驗，陪你穿越卡住的地方，重新看見自己的下一步。</p>
+          <a class="cta-btn" id="heroLineBtn" href="https://lin.ee/5FUzEjg" target="_blank" rel="noopener">加入 LINE，聊聊再說</a>
+          <div class="hero-reassure">先聊聊你的狀態，再一起確認體驗是否適合你</div>
+        </div>
+        <figure class="hero-visual">
+          <img src="assets/media/hero-bowl-atmosphere-20261003.jpg" alt="頌缽靜置於柔和日光中的氛圍示意">
+          <figcaption>氛圍示意</figcaption>
+        </figure>
       </div>
     </section>
 
@@ -208,20 +216,18 @@
     </div></section>
 
     <section class="tight"><div class="wrap">
-      <div class="eyebrow">這是什麼</div>
-      <h2 style="font-size:clamp(24px,4vw,32px);">兩種陪伴你的方式</h2>
-      <div class="card-grid">
-        
-          <div class="card">
-            <div class="tag">Dialogue</div>
-            <h3>一對一深度對話</h3>
-            <p>透過提問與聊天，陪你看見自己一直沒察覺的盲點與慣性</p>
-          </div>
-          <div class="card">
-            <div class="tag">Sound</div>
-            <h3>頌缽身心整合體驗</h3>
-            <p>缽的振動穿過身體，陪你卸下不自覺的防備，回到當下，重新感受自己的呼吸與重量</p>
-          </div>
+      <div class="eyebrow">一套整合體驗</div>
+      <h2 style="font-size:clamp(24px,4vw,32px);">頌缽加深度對話，陪你找回自己的節奏</h2>
+      <div class="integration-grid">
+        <div class="integration-copy">
+          <p>不是把頌缽和聊天分開選，而是先讓聲音陪身體慢下來，再透過對話梳理心裡真正卡住的地方。</p>
+          <p>從感受出發，一起看見你此刻的需要，帶著一個更清楚、願意踏出的下一步離開。</p>
+          <a class="text-link" href="#experience-process">看看體驗怎麼進行 <span aria-hidden="true">↓</span></a>
+        </div>
+        <figure class="integration-visual">
+          <img src="assets/media/integrated-experience-scene-20261003.jpg" alt="兩人在頌缽旁進行深度對話的情境示意">
+          <figcaption>情境示意</figcaption>
+        </figure>
       </div>
       <div class="sound-preview">
         <div class="sound-copy">
@@ -242,6 +248,8 @@
           </video>
         </div>
       </div>
+    </div></section>
+
     </div></section>
 
     <section class="tight"><div class="wrap">
