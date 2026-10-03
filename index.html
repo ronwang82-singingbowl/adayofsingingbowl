@@ -125,6 +125,20 @@
     8%   { opacity: 0.55; }
     100% { transform: scale(21); opacity: 0; stroke-width: 0.4; }
   }
+
+/* Sound sample and brand video */
+.stage .sound-preview{margin-top:34px;padding:24px;background:var(--ink-3);border:1px solid var(--hairline);border-radius:18px;display:grid;grid-template-columns:112px 1fr;gap:20px;align-items:center}
+.stage .sound-preview img{width:112px;height:112px;object-fit:cover;border-radius:14px}
+.stage .sound-preview h3{font-size:20px;margin:2px 0 8px}
+.stage .sound-preview p{font-size:14px;color:var(--mist);margin:0 0 14px;line-height:1.8}
+.stage .sound-preview audio{width:100%;height:42px;accent-color:var(--brass)}
+.stage .sound-preview .scene-jump{display:inline-block;color:var(--brass);font-size:13px;margin-top:8px;text-underline-offset:4px}
+.stage .scene-grid{display:grid;grid-template-columns:1fr 260px;gap:36px;align-items:center;margin-top:34px}
+.stage .scene-copy{color:var(--mist);font-size:15px;line-height:1.9;max-width:420px}
+.stage .scene-player{width:100%;max-width:260px}
+.stage .scene-video{width:100%;max-height:464px;aspect-ratio:9/16;object-fit:cover;border-radius:18px;background:var(--ink-3);border:1px solid var(--hairline)}
+.stage .scene-play{width:100%;margin-top:10px;padding:12px 16px;border:1px solid var(--brass);border-radius:999px;background:var(--brass);color:var(--ink);font:600 14px/1.3 "Noto Sans TC",sans-serif;cursor:pointer}
+@media(max-width:600px){.stage .sound-preview{grid-template-columns:1fr;gap:14px;padding:18px}.stage .sound-preview img{width:100%;height:120px}.stage .scene-grid{grid-template-columns:1fr;gap:22px}.stage .scene-player{width:min(100%,280px);max-width:none;justify-self:center}}
 </style>
 <script type="application/ld+json">
 {
@@ -212,6 +226,19 @@
             <p>缽的振動穿過身體，陪你卸下不自覺的防備，回到當下，重新感受自己的呼吸與重量</p>
           </div>
       </div>
+      <div class="sound-preview">
+        <img src="assets/media/bowl-sample-waveform.svg" alt="" aria-hidden="true">
+        <div>
+          <div class="eyebrow">試聽一小段</div>
+          <h3>從敲擊聲開始</h3>
+          <p>如果你願意，可以先聽一小段缽聲。錄音僅供參考，現場感受會不同。</p>
+          <audio controls preload="none" aria-label="播放頌缽聲音試聽片段">
+            <source src="assets/media/bowl-sample-20261003.mp3" type="audio/mpeg">
+            你的瀏覽器目前無法播放這段音訊。
+          </audio>
+          <a class="scene-jump" href="#brandScene">再看 8 秒品牌畫面＋缽音 ↓</a>
+        </div>
+      </div>
     </div></section>
 
     <section class="tight"><div class="wrap">
@@ -282,6 +309,21 @@
             <div class="num">03</div>
             <div><h3>帶回你的下一步</h3><p>用簡單而誠實的對話，梳理出一個你真正願意帶走的方向。</p></div>
           </div>
+      </div>
+    </div></section>
+
+    <section class="tight" id="brandScene"><div class="wrap">
+      <div class="eyebrow">品牌氛圍影片 · 8 秒</div>
+      <h2 style="font-size:clamp(24px,4vw,32px);">讓品牌畫面配上缽聲</h2>
+      <div class="scene-grid">
+        <div class="scene-copy">這是一段品牌氛圍影片，畫面不是頌缽體驗現場紀錄。播放時配上缽音示範；實際體驗的聲音與感受會不同。</div>
+        <div class="scene-player">
+          <video id="brandSceneVideo" class="scene-video" controls playsinline preload="none" poster="assets/media/brand-visual-poster.jpg" aria-label="配上頌缽聲音的品牌氛圍影片">
+            <source src="assets/media/brand-visual-with-bowl-audio-20261003.mp4" type="video/mp4">
+            你的瀏覽器目前無法播放這段影片。
+          </video>
+          <button class="scene-play" type="button" onclick="document.getElementById('brandSceneVideo').play()">▶ 播放 8 秒影片＋缽音</button>
+        </div>
       </div>
     </div></section>
 
