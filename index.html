@@ -127,15 +127,16 @@
   }
 
 /* Sound sample and brand video */
-.stage .sound-preview{margin-top:34px;padding:24px;background:var(--ink-3);border:1px solid var(--hairline);border-radius:18px;display:grid;grid-template-columns:112px 1fr;gap:20px;align-items:center}
-.stage .sound-preview img{width:112px;height:112px;object-fit:cover;border-radius:14px}
+.stage .sound-preview{margin-top:34px;padding:28px;background:var(--ink-3);border:1px solid var(--hairline);border-radius:18px;display:grid;grid-template-columns:minmax(0,1fr) 212px;gap:32px;align-items:center}
+.stage .sound-wave{display:block;width:88px;height:34px;object-fit:contain;margin-bottom:16px;opacity:.9}
 .stage .sound-preview h3{font-size:20px;margin:2px 0 8px}
 .stage .sound-preview p{font-size:14px;color:var(--mist);margin:0 0 14px;line-height:1.8}
 .stage .sound-preview audio{width:100%;height:42px;accent-color:var(--brass)}
-.stage .scene-player{width:100%;max-width:240px;margin-top:18px}
-.stage .scene-video{width:100%;max-height:464px;aspect-ratio:9/16;object-fit:cover;border-radius:18px;background:var(--ink-3);border:1px solid var(--hairline)}
-.stage .scene-play{width:100%;margin-top:10px;padding:12px 16px;border:1px solid var(--brass);border-radius:999px;background:var(--brass);color:var(--ink);font:600 14px/1.3 "Noto Sans TC",sans-serif;cursor:pointer}
-@media(max-width:600px){.stage .sound-preview{grid-template-columns:1fr;gap:14px;padding:18px}.stage .sound-preview img{width:100%;height:120px}.stage .scene-player{width:min(100%,240px);max-width:none}}
+.stage .sound-duration{font-size:12px;color:var(--mist);margin-top:8px}
+.stage .scene-player{position:relative;width:100%;max-width:212px}
+.stage .scene-label{position:absolute;top:12px;left:12px;z-index:1;padding:4px 9px;border-radius:99px;background:rgba(248,245,238,.92);font-size:11px;letter-spacing:.04em;color:var(--paper)}
+.stage .scene-video{display:block;width:100%;max-height:376px;aspect-ratio:9/16;object-fit:cover;border-radius:16px;background:var(--ink-3);border:1px solid var(--hairline)}
+@media(max-width:600px){.stage .sound-preview{grid-template-columns:1fr;gap:24px;padding:20px}.stage .sound-wave{width:76px;height:28px;margin-bottom:12px}.stage .scene-player{width:min(100%,210px);max-width:none;justify-self:center}}
 </style>
 <script type="application/ld+json">
 {
@@ -224,22 +225,23 @@
           </div>
       </div>
       <div class="sound-preview">
-        <img src="assets/media/bowl-sample-waveform.svg" alt="" aria-hidden="true">
-        <div>
+        <div class="sound-copy">
+          <img class="sound-wave" src="assets/media/bowl-sample-waveform.svg" alt="" aria-hidden="true">
           <div class="eyebrow">試聽一小段</div>
           <h3>從敲擊聲開始</h3>
           <p>如果你願意，可以先聽一小段缽聲。錄音僅供參考，現場感受會不同。</p>
-          <audio controls preload="none" aria-label="播放頌缽聲音試聽片段">
+          <audio controls preload="metadata" aria-label="播放頌缽聲音試聽片段">
             <source src="assets/media/bowl-sample-20261003.mp3" type="audio/mpeg">
             你的瀏覽器目前無法播放這段音訊。
           </audio>
-          <div class="scene-player">
-            <video id="brandSceneVideo" class="scene-video" controls playsinline preload="none" poster="assets/media/brand-visual-poster.jpg" aria-label="配上頌缽聲音的品牌氛圍影片">
-              <source src="assets/media/brand-visual-with-bowl-audio-20261003.mp4" type="video/mp4">
-              你的瀏覽器目前無法播放這段影片。
-            </video>
-            <button class="scene-play" type="button" onclick="document.getElementById('brandSceneVideo').play()">▶ 播放 8 秒影片＋缽音</button>
-          </div>
+          <div class="sound-duration">30 秒聲音試聽</div>
+        </div>
+        <div class="scene-player">
+          <span class="scene-label">品牌影像</span>
+          <video id="brandSceneVideo" class="scene-video" controls playsinline preload="metadata" poster="assets/media/brand-visual-poster.jpg" aria-label="配上頌缽聲音的品牌氛圍短片">
+            <source src="assets/media/brand-visual-with-bowl-audio-20261003.mp4" type="video/mp4">
+            你的瀏覽器目前無法播放這段影片。
+          </video>
         </div>
       </div>
     </div></section>
