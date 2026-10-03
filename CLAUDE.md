@@ -35,7 +35,7 @@
 | 路徑 | 說明 |
 |---|---|
 | `index.html` | 公開首頁。**由 `editor.html` 產生**，不要只改這裡 |
-| `editor.html` | Ron 專用的視覺化編輯器 + 一鍵發布工具 |
+| `editor.html` | Ron 專用的視覺化編輯器，可預覽並下載首頁檔案；不會直接發布 |
 | `member/` | 會員系統 SPA（`index.html` + `member.js` + `member.css`）|
 | `privacy.html` | 隱私權政策 |
 | `line-add.html` | 電腦版 LINE 加好友的備援頁 |
@@ -58,12 +58,14 @@ python3 tools/sync-version.py
 ### 改首頁樣式或內容 → 兩個地方都要改
 
 `editor.html` 裡的 `.stage` CSS 與 `renderPreview()` 範本，決定的是
-**「未來重新發布時」**產生的 HTML。改了它**不會**動到目前線上的 `index.html`。
+產生並下載的 HTML。改了它**不會**動到目前線上的 `index.html`。
 
 所以：
-- 只改 `index.html` → Ron 下次用編輯器發布時會被蓋掉
+- 只改 `index.html` → Ron 下次從編輯器產生首頁檔案時，新的輸出可能蓋掉這些修改
 - 只改 `editor.html` → 現在線上看不到變化
 - **兩個都要改**
+
+`editor.html` 不會直接寫入 GitHub 或發布網站。它只提供首頁預覽與 `index.html` 下載；線上更新仍須透過專案維護流程完成。
 
 （隱私權政策頁尾連結就是這樣處理的：`index.html`、`member/index.html`、
 `editor.html` 的輸出範本，三處都加。）

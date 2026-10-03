@@ -258,7 +258,7 @@ input.f:focus, textarea.f:focus{ outline:2px solid var(--ui-accent-soft); border
 
 <script>
 (function editorAccessGate(){
-  // 這個工具能直接發布內容到正式網站，加一道密碼門檻避免被公開網址誤觸或亂試。
+  // 這個工具可編輯並產生首頁檔案，加一道密碼門檻避免公開網址遭誤用。
   const STORED_HASH = "7abcbcc0236eb18def7ee9c357f08b291f1db739ea526a956eb308df581ead40";
   async function sha256Hex(str){
     const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(str));
@@ -522,9 +522,8 @@ function buildForm(){
   const top = document.createElement("div"); top.className="topbar";
   top.innerHTML = `
     <h1>缽日網站編輯器</h1>
-    <p>左邊改內容，右邊即時看預覽。改完可以直接按「一鍵發布到網站」更新線上版本，或按「下載網站檔案」手動備存。</p>
+    <p>左邊改內容，右邊即時看預覽。完成後可下載首頁檔案，再透過專案維護流程更新網站。</p>
     <div class="btn-row">
-      <button class="tool primary" id="publishSite" style="background:#2ea44f;border-color:#2ea44f;">一鍵發布到網站</button>
       <button class="tool" id="exportSite">下載網站檔案 (index.html)</button>
       <button class="tool" id="saveDraft">下載草稿 (可下次繼續編輯)</button>
       <button class="tool" id="loadDraft">載入草稿</button>
@@ -534,10 +533,10 @@ function buildForm(){
   panel.appendChild(top);
 
   const howto = el(`<div class="howto">
-    <b>發布步驟：</b>
+    <b>更新網站：</b>
     <ol>
-      <li>直接點擊「一鍵發布到網站」並輸入您的 GitHub Token 即刻更新。</li>
-      <li>或按「下載網站檔案」下載 index.html 檔案手動上傳備存。</li>
+      <li>按「下載網站檔案」取得產生的 index.html；此編輯器不會直接更新線上網站。</li>
+      <li>確認檔案內容後，透過專案的 GitHub Pages 維護流程更新網站。</li>
     </ol>
   </div>`);
   panel.appendChild(howto);
@@ -677,7 +676,6 @@ function buildForm(){
     b.appendChild(fieldInput("網頁標題", state.pageTitle, v=>state.pageTitle=v));
   }));
 
-  document.getElementById("publishSite").onclick = publishSite;
   document.getElementById("exportSite").onclick = exportSite;
   document.getElementById("saveDraft").onclick = saveDraft;
   document.getElementById("loadDraft").onclick = ()=> document.getElementById("draftFile").click();
@@ -978,77 +976,6 @@ function download(filename, content, mime){
   a.href = URL.createObjectURL(blob);
   a.download = filename;
   a.click();
-}
-
-async function publishSite(){
-  const token = prompt("請輸入您的 GitHub Personal Access Token (PAT)：\n(每次發布需重新輸入以確保安全性，此 Token 不會儲存在網頁中)");
-  if(!token) return;
-
-  const btn = document.getElementById("publishSite");
-  const oldText = btn.textContent;
-  btn.disabled = true;
-  btn.textContent = "正在發布...";
-  btn.style.opacity = "0.7";
-
-  const owner = "ronwang82-singingbowl";
-  const repo = "adayofsingingbowl";
-  const path = "index.html";
-  const branch = "main";
-
-  try {
-    // 1. Get the current file SHA
-    const getUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${path}?ref=${branch}`;
-    const getRes = await fetch(getUrl, {
-      headers: {
-        "Authorization": `token ${token}`,
-        "Accept": "application/vnd.github+json"
-      }
-    });
-
-    if (!getRes.ok) {
-      const errData = await getRes.json();
-      throw new Error(`無法獲取原檔案資訊: ${errData.message || getRes.statusText}`);
-    }
-
-    const fileData = await getRes.json();
-    const sha = fileData.sha;
-
-    // 2. Generate new HTML content
-    const newHTML = buildFullSiteHTML();
-
-    // 3. Base64 encode the content (handling UTF-8)
-    const base64Content = btoa(unescape(encodeURIComponent(newHTML)));
-
-    // 4. Update file via PUT
-    const putUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
-    const putRes = await fetch(putUrl, {
-      method: "PUT",
-      headers: {
-        "Authorization": `token ${token}`,
-        "Accept": "application/vnd.github+json",
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        message: "Update index.html via web editor",
-        content: base64Content,
-        sha: sha,
-        branch: branch
-      })
-    });
-
-    if (!putRes.ok) {
-      const errData = await putRes.json();
-      throw new Error(`上傳檔案失敗: ${errData.message || putRes.statusText}`);
-    }
-
-    alert("✅ 發布成功！\nGitHub Pages 大約需要 1 分鐘進行部署，請稍候重新整理網頁查看最新內容。");
-  } catch (error) {
-    alert(`❌ 發布失敗！\n錯誤原因：${error.message}\n請確認您的 Token 是否正確，且擁有 "repo" 權限。`);
-  } finally {
-    btn.disabled = false;
-    btn.textContent = oldText;
-    btn.style.opacity = "1";
-  }
 }
 
 function exportSite(){
