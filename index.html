@@ -422,7 +422,7 @@
       </div>
       <p class="clue-fallback">抽卡畫面沒有顯示？<a href="https://ronwang82-singingbowl.github.io/cards-life-clue/" target="_blank" rel="noopener">在新頁面開啟</a></p>
       <div class="clue-community">
-        <h3>想更了解最近的內在狀態？</h3>
+        <h3><span class="title-line">想更了解</span><span class="title-line">最近的內在狀態？</span></h3>
         <p>如果這張卡讓你想繼續往裡面看，歡迎加入「魔法師團－人生自我調頻」，一起練習覺察，也讓對話有個地方開始。</p>
         <a class="cta-btn" id="lifeClueCommunityLink" href="https://line.me/ti/g2/5CRjmJQrMo7e_Im6XJd0uHaJtXXQLQgujii-vw?utm_source=invitation&amp;utm_medium=link_copy&amp;utm_campaign=default" target="_blank" rel="noopener">加入社群，繼續認識自己</a>
       </div>
@@ -583,7 +583,7 @@
     if (!doc.getElementById('boriEmbedType')) {
       var embedType = doc.createElement('style');
       embedType.id = 'boriEmbedType';
-      embedType.textContent = '@media(max-width:340px){h1{font-size:clamp(27px,9vw,30px)}.card-title{font-size:26px}}';
+      embedType.textContent = '@media(max-width:340px){.app{padding-left:14px;padding-right:14px}h1{font-size:25px;text-wrap:balance}.intro{font-size:14px;text-wrap:balance}.card-title{font-size:25px;text-wrap:balance}}';
       doc.head.appendChild(embedType);
     }
     var app = doc.querySelector('.app');
