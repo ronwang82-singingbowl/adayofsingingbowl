@@ -137,8 +137,44 @@
 .stage .scene-video{display:block;width:100%;max-height:376px;aspect-ratio:9/16;object-fit:cover;border-radius:16px;background:var(--ink-3);border:1px solid var(--hairline)}
 @media(max-width:600px){.stage .sound-preview{grid-template-columns:1fr;gap:24px;padding:20px}.stage .scene-player{width:min(100%,210px);max-width:none;justify-self:center}}
 
-.stage .hero{min-height:auto;justify-content:initial;text-align:left;padding:90px 32px 78px}.stage .hero-inner{width:min(1120px,100%);display:grid;grid-template-columns:minmax(0,1fr) minmax(320px,.9fr);gap:clamp(36px,7vw,92px);align-items:center}.stage .hero-copy{max-width:520px}.stage .hero h1{font-size:clamp(36px,5vw,64px)}.stage .hero-desc{margin-left:0;margin-right:0}.stage .hero-visual,.stage .integration-visual{position:relative;margin:0;overflow:hidden;border-radius:24px;background:var(--ink-3);border:1px solid var(--hairline)}.stage .hero-visual img{display:block;width:100%;aspect-ratio:4/3;object-fit:cover}.stage .hero-visual figcaption,.stage .integration-visual figcaption{position:absolute;right:14px;bottom:14px;padding:5px 10px;border-radius:99px;background:rgba(248,245,238,.94);color:var(--paper);font-size:11px;letter-spacing:.04em}.stage .integration-grid{margin-top:32px;display:grid;grid-template-columns:minmax(0,1fr) minmax(280px,.95fr);gap:clamp(28px,5vw,64px);align-items:center}.stage .integration-copy p{color:var(--mist);font-size:15px;line-height:1.95;margin:0 0 16px}.stage .integration-visual img{width:100%;display:block;aspect-ratio:4/3;object-fit:cover}.stage .text-link{display:inline-flex;gap:10px;margin-top:10px;color:var(--brass);text-decoration:none;border-bottom:1px solid var(--brass-dim);padding-bottom:4px;font-size:14px}
-@media(max-width:700px){.stage .hero{padding:76px 24px 60px}.stage .hero-inner,.stage .integration-grid{grid-template-columns:1fr;gap:28px}.stage .hero-visual{grid-row:2}.stage .hero h1{font-size:clamp(36px,10vw,52px)}.stage .hero-visual img,.stage .integration-visual img{aspect-ratio:4/3}.stage .integration-grid{margin-top:24px}}
+.stage .hero{position:relative;isolation:isolate;min-height:max(700px,90svh);padding:110px 28px 100px;display:flex;align-items:center;justify-content:flex-start;text-align:left;overflow:hidden;background:#293b31}
+.stage .hero-inner{position:relative;z-index:1;width:min(1120px,100%);margin:0 auto;display:block}
+.stage .hero-copy{max-width:670px}
+.stage .hero-visual,.stage .integration-visual{position:absolute;inset:0;margin:0;border:0;border-radius:0;overflow:hidden;background:#293b31}
+.stage .hero-visual picture,.stage .integration-visual picture{display:block;width:100%;height:100%}
+.stage .hero-visual img,.stage .integration-visual img{display:block;width:100%;height:100%;object-fit:cover}
+.stage .hero-visual img{object-position:center 55%}
+.stage .hero-visual::after,.stage .integration-visual::after{content:"";position:absolute;inset:0;z-index:1;pointer-events:none}
+.stage .hero-visual::after{background:linear-gradient(90deg,rgba(20,38,30,.86) 0%,rgba(20,38,30,.76) 35%,rgba(20,38,30,.38) 66%,rgba(20,38,30,.10) 100%)}
+.stage .hero-visual figcaption,.stage .integration-visual figcaption{position:absolute;z-index:2;right:24px;bottom:20px;padding:5px 10px;border-radius:99px;background:rgba(17,32,26,.65);color:#f8f5ee;font-size:11px;letter-spacing:.04em}
+.stage .hero h1{font-size:clamp(42px,5.5vw,70px);line-height:1.18;color:#fff;letter-spacing:.025em}
+.stage .hero .eyebrow,.stage .experience-feature .eyebrow{color:#e8d5a6}
+.stage .hero .eyebrow::before,.stage .experience-feature .eyebrow::before{background:#e8d5a6}
+.stage .hero-sub{color:#f0dfb7;font-size:clamp(17px,2vw,21px)}
+.stage .hero-desc{margin-left:0;margin-right:0;max-width:560px;color:#f8f5ee;font-size:16px}
+.stage .hero-reassure{color:#e1e4d9}
+.stage .hero .cta-btn{background:#f4e9cc;color:#2b4132}
+.stage .experience-feature{position:relative;isolation:isolate;min-height:590px;padding:100px 28px;display:flex;align-items:center;overflow:hidden;background:#293b31}
+.stage .experience-feature .wrap{position:relative;z-index:1;width:min(1120px,100%);max-width:1120px;margin:0 auto;padding:0}
+.stage .experience-copy{max-width:560px}
+.stage .experience-copy h2{font-size:clamp(28px,3.4vw,42px);line-height:1.45;color:#fff}
+.stage .experience-copy p{color:#f8f5ee;font-size:16px;line-height:1.95;margin:18px 0 0}
+.stage .integration-visual img{object-position:center center}
+.stage .integration-visual::after{background:linear-gradient(90deg,rgba(20,38,30,.83) 0%,rgba(20,38,30,.72) 33%,rgba(20,38,30,.28) 66%,rgba(20,38,30,.05) 100%)}
+.stage .experience-feature .text-link{display:inline-flex;gap:10px;margin-top:28px;color:#f5e4b8;text-decoration:none;border-bottom:1px solid #e8d5a6;padding-bottom:4px;font-size:14px}
+@media(max-width:700px){
+  .stage .hero{min-height:720px;min-height:90svh;padding:92px 24px 76px}
+  .stage .hero-inner{width:100%}
+  .stage .hero h1{font-size:clamp(37px,10vw,54px)}
+  .stage .hero-visual img{object-position:67% center}
+  .stage .hero-visual::after{background:linear-gradient(180deg,rgba(20,38,30,.74) 0%,rgba(20,38,30,.69) 48%,rgba(20,38,30,.62) 100%)}
+  .stage .hero-visual figcaption,.stage .integration-visual figcaption{right:14px;bottom:14px}
+  .stage .experience-feature{min-height:680px;padding:84px 24px}
+  .stage .experience-feature .wrap{width:100%}
+  .stage .experience-copy h2{font-size:clamp(29px,7vw,38px)}
+  .stage .integration-visual img{object-position:57% center}
+  .stage .integration-visual::after{background:linear-gradient(180deg,rgba(20,38,30,.78) 0%,rgba(20,38,30,.72) 58%,rgba(20,38,30,.62) 100%)}
+}
 </style>
 <script type="application/ld+json">
 {
@@ -177,6 +213,13 @@
       </svg>
     </div>
     <section class="hero">
+      <figure class="hero-visual">
+        <picture>
+          <source srcset="assets/media/hero-bowl-atmosphere-20261003.webp" type="image/webp">
+          <img src="assets/media/hero-bowl-atmosphere-20261003.jpg" alt="頌缽靜置於柔和日光中的氛圍示意" fetchpriority="high" decoding="async">
+        </picture>
+        <figcaption>AI 氛圍示意</figcaption>
+      </figure>
       <div class="hero-inner">
         <div class="hero-copy">
           <div class="eyebrow">頌缽 · 對話 · 覺察</div>
@@ -186,10 +229,6 @@
           <a class="cta-btn" id="heroLineBtn" href="https://lin.ee/5FUzEjg" target="_blank" rel="noopener">加入 LINE，聊聊再說</a>
           <div class="hero-reassure">先聊聊你的狀態，再一起確認體驗是否適合你</div>
         </div>
-        <figure class="hero-visual">
-          <img src="assets/media/hero-bowl-atmosphere-20261003.jpg" alt="頌缽靜置於柔和日光中的氛圍示意">
-          <figcaption>氛圍示意</figcaption>
-        </figure>
       </div>
     </section>
 
@@ -215,20 +254,26 @@
       <p class="body-text">不是要幫你解決問題，而是想陪你看見真實透過聲音的振動與一場真誠的對話，讓堵住的地方重新流動，從迷茫裡看見方向，找到願意踏出的下一步</p>
     </div></section>
 
-    <section class="tight"><div class="wrap">
-      <div class="eyebrow">一套整合體驗</div>
-      <h2 style="font-size:clamp(24px,4vw,32px);">頌缽加深度對話，陪你找回自己的節奏</h2>
-      <div class="integration-grid">
-        <div class="integration-copy">
-          <p>不是把頌缽和聊天分開選，而是先讓聲音陪身體慢下來，再透過對話梳理心裡真正卡住的地方。</p>
+    <section class="experience-feature">
+      <figure class="integration-visual">
+        <picture>
+          <source srcset="assets/media/integrated-experience-scene-20261003.webp" type="image/webp">
+          <img src="assets/media/integrated-experience-scene-20261003.jpg" alt="頌缽與深度對話的情境示意：兩人坐在安靜空間對談" loading="lazy" decoding="async">
+        </picture>
+        <figcaption>AI 情境示意</figcaption>
+      </figure>
+      <div class="wrap experience-content">
+        <div class="experience-copy">
+          <div class="eyebrow">一套整合體驗</div>
+          <h2>頌缽加深度對話，陪你找回自己的節奏</h2>
+          <p>先讓頌缽的聲音陪身體慢下來，再透過深度對話，梳理心裡真正卡住的地方。</p>
           <p>從感受出發，一起看見你此刻的需要，帶著一個更清楚、願意踏出的下一步離開。</p>
           <a class="text-link" href="#experience-process">看看體驗怎麼進行 <span aria-hidden="true">↓</span></a>
         </div>
-        <figure class="integration-visual">
-          <img src="assets/media/integrated-experience-scene-20261003.jpg" alt="兩人在頌缽旁進行深度對話的情境示意">
-          <figcaption>情境示意</figcaption>
-        </figure>
       </div>
+    </section>
+
+    <section class="tight"><div class="wrap">
       <div class="sound-preview">
         <div class="sound-copy">
           <div class="eyebrow">試聽一小段</div>
