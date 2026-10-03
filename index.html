@@ -133,7 +133,9 @@
 .stage .about-role { font-family: "JetBrains Mono", monospace; font-size: 11px; color: var(--jade); margin-top: 6px; }
 .stage .about-bio { color: var(--mist); font-size: 14.5px; margin-top: 12px; line-height: 1.85; }
 .stage .about-meta { margin-top: 12px; font-size: 12.5px; color: var(--mist); }
-.stage .quote-section { text-align: center; padding: 100px 0px; }
+.stage .about-section, .stage .quote-section { background: #E9EEE6; }
+.stage .about-section { padding-top: 80px; padding-bottom: 24px; }
+.stage .quote-section { text-align: center; padding: 52px 0px 80px; }
 .stage .quote-mark { font-family: "Noto Serif TC", serif; font-size: 56px; color: var(--brass-dim); line-height: 1; }
 .stage blockquote { margin: 8px auto 0px; max-width: 540px; font-family: "Noto Serif TC", serif; font-size: clamp(18px, 3vw, 25px); line-height: 1.7; }
 .stage .quote-by { margin-top: 20px; font-family: "JetBrains Mono", monospace; font-size: 11px; color: var(--jade); text-transform: uppercase; }
@@ -141,9 +143,15 @@
 .stage .faq-item:last-child { border-bottom: 1px solid var(--hairline); }
 .stage .faq-q { font-size: 15.5px; font-weight: 500; display: flex; justify-content: space-between; }
 .stage .faq-a { color: var(--mist); font-size: 14px; margin-top: 10px; line-height: 1.8; }
-.stage .final { text-align: center; background: transparent; border-top: 1px solid var(--hairline); padding: 100px 0px 80px; }
+.stage .final { text-align: center; background: #4E5E48; border-top: 0; padding: 100px 0px 80px; }
 .stage .final h2 { font-size: clamp(26px, 5vw, 38px); line-height: 1.4; white-space: pre-line; }
+.stage .final h2 { color: #F8F5EE; }
+.stage .final .eyebrow { color: #E8D5A6; }
+.stage .final .eyebrow::before { background: #E8D5A6; }
+.stage .final .body-text { color: #E2E8DD; }
 .stage .line-card { margin: 40px auto 0px; max-width: 360px; background: var(--ink-3); border: 1px solid var(--hairline); border-radius: 18px; padding: 32px 26px 28px; display: flex; flex-direction: column; align-items: center; text-align: center; }
+.stage .final .line-card { background: #F8F5EE; border-color: #D9D2C4; }
+.stage .final .line-name { color: #4E5E48; }
 .stage .clue-section { padding: 80px 0 96px; background: transparent; }
 .stage .clue-section .wrap { max-width: 760px; }
 .stage .clue-heading { max-width: 560px; margin: 0 auto 32px; text-align: center; }
@@ -168,7 +176,7 @@
 .stage .qr-wrap { margin: 22px auto 0px; width: 203px; height: 203px; background: var(--paper); border-radius: 12px; padding: 10px; display: flex; align-items: center; justify-content: center; }
 .stage .qr-wrap img { width: 100%; height: 100%; object-fit: contain; }
 .stage .qr-caption { font-family: "JetBrains Mono", monospace; font-size: 10.5px; color: var(--mist); margin-top: 12px; }
-.stage footer { text-align: center; padding: 34px 28px 44px; color: var(--mist); font-size: 12px; }
+.stage footer { text-align: center; padding: 34px 28px 44px; color: var(--mist); font-size: 12px; background: var(--ink); }
 .stage .foot-links { margin-bottom: 12px; display: flex; gap: 16px; justify-content: center; font-size: 12.5px; }
 .stage, .stage *, .stage ::before, .stage ::after { box-sizing: border-box; }
 
@@ -434,7 +442,7 @@
       </div>
     </div></section>
 
-    <section class="tight"><div class="wrap">
+    <section class="tight about-section"><div class="wrap">
       <div class="eyebrow">關於音療師</div>
       <h2 style="font-size:clamp(24px,4vw,32px);">你的聲音嚮導</h2>
       <div class="about-grid">
