@@ -1,0 +1,12 @@
+const {test}=require('node:test');const assert=require('node:assert/strict');
+const C=require('../member/companion-core.js');
+const base={memberKey:'uid-a',memberName:'測試甲',date:'2026-11-10',time:'14:00',service:'頌缽體驗',plan:'',status:'已完成',before:'',after:'',feedback:'覺得放鬆',tags:'放鬆，放鬆、被理解',followDate:'2026-11-09',followNote:'',followDone:false,archived:false};
+test('Taipei day crosses UTC midnight',()=>assert.equal(C.today(new Date('2026-11-09T17:00:00Z')),'2026-11-10'));
+test('dates and times reject impossible input',()=>{assert.equal(C.validDate('2025-02-29'),false);assert.equal(C.validDate('2024-02-29'),true);assert.throws(()=>C.draft({...base,time:'24:01'}));assert.throws(()=>C.draft({...base,date:'2026-02-30'}));});
+test('custom service and quarterly plan',()=>assert.equal(C.draft({...base,service:'其他陪伴',plan:'第一季'}).service,'其他陪伴'));
+test('blank service and oversized notes rejected',()=>{assert.throws(()=>C.draft({...base,service:' '}));assert.throws(()=>C.draft({...base,before:'a'.repeat(10001)}));});
+test('duplicate legacy ID cannot silently link wrong member',()=>{const list=C.members({a:{id:1,name:'甲'},b:{id:1,name:'乙'}});assert.throws(()=>C.resolveMember(list,{userId:1}));assert.equal(C.resolveMember(list,{userId:1,firebaseUid:'b'}).key,'b');});
+test('tags counted once per record, excludes archived or empty feedback',()=>assert.deepEqual(new Map(C.tagCounts([base,{...base,archived:true},{...base,feedback:''}])),new Map([['放鬆',1],['被理解',1]])));
+test('follow queue excludes done, cancelled and archived',()=>{assert.equal(C.filter([base,{...base,followDone:true},{...base,status:'已取消'},{...base,archived:true}],{mode:'follow'}).length,1);});
+test('member and date filters preserve chronology',()=>{assert.deepEqual(C.filter([base,{...base,memberKey:'uid-b'},{...base,date:'2026-11-08'}],{memberKey:'uid-a'}).map(r=>r.date),['2026-11-10','2026-11-08']);assert.equal(C.filter([base],{date:'2026-11-11'}).length,0);});
+test('stale revision aborts; archive is reversible',()=>{assert.equal(C.nextRevision({revision:2},1,base),undefined);const archived=C.nextRevision({revision:2},2,{...base,archived:true});assert.equal(archived.revision,3);assert.equal(C.nextRevision(archived,3,base).archived,false);});

@@ -30,7 +30,7 @@ ROOT = Path(__file__).resolve().parent.parent
 INDEX = ROOT / "member" / "index.html"
 
 # 要掛版號的靜態檔案
-ASSETS = ["member.js", "member.css"]
+ASSETS = ["member.js", "member.css", "companion-core.js", "companion.js", "companion.css"]
 
 
 def short_hash(path: Path) -> str:

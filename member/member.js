@@ -936,9 +936,11 @@ function onUserLoginSuccess() {
 
   // 註冊該用戶專屬的即時監聽器
   startRealtimeSync();
+  window.BoriCompanion?.start();
 }
 
 function onUserLogoutSuccess() {
+  window.BoriCompanion?.stop();
   currentUser = null;
   localStorage.removeItem("singbowl_current_user_id");
   localStorage.removeItem("singbowl_debug_banner");
@@ -1653,6 +1655,7 @@ let adminSlotSelectedDateStr = null;
 let adminSelectedSlotType = "1on1"; // 目前在「開放時段」表單中選擇的類型：1on1 或 group
 
 function renderAdminDashboard(paneId) {
+  if (paneId === "companion" && (!auth.currentUser || currentUser?.role !== "admin")) return;
   activeAdminPane = paneId;
   
   // Toggle sidebar items active
@@ -1662,6 +1665,7 @@ function renderAdminDashboard(paneId) {
   
   const paneToMenuMap = {
     "overview": "btnAdminMenuOverview",
+    "companion": "btnAdminMenuCompanion",
     "members": "btnAdminMenuMembers",
     "bookings": "btnAdminMenuBookings",
     "schedule": "btnAdminMenuSchedule",
@@ -1678,6 +1682,8 @@ function renderAdminDashboard(paneId) {
   });
   document.getElementById(`pane-admin-${paneId}`).classList.add("active");
   
+  if (paneId === "companion") window.BoriCompanion?.render();
+
   // 1. Calculate General Stats
   const totalMembers = users.filter(u => u.role !== "admin").length;
   const pendingBookings = bookings.filter(b => b.status === "待確認").length;
@@ -1819,6 +1825,7 @@ function renderAdminMemberList() {
         </div>
       ` : `
         <div class="action-btn-group">
+          <button class="table-action-btn secondary" onclick="BoriCompanion.openForMember(${u.id})">陪伴歷程</button>
           <button class="table-action-btn success" onclick="openAdjustPoints(${u.id})">調整次數</button>
           <button class="table-action-btn secondary" onclick="openEditMember(${u.id})">編輯資料</button>
           <button class="table-action-btn danger" onclick="deleteMember(${u.id})">刪除會員</button>
@@ -2214,6 +2221,12 @@ function renderAdminBookingList() {
         <td><span class="status-badge ${statusClass}">${b.status}</span></td>
         <td>${actions}</td>
       `;
+      const journalButton = document.createElement("button");
+      journalButton.type = "button";
+      journalButton.className = "table-action-btn secondary";
+      journalButton.textContent = "陪伴紀錄";
+      journalButton.addEventListener("click", () => window.BoriCompanion?.openForBooking(b.id));
+      row.lastElementChild.appendChild(journalButton);
       container.appendChild(row);
     });
   }

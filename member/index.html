@@ -25,6 +25,7 @@
   
   <!-- LINE LIFF SDK -->
   <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<link rel="stylesheet" href="companion.css?v=a2b34062">
 </head>
 <body>
   <script>
@@ -657,6 +658,7 @@
             <h2 class="sidebar-title">管理員後台</h2>
             <div class="sidebar-menu">
               <button class="sidebar-item active" id="btnAdminMenuOverview"><i data-lucide="layout-dashboard"></i> 數據總覽</button>
+              <button class="sidebar-item" id="btnAdminMenuCompanion"><i data-lucide="notebook-pen"></i> 陪伴紀錄</button>
               <button class="sidebar-item" id="btnAdminMenuMembers"><i data-lucide="users-2"></i> 會員管理</button>
               <button class="sidebar-item" id="btnAdminMenuBookings"><i data-lucide="calendar-days"></i> 預約審核</button>
               <button class="sidebar-item" id="btnAdminMenuSchedule"><i data-lucide="calendar-clock"></i> 預約排程</button>
@@ -671,6 +673,17 @@
           <!-- Right Content Area -->
           <div class="admin-main-pane">
             
+                        <section class="admin-pane-section companion" id="pane-admin-companion" aria-labelledby="companionTitle">
+              <div class="companion-heading"><div><small>BORI · THE COMPANION JOURNAL</small><h2 id="companionTitle">每一次陪伴，都被好好記得。</h2><p>從一場對話，慢慢看見下一步。</p></div><button type="button" class="cta-btn primary-btn" id="companionNew" disabled>＋ 新增紀錄</button></div>
+              <div class="companion-status"><span id="companionMessage" role="status">登入管理員後，可查看私人陪伴紀錄</span><small id="companionConnection"></small></div>
+              <div id="companionSetup" class="companion-setup" hidden><h3>啟用你的私人紀錄空間</h3><p>請先由網站維護者完成 Firebase 私人紀錄規則與管理員授權。未完成前不會儲存筆記，也不會退回只存在此裝置的儲存方式。</p><p>目前登入帳號的 Firebase UID：<code id="companionUid"></code></p><button type="button" class="table-action-btn secondary" id="companionRetry">重新檢查權限</button></div>
+              <div class="companion-tabs" aria-label="紀錄檢視"><button type="button" class="active" data-companion-mode="history" aria-pressed="true">個案歷程</button><button type="button" data-companion-mode="follow" aria-pressed="false">追蹤提醒 <span id="companionDueCount">0</span></button><button type="button" data-companion-mode="feedback" aria-pressed="false">回饋札記</button><button type="button" data-companion-mode="archive" aria-pressed="false">已封存</button></div>
+              <div class="companion-filters"><label>個案<select id="companionMember"><option value="">所有個案</option></select></label><label>服務日期<input id="companionDate" type="date"></label><label>搜尋<input id="companionQuery" type="search" placeholder="姓名、服務、方案或回饋…"></label><button type="button" class="table-action-btn secondary" id="companionReset">清除篩選</button></div>
+              <p class="companion-hint">追蹤提醒顯示於站內，依預定關心日期排序；數字為今天與已逾期的待關心事項，不會自動發送 LINE。</p>
+              <div id="companionTags" class="companion-tags" aria-label="常見回饋標籤"></div><div id="companionList"></div>
+              <div class="companion-footer"><span>內部筆記只供獲授權的管理員使用，會員端不顯示</span><button type="button" class="table-action-btn secondary" id="companionExport" disabled>匯出私人紀錄備份</button></div>
+            </section>
+
             <!-- 7.1 Overview Panel -->
             <div class="admin-pane-section active" id="pane-admin-overview">
               <div class="admin-stats-row">
@@ -1521,6 +1534,21 @@
     </footer>
   </div>
 
+    <dialog id="companionDialog" class="companion-dialog" aria-labelledby="companionDialogTitle">
+    <div class="companion-heading"><div><small>A MOMENT TO REMEMBER</small><h2 id="companionDialogTitle">留下這一次陪伴</h2></div><button type="button" id="companionClose" aria-label="關閉紀錄表單">✕</button></div>
+    <p id="companionBookingInfo" class="companion-hint"></p>
+    <form id="companionForm">
+      <div class="companion-form-grid"><label>個案 *<select name="memberKey" required></select></label><label>服務類型 *<input name="service" list="companionServiceOptions" maxlength="300" required><datalist id="companionServiceOptions"></datalist></label><label>服務日期 *<input type="date" name="date" required></label><label>時間（台灣）<input type="time" name="time"></label><label>陪伴方案／期別<input name="plan" maxlength="300" placeholder="例如：冬季深度陪伴・第 2 次"></label><label>本次陪伴進度<select name="status"><option>待開始</option><option>陪伴中</option><option>已完成</option><option>已取消</option></select></label></div>
+      <label>對談前｜此刻帶著什麼來？<textarea name="before" rows="3" maxlength="10000"></textarea></label>
+      <label>對談後｜新的看見與下一步<textarea name="after" rows="3" maxlength="10000"></textarea></label>
+      <label>頌缽／服務體驗回饋｜保留對方的原話<textarea name="feedback" rows="3" maxlength="10000"></textarea></label>
+      <label>感受標籤（以逗號分隔）<input name="tags" maxlength="300" placeholder="放鬆、被理解、思緒清晰"></label>
+      <div class="companion-form-grid"><label>預定關心日期<input type="date" name="followDate"></label><label>想關心的事<textarea name="followNote" rows="2" maxlength="10000"></textarea></label></div>
+      <label class="companion-checkbox"><input type="checkbox" name="followDone">已完成這次關心</label>
+      <p id="companionFormMessage" role="status" aria-live="polite"></p><div class="companion-footer"><span>只記下對陪伴有幫助的資訊</span><button type="submit" class="cta-btn primary-btn" id="companionSave" disabled>儲存紀錄</button></div>
+    </form>
+  </dialog>
+
   <!-- Firebase SDK (Compat Version for simple global initialization) -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
@@ -1530,7 +1558,9 @@
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 
   <!-- JavaScript -->
-<script src="member.js?v=a2c778f5"></script>
+<script src="member.js?v=c92b63c8"></script>
 
+<script src="companion-core.js?v=a289bf25"></script>
+<script src="companion.js?v=a37ff90a"></script>
 </body>
 </html>
