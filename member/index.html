@@ -25,7 +25,7 @@
   
   <!-- LINE LIFF SDK -->
   <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
-<link rel="stylesheet" href="companion.css?v=a2b34062">
+<link rel="stylesheet" href="companion.css?v=366e0876">
 </head>
 <body>
   <script>
@@ -1539,10 +1539,11 @@
     <p id="companionBookingInfo" class="companion-hint"></p>
     <form id="companionForm">
       <div class="companion-form-grid"><label>個案 *<select name="memberKey" required></select></label><label>服務類型 *<input name="service" list="companionServiceOptions" maxlength="300" required><datalist id="companionServiceOptions"></datalist></label><label>服務日期 *<input type="date" name="date" required></label><label>時間（台灣）<input type="time" name="time"></label><label>陪伴方案／期別<input name="plan" maxlength="300" placeholder="例如：冬季深度陪伴・第 2 次"></label><label>本次陪伴進度<select name="status"><option>待開始</option><option>陪伴中</option><option>已完成</option><option>已取消</option></select></label></div>
-      <label>對談前｜此刻帶著什麼來？<textarea name="before" rows="3" maxlength="10000"></textarea></label>
-      <label>對談後｜新的看見與下一步<textarea name="after" rows="3" maxlength="10000"></textarea></label>
+      <p class="companion-hint">常用重點可複選，也可以只寫補充。依對方實際描述記錄，沒有符合的選項也沒關係。</p>
+      <fieldset class="companion-choice-field"><legend>對談前｜此刻帶著什麼來？</legend><div class="companion-choices" id="companionBeforeChoices"></div><label>其他重點／自由補充<textarea name="before" rows="2" maxlength="10000" placeholder="例如：最近在考慮換工作，想梳理自己在意的事"></textarea></label></fieldset>
+      <fieldset class="companion-choice-field"><legend>對談後｜新的看見與下一步</legend><div class="companion-choices" id="companionAfterChoices"></div><label>新的看見／自由補充<textarea name="after" rows="2" maxlength="10000" placeholder="例如：想先留一個晚上給自己，再整理下一步"></textarea></label></fieldset>
       <label>頌缽／服務體驗回饋｜保留對方的原話<textarea name="feedback" rows="3" maxlength="10000"></textarea></label>
-      <label>感受標籤（以逗號分隔）<input name="tags" maxlength="300" placeholder="放鬆、被理解、思緒清晰"></label>
+      <fieldset class="companion-choice-field"><legend>感受標籤｜可複選</legend><div class="companion-choices" id="companionFeelingChoices"></div><label>其他感受（以逗號分隔）<input name="tags" maxlength="300" placeholder="例如：呼吸比較順、感到踏實"></label></fieldset>
       <div class="companion-form-grid"><label>預定關心日期<input type="date" name="followDate"></label><label>想關心的事<textarea name="followNote" rows="2" maxlength="10000"></textarea></label></div>
       <label class="companion-checkbox"><input type="checkbox" name="followDone">已完成這次關心</label>
       <p id="companionFormMessage" role="status" aria-live="polite"></p><div class="companion-footer"><span>只記下對陪伴有幫助的資訊</span><button type="submit" class="cta-btn primary-btn" id="companionSave" disabled>儲存紀錄</button></div>
@@ -1560,7 +1561,7 @@
   <!-- JavaScript -->
 <script src="member.js?v=c92b63c8"></script>
 
-<script src="companion-core.js?v=a289bf25"></script>
-<script src="companion.js?v=a37ff90a"></script>
+<script src="companion-core.js?v=294a83b5"></script>
+<script src="companion.js?v=fe7a913e"></script>
 </body>
 </html>

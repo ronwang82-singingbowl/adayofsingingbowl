@@ -31,3 +31,17 @@ test('UI: booking link, save, reopen, follow, feedback, archive/restore, logout 
 test('UI: rejected cloud save keeps typed notes and does not report success',async()=>{const x=setup();try{x.w.BoriCompanion.openForBooking(1);x.el('companionForm').elements.before.value='保留內容';x.setReject(true);await x.submit();assert.equal(x.el('companionForm').elements.before.value,'保留內容');assert.equal(x.el('companionDialog').open,true);assert.match(x.el('companionFormMessage').textContent,/拒絕儲存/);assert.deepEqual(x.store.companionRecords,{});}finally{x.dom.window.close();}});
 test('UI: missing grant disables creation and never loads private records',()=>{const x=setup({grant:false});try{assert.equal(x.el('companionSetup').hidden,false);assert.equal(x.el('companionNew').disabled,true);assert.equal(x.el('companionList').textContent,'');}finally{x.dom.window.close();}});
 test('UI: stale edit cannot overwrite newer saved content',async()=>{const x=setup();try{x.w.BoriCompanion.openForBooking(1);await x.submit();x.w.BoriCompanion.openForBooking(1);x.store.companionRecords['new-1'].revision=2;x.store.companionRecords['new-1'].after='另一裝置';x.el('companionForm').elements.after.value='舊視窗';await x.submit();assert.match(x.el('companionFormMessage').textContent,/較新版本/);assert.equal(x.store.companionRecords['new-1'].after,'另一裝置');}finally{x.dom.window.close();}});
+test('UI: multiselect, custom text and tags persist, reopen and deselect without losing notes',async()=>{const x=setup();try{
+ x.w.BoriCompanion.openForBooking(1);const f=x.el('companionForm');
+ const checkbox=(name,value)=>[...f.querySelectorAll('input[type="checkbox"]')].find(i=>i.name===name+'Choice'&&i.value===value);
+ assert.equal(f.querySelectorAll('.companion-choices input:checked').length,0);
+ checkbox('before','感到緊繃').click();checkbox('before','工作與方向').click();checkbox('after','仍有困惑').click();checkbox('tags','平靜').click();
+ f.elements.before.value='保留這段自己的話\n還有第二行';f.elements.after.value='下次想再聊';f.elements.tags.value='平靜、踏實、踏實';await x.submit();
+ const saved=x.store.companionRecords['new-1'];assert.deepEqual(x.w.BoriCompanionCore.splitNote(saved.before).selected.sort().join(','),['感到緊繃','工作與方向'].sort().join(','));assert.equal(saved.tags,'平靜、踏實');
+ assert.match(x.el('companionList').textContent,/仍有困惑/);assert.doesNotMatch(x.el('companionList').textContent,/【複選重點】/);
+ x.w.document.querySelector('[data-companion-mode="feedback"]').click();assert.match(x.el('companionTags').textContent,/平靜 · 1 次/);
+ x.w.BoriCompanion.openForBooking(1);assert.equal(checkbox('before','感到緊繃').checked,true);assert.equal(f.elements.before.value,'保留這段自己的話\n還有第二行');assert.equal(f.elements.tags.value,'踏實');
+ checkbox('before','感到緊繃').click();checkbox('tags','平靜').click();await x.submit();
+ const updated=x.store.companionRecords['new-1'];assert.doesNotMatch(updated.before,/感到緊繃/);assert.match(updated.before,/保留這段自己的話/);assert.equal(updated.tags,'踏實');
+ x.w.BoriCompanion.openForBooking(1);checkbox('before','工作與方向').click();await x.submit();assert.equal(x.store.companionRecords['new-1'].before,'保留這段自己的話\n還有第二行');
+}finally{x.dom.window.close();}});

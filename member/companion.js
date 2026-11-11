@@ -7,6 +7,20 @@
   let mode = 'history', memberKey = '', pending = null, editor = null, dirty = false, saving = false;
   const $ = id => document.getElementById(id);
   const escText = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const choiceContainers = {before:'companionBeforeChoices',after:'companionAfterChoices',tags:'companionFeelingChoices'};
+  function fillChoices(kind, selected) {
+    const container=$(choiceContainers[kind]);container.replaceChildren();
+    for(const value of new Set([...C.CHOICES[kind],...selected])) {
+      const label=document.createElement('label');label.className='companion-choice';
+      const input=document.createElement('input');input.type='checkbox';input.name=kind+'Choice';input.value=value;input.checked=selected.includes(value);
+      const caption=document.createElement('span');caption.textContent=value;label.append(input,caption);container.append(label);
+    }
+  }
+  function selectedChoices(kind) { return [...$(choiceContainers[kind]).querySelectorAll('input:checked')].map(input=>input.value); }
+  function noteHtml(value) {
+    const note=C.splitNote(value);
+    return (note.selected.length?'<div class="companion-note-chips">'+note.selected.map(s=>'<span>'+escText(s)+'</span>').join('')+'</div>':'') + (note.extra?'<p>'+escText(note.extra)+'</p>':note.selected.length?'':'<p>尚未記錄</p>');
+  }
   function message(text, error=false) { const el=$('companionMessage'); el.textContent=text; el.setAttribute('role',error?'alert':'status'); el.classList.toggle('is-error',error); }
   function detach(list) { list.splice(0).forEach(([ref,cb]) => ref.off('value',cb)); }
   function watch(ref, cb, list, onError) { ref.on('value',cb,onError); list.push([ref,cb]); }
@@ -60,7 +74,7 @@
     rows.forEach(r=>{
       const card=document.createElement('article');card.className='companion-card';
       const member=memberList.find(m=>m.key===r.memberKey);
-      card.innerHTML=`<div class="companion-card-head"><div><small>${escText(r.date)} ${escText(r.time)} ${r.bookingId?'・預約 #'+escText(r.bookingId):'・獨立服務紀錄'}</small><h3>${escText(member?.name||r.memberName)} <span>${escText(r.service)}</span></h3></div><span class="companion-badge">${escText(r.status)}</span></div>${r.plan?'<p class="companion-plan">陪伴方案：'+escText(r.plan)+'</p>':''}<div class="companion-notes">${[['對談前',r.before],['對談後與下一步',r.after],['體驗回饋',r.feedback]].map(([label,value])=>`<section><h4>${label}</h4><p>${escText(value||'尚未記錄')}</p></section>`).join('')}</div><p class="companion-tagline">${C.tags(r.tags).map(t=>'<span>'+escText(t)+'</span>').join('')}</p>${r.followDate?`<p class="companion-follow">${r.followDone?'✓ 已完成關心':r.followDate<=C.today()?'待關心':'預定關心'} · ${escText(r.followDate)}<br>${escText(r.followNote)}</p>`:''}<div class="companion-card-actions"></div>`;
+      card.innerHTML=`<div class="companion-card-head"><div><small>${escText(r.date)} ${escText(r.time)} ${r.bookingId?'・預約 #'+escText(r.bookingId):'・獨立服務紀錄'}</small><h3>${escText(member?.name||r.memberName)} <span>${escText(r.service)}</span></h3></div><span class="companion-badge">${escText(r.status)}</span></div>${r.plan?'<p class="companion-plan">陪伴方案：'+escText(r.plan)+'</p>':''}<div class="companion-notes">${[['對談前',r.before],['對談後與下一步',r.after],['體驗回饋',r.feedback]].map(([label,value])=>`<section><h4>${label}</h4>${label==='體驗回饋'?'<p>'+escText(value||'尚未記錄')+'</p>':noteHtml(value)}</section>`).join('')}</div><p class="companion-tagline">${C.tags(r.tags).map(t=>'<span>'+escText(t)+'</span>').join('')}</p>${r.followDate?`<p class="companion-follow">${r.followDone?'✓ 已完成關心':r.followDate<=C.today()?'待關心':'預定關心'} · ${escText(r.followDate)}<br>${escText(r.followNote)}</p>`:''}<div class="companion-card-actions"></div>`;
       const actions=card.querySelector('.companion-card-actions');
       function button(label,fn){const el=document.createElement('button');el.type='button';el.className='table-action-btn secondary';el.textContent=label;el.onclick=fn;actions.append(el);}
       button('查看／編輯',()=>edit(r));
@@ -80,7 +94,9 @@
     editor=initial;
     const sel=form.elements.memberKey;sel.replaceChildren(new Option('請選擇會員',''));memberList.forEach(m=>sel.add(new Option(m.name+' · #'+m.id,m.key)));
     if(initial.memberKey&&!memberList.some(m=>m.key===initial.memberKey))sel.add(new Option(initial.memberName+'（已移除會員）',initial.memberKey));
-    ['memberKey','date','time','service','plan','status','before','after','feedback','tags','followDate','followNote'].forEach(k=>form.elements[k].value=initial[k]||'');
+    ['memberKey','date','time','service','plan','status','feedback','followDate','followNote'].forEach(k=>form.elements[k].value=initial[k]||'');
+    for(const kind of ['before','after']) { const note=C.splitNote(initial[kind]);fillChoices(kind,note.selected);form.elements[kind].value=note.extra; }
+    const feelings=C.tags(initial.tags);fillChoices('tags',feelings.filter(tag=>C.CHOICES.tags.includes(tag)));form.elements.tags.value=feelings.filter(tag=>!C.CHOICES.tags.includes(tag)).join('、');
     form.elements.followDone.checked=initial.followDone;sel.disabled=!!record||!!booking;
     $('companionBookingInfo').textContent=initial.bookingId?'連結預約 #'+initial.bookingId+' · 個案紀錄進度不會更動預約狀態或扣點':'獨立服務紀錄・不會新增預約或扣點';
     $('companionFormMessage').textContent='';updateControls();$('companionDialog').showModal();sel.focus();
@@ -114,7 +130,7 @@
     document.querySelectorAll('[data-companion-mode]').forEach(b=>b.onclick=()=>{mode=b.dataset.companionMode;render();});
     $('companionClose').onclick=close;$('companionDialog').addEventListener('cancel',e=>{e.preventDefault();close();});
     $('companionForm').oninput=()=>{dirty=true;};
-    $('companionForm').onsubmit=e=>{e.preventDefault();const f=e.currentTarget;if(!f.reportValidity()||!editor)return;const values={...editor};['memberKey','date','time','service','plan','status','before','after','feedback','tags','followDate','followNote'].forEach(k=>values[k]=f.elements[k].value);values.followDone=f.elements.followDone.checked;if(values.followDate!==editor.followDate)values.followDone=false;persist(editor,values,true);};
+    $('companionForm').onsubmit=e=>{e.preventDefault();const f=e.currentTarget;if(!f.reportValidity()||!editor)return;const values={...editor};['memberKey','date','time','service','plan','status','feedback','followDate','followNote'].forEach(k=>values[k]=f.elements[k].value);for(const kind of ['before','after'])values[kind]=C.joinNote(selectedChoices(kind),f.elements[kind].value);values.tags=C.tags([...selectedChoices('tags'),...C.tags(f.elements.tags.value)].join('、')).join('、');values.followDone=f.elements.followDone.checked;if(values.followDate!==editor.followDate)values.followDone=false;persist(editor,values,true);};
     $('companionRetry').onclick=()=>{stop();start();};
     $('companionExport').onclick=()=>{if(!authorized()||!ready)return;const url=URL.createObjectURL(new Blob([JSON.stringify({format:'bori-companion',version:1,exportedAt:new Date().toISOString(),records},null,2)],{type:'application/json'}));const a=document.createElement('a');a.href=url;a.download='BORI-私人陪伴紀錄-'+C.today()+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};
     window.addEventListener('beforeunload',e=>{if(dirty||saving){e.preventDefault();e.returnValue='';}});

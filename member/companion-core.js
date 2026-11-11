@@ -7,6 +7,25 @@
   'use strict';
   const SERVICES = ['深度對談＋頌缽', '一對一深度對談', '頌缽體驗', '團體頌缽', '季度深度陪伴', '生命數字解讀'];
   const STATES = ['待開始', '陪伴中', '已完成', '已取消'];
+  const CHOICES = {
+    before: ['思緒紛亂', '感到緊繃', '有些疲憊', '情緒低落', '想安靜一下', '還說不清楚', '工作與方向', '人際與關係', '生活步調', '自我期待', '身體感受', '想更了解自己'],
+    after: ['被聽見與理解', '感到放鬆', '思緒較清楚', '看見自己的需要', '有新的角度', '願意接納自己', '找到一個小步驟', '想練習表達', '想調整生活步調', '想再留點時間', '仍有困惑', '感受暫時不明顯'],
+    tags: ['放鬆', '安心', '被理解', '溫暖', '平靜', '有力量', '思緒清晰', '想睡', '身體有感', '情緒浮現', '仍有緊繃', '暫無明顯感受']
+  };
+  // Human-readable encoding in the existing text fields; no database rule change.
+  // Unmarked legacy notes stay free text. Unknown saved choices remain editable.
+  function splitNote(value) {
+    const text = String(value || '');
+    const match = /^【複選重點】\n((?:- [^\r\n]+\n)*- [^\r\n]+)(?:\n\n【補充紀錄】\n([\s\S]*))?$/.exec(text);
+    if (!match) return {selected: [], extra: text};
+    return {selected: [...new Set(match[1].split('\n').map(line => line.slice(2)))], extra: match[2] || ''};
+  }
+  function joinNote(selected, extra) {
+    const choices = [...new Set(selected.map(s => String(s).trim()).filter(Boolean))];
+    const text = String(extra || '');
+    if (!choices.length) return text;
+    return '【複選重點】\n' + choices.map(s => '- ' + s).join('\n') + (text ? '\n\n【補充紀錄】\n' + text : '');
+  }
   const textFields = ['service', 'plan', 'before', 'after', 'feedback', 'tags', 'followNote'];
   function today(now = new Date()) {
     return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Taipei', year: 'numeric', month: '2-digit', day: '2-digit' }).format(now);
@@ -27,13 +46,14 @@
     return byId[0];
   }
   function tags(value) { return [...new Set(String(value || '').split(/[,，、\n]/).map(t => t.trim()).filter(Boolean))]; }
+  function hasFeedback(record) { return !!(String(record.feedback || '').trim() || tags(record.tags).length); }
   function tagCounts(records) {
     const counts = new Map();
-    records.filter(r => !r.archived && r.feedback.trim()).forEach(r => tags(r.tags).forEach(t => counts.set(t, (counts.get(t) || 0) + 1)));
+    records.filter(r => !r.archived && hasFeedback(r)).forEach(r => tags(r.tags).forEach(t => counts.set(t, (counts.get(t) || 0) + 1)));
     return [...counts].sort((a,b) => b[1] - a[1] || a[0].localeCompare(b[0]));
   }
   function filter(records, {memberKey='', date='', query='', mode='history', today: day=today()} = {}) {
-    return records.filter(r => (mode === 'archive' ? r.archived : !r.archived) && (!memberKey || r.memberKey === memberKey) && (!date || r.date === date) && (!query || [r.memberName, ...textFields.map(k=>r[k])].join('\n').toLowerCase().includes(query.toLowerCase())) && (mode !== 'follow' || (r.followDate && !r.followDone && r.status !== '已取消')) && (mode !== 'feedback' || r.feedback.trim())).sort((a,b) => mode === 'follow' ? a.followDate.localeCompare(b.followDate) : (b.date+b.time).localeCompare(a.date+a.time));
+    return records.filter(r => (mode === 'archive' ? r.archived : !r.archived) && (!memberKey || r.memberKey === memberKey) && (!date || r.date === date) && (!query || [r.memberName, ...textFields.map(k=>r[k])].join('\n').toLowerCase().includes(query.toLowerCase())) && (mode !== 'follow' || (r.followDate && !r.followDone && r.status !== '已取消')) && (mode !== 'feedback' || hasFeedback(r))).sort((a,b) => mode === 'follow' ? a.followDate.localeCompare(b.followDate) : (b.date+b.time).localeCompare(a.date+a.time));
   }
   function draft(input) {
     const out = {};
@@ -54,5 +74,5 @@
     if (current && current.revision !== expected) return;
     return {...record,revision:expected+1};
   }
-  return {SERVICES,STATES,today,validDate,members,resolveMember,tags,tagCounts,filter,draft,nextRevision};
+  return {SERVICES,STATES,CHOICES,splitNote,joinNote,today,validDate,members,resolveMember,tags,tagCounts,filter,draft,nextRevision};
 });
