@@ -14,7 +14,7 @@ function setup({grant=true}={}) {
  w.HTMLDialogElement.prototype.showModal=function(){this.setAttribute('open','')};w.HTMLDialogElement.prototype.close=function(){this.removeAttribute('open')};
  w.eval(fs.readFileSync(root+'/member/companion-core.js','utf8'));w.eval(fs.readFileSync(root+'/member/companion.js','utf8'));w.document.dispatchEvent(new w.Event('DOMContentLoaded'));w.BoriCompanion.start();
  const el=id=>w.document.getElementById(id), button=label=>[...el('companionList').querySelectorAll('button')].find(b=>b.textContent===label);
- async function submit(){el('companionForm').dispatchEvent(new w.Event('submit',{bubbles:true,cancelable:true}));await new Promise(r=>setImmediate(r));}
+ async function submit(){el('companionSave').click();await new Promise(r=>setImmediate(r));}
  return {dom,w,store,el,button,submit,emit,setReject(v){rejectWrite=v}};
 }
 test('UI: booking link, save, reopen, follow, feedback, archive/restore, logout cleanup',async()=>{const x=setup();try{
@@ -44,4 +44,20 @@ test('UI: multiselect, custom text and tags persist, reopen and deselect without
  checkbox('before','感到緊繃').click();checkbox('tags','平靜').click();await x.submit();
  const updated=x.store.companionRecords['new-1'];assert.doesNotMatch(updated.before,/感到緊繃/);assert.match(updated.before,/保留這段自己的話/);assert.equal(updated.tags,'踏實');
  x.w.BoriCompanion.openForBooking(1);checkbox('before','工作與方向').click();await x.submit();assert.equal(x.store.companionRecords['new-1'].before,'保留這段自己的話\n還有第二行');
+}finally{x.dom.window.close();}});
+test('UI: save click works without native form submission and does not duplicate a record',async()=>{const x=setup();try{
+ x.w.BoriCompanion.openForBooking(1);const f=x.el('companionForm');let nativeSubmits=0;
+ f.addEventListener('submit',e=>{nativeSubmits++;e.preventDefault();e.stopImmediatePropagation();},true);
+ assert.equal(x.el('companionSave').type,'button');f.elements.followNote.value='保留下一次關心';
+ x.el('companionSave').click();x.el('companionSave').click();await new Promise(r=>setImmediate(r));
+ assert.equal(nativeSubmits,0);assert.equal(Object.keys(x.store.companionRecords).length,1);assert.equal(x.store.companionRecords['new-1'].revision,1);
+ assert.equal(x.el('companionDialog').open,false);assert.match(x.el('companionMessage').textContent,/已確認儲存/);
+}finally{x.dom.window.close();}});
+test('UI: missing required fields show a useful error and keep notes until corrected',async()=>{const x=setup();try{
+ x.el('companionNew').click();const f=x.el('companionForm');f.elements.before.value='先填了很多內容';
+ await x.submit();assert.match(x.el('companionFormMessage').textContent,/請先選擇一位個案/);assert.equal(x.w.document.activeElement,f.elements.memberKey);assert.equal(f.elements.memberKey.getAttribute('aria-invalid'),'true');
+ assert.equal(f.elements.before.value,'先填了很多內容');assert.deepEqual(x.store.companionRecords,{});assert.equal(x.el('companionDialog').open,true);
+ f.elements.memberKey.value='memberA';f.elements.date.value='';await x.submit();assert.match(x.el('companionFormMessage').textContent,/服務日期/);assert.equal(f.elements.memberKey.hasAttribute('aria-invalid'),false);
+ f.elements.date.value='2026-11-11';f.elements.service.value='';await x.submit();assert.match(x.el('companionFormMessage').textContent,/服務類型/);
+ f.elements.service.value='頌缽體驗';await x.submit();assert.equal(x.el('companionDialog').open,false);assert.equal(x.store.companionRecords['new-1'].before,'先填了很多內容');
 }finally{x.dom.window.close();}});

@@ -22,6 +22,34 @@
     return (note.selected.length?'<div class="companion-note-chips">'+note.selected.map(s=>'<span>'+escText(s)+'</span>').join('')+'</div>':'') + (note.extra?'<p>'+escText(note.extra)+'</p>':note.selected.length?'':'<p>尚未記錄</p>');
   }
   function message(text, error=false) { const el=$('companionMessage'); el.textContent=text; el.setAttribute('role',error?'alert':'status'); el.classList.toggle('is-error',error); }
+  function formMessage(text, error=false) { const el=$('companionFormMessage');el.textContent=text;el.setAttribute('role',error?'alert':'status');el.classList.toggle('is-error',error); }
+  function clearFormErrors() {
+    $('companionForm').querySelectorAll('[data-companion-error-for]').forEach(el=>{
+      const field=$('companionForm').elements[el.dataset.companionErrorFor];
+      if(field){field.removeAttribute('aria-invalid');const ids=(field.getAttribute('aria-describedby')||'').split(' ').filter(id=>id&&id!==el.id);if(ids.length)field.setAttribute('aria-describedby',ids.join(' '));else field.removeAttribute('aria-describedby');}
+      el.remove();
+    });
+  }
+  function saveEditor() {
+    const f=$('companionForm');if(saving)return;
+    if(!editor){formMessage('請重新開啟紀錄表單後再儲存',true);return;}
+    clearFormErrors();
+    const invalid=[...f.elements].find(field=>field.willValidate&&!field.validity.valid);
+    if(invalid){
+      const labels={memberKey:'個案',service:'服務類型',date:'服務日期',time:'時間',followDate:'預定關心日期'};
+      const label=labels[invalid.name]||'欄位';
+      const text=invalid.validity.valueMissing?(invalid.name==='memberKey'?'請先選擇一位個案，再儲存紀錄。':'請填寫「'+label+'」，再儲存紀錄。'):'請確認「'+label+'」的格式或長度，再儲存紀錄。';
+      const help=document.createElement('span');help.className='companion-field-error';help.id='companion-error-'+invalid.name;help.dataset.companionErrorFor=invalid.name;help.textContent=text;
+      invalid.insertAdjacentElement('afterend',help);invalid.setAttribute('aria-invalid','true');invalid.setAttribute('aria-describedby',((invalid.getAttribute('aria-describedby')||'')+' '+help.id).trim());
+      formMessage(text+' 已填內容仍保留。',true);invalid.focus();invalid.scrollIntoView?.({block:'center'});return;
+    }
+    const values={...editor};
+    ['memberKey','date','time','service','plan','status','feedback','followDate','followNote'].forEach(k=>values[k]=f.elements[k].value);
+    for(const kind of ['before','after'])values[kind]=C.joinNote(selectedChoices(kind),f.elements[kind].value);
+    values.tags=C.tags([...selectedChoices('tags'),...C.tags(f.elements.tags.value)].join('、')).join('、');values.followDone=f.elements.followDone.checked;
+    if(values.followDate!==editor.followDate)values.followDone=false;
+    persist(editor,values,true);
+  }
   function detach(list) { list.splice(0).forEach(([ref,cb]) => ref.off('value',cb)); }
   function watch(ref, cb, list, onError) { ref.on('value',cb,onError); list.push([ref,cb]); }
   function authorized() { return allowed && owner && auth.currentUser?.uid === owner && currentUser?.role === 'admin'; }
@@ -88,7 +116,7 @@
   }
   function edit(record=null,booking=null){
     if(!authorized()||!ready)return;
-    const form=$('companionForm');form.reset();dirty=false;
+    const form=$('companionForm');form.reset();clearFormErrors();dirty=false;
     const initial=record?{...record}:{id:database.ref('companionRecords').push().key,revision:0,memberKey,bookingId:booking?.key||'',date:booking?.date||C.today(),time:booking?.time||'',service:booking?.type==='group'?'團體頌缽':'深度對談＋頌缽',plan:'',status:'待開始',before:'',after:'',feedback:'',tags:'',followDate:'',followNote:'',followDone:false,archived:false};
     if(booking)initial.memberKey=C.resolveMember(memberList,booking).key;
     editor=initial;
@@ -99,10 +127,10 @@
     const feelings=C.tags(initial.tags);fillChoices('tags',feelings.filter(tag=>C.CHOICES.tags.includes(tag)));form.elements.tags.value=feelings.filter(tag=>!C.CHOICES.tags.includes(tag)).join('、');
     form.elements.followDone.checked=initial.followDone;sel.disabled=!!record||!!booking;
     $('companionBookingInfo').textContent=initial.bookingId?'連結預約 #'+initial.bookingId+' · 個案紀錄進度不會更動預約狀態或扣點':'獨立服務紀錄・不會新增預約或扣點';
-    $('companionFormMessage').textContent='';updateControls();$('companionDialog').showModal();sel.focus();
+    formMessage('');updateControls();$('companionDialog').showModal();sel.focus();
   }
   async function persist(base, values, fromEditor=false){
-    if(!authorized()||!ready||!connected||saving){message('請確認已連線且私人紀錄已載入',true);return;}
+    if(!authorized()||!ready||!connected||saving){if(fromEditor)formMessage('請確認已連線且私人紀錄已載入；已填內容仍保留。',true);else message('請確認已連線且私人紀錄已載入',true);return;}
     const session=generation, uid=owner;let committedRecord;
     try{
       const clean=C.draft(values);
@@ -110,14 +138,14 @@
       if(!base.revision&&!member)throw Error('請選擇現有會員');
       if(base.revision&&values.memberKey!==base.memberKey)throw Error('已建立的紀錄不可改掛會員');
       const payload={...clean,memberKey:values.memberKey,memberId:String(base.revision?base.memberId:member.id),memberName:base.revision?base.memberName:member.name,bookingId:base.bookingId||'',createdAt:base.createdAt||firebase.database.ServerValue.TIMESTAMP,createdBy:base.createdBy||uid,updatedAt:firebase.database.ServerValue.TIMESTAMP,updatedBy:uid};
-      saving=true;updateControls();if(fromEditor)$('companionFormMessage').textContent='正在等待雲端確認，請先保留此視窗…';
+      saving=true;updateControls();if(fromEditor)formMessage('正在等待雲端確認，請先保留此視窗…');
       const result=await database.ref('companionRecords/'+base.id).transaction(current=>C.nextRevision(current,base.revision||0,payload),undefined,false);
       if(!result.committed)throw Error('這筆紀錄已有較新版本，未覆蓋雲端資料。請先複製本次文字，再關閉並重新開啟紀錄');
       committedRecord=result.snapshot.val();
       if(session!==generation||auth.currentUser?.uid!==uid)return;
       records=[...records.filter(r=>r.id!==base.id),{...committedRecord,id:base.id}];
       if(fromEditor)hideEditor();message('已確認儲存至雲端');render();
-    }catch(e){if(session!==generation)return;const text=/permission|denied/i.test(e.message||'')?'雲端拒絕儲存，請確認私人紀錄權限；本次內容仍保留在表單':e.message||'儲存失敗，請重試';if(fromEditor)$('companionFormMessage').textContent=text;else message(text,true);}
+    }catch(e){if(session!==generation)return;const text=/permission|denied/i.test(e.message||'')?'雲端拒絕儲存，請確認私人紀錄權限；本次內容仍保留在表單':e.message||'儲存失敗，請重試';if(fromEditor){formMessage(text,true);$('companionFormMessage').scrollIntoView?.({block:'nearest'});}else message(text,true);}
     finally{saving=false;updateControls();}
   }
   function close(){if(saving)return;if(dirty&&!confirm('這次修改尚未儲存，要放棄修改嗎？'))return;hideEditor();}
@@ -130,7 +158,10 @@
     document.querySelectorAll('[data-companion-mode]').forEach(b=>b.onclick=()=>{mode=b.dataset.companionMode;render();});
     $('companionClose').onclick=close;$('companionDialog').addEventListener('cancel',e=>{e.preventDefault();close();});
     $('companionForm').oninput=()=>{dirty=true;};
-    $('companionForm').onsubmit=e=>{e.preventDefault();const f=e.currentTarget;if(!f.reportValidity()||!editor)return;const values={...editor};['memberKey','date','time','service','plan','status','feedback','followDate','followNote'].forEach(k=>values[k]=f.elements[k].value);for(const kind of ['before','after'])values[kind]=C.joinNote(selectedChoices(kind),f.elements[kind].value);values.tags=C.tags([...selectedChoices('tags'),...C.tags(f.elements.tags.value)].join('、')).join('、');values.followDone=f.elements.followDone.checked;if(values.followDate!==editor.followDate)values.followDone=false;persist(editor,values,true);};
+    // Save with an ordinary button: embedded previews may disallow native form submission.
+    // Explicit validation still runs; no form navigation or sandbox permission is needed.
+    $('companionSave').onclick=saveEditor;
+    $('companionForm').onsubmit=e=>{e.preventDefault();saveEditor();};
     $('companionRetry').onclick=()=>{stop();start();};
     $('companionExport').onclick=()=>{if(!authorized()||!ready)return;const url=URL.createObjectURL(new Blob([JSON.stringify({format:'bori-companion',version:1,exportedAt:new Date().toISOString(),records},null,2)],{type:'application/json'}));const a=document.createElement('a');a.href=url;a.download='BORI-私人陪伴紀錄-'+C.today()+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};
     window.addEventListener('beforeunload',e=>{if(dirty||saving){e.preventDefault();e.returnValue='';}});
