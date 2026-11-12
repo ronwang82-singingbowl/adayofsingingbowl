@@ -97,18 +97,37 @@
     const rows=C.filter(records,{memberKey,query:$('companionQuery').value.trim(),date:$('companionDate').value,mode});
     const due=records.filter(r=>!r.archived&&r.followDate&&!r.followDone&&r.status!=='已取消'&&r.followDate<=C.today());
     $('companionDueCount').textContent=String(due.length);
+    const expandedGroups=new Set([...$('companionList').querySelectorAll('.companion-person[open]')].map(el=>el.dataset.memberKey));
+    const expandedRecords=new Set([...$('companionList').querySelectorAll('.companion-record[open]')].map(el=>el.dataset.recordId));
     $('companionList').replaceChildren();
     if(!rows.length){const p=document.createElement('p');p.className='companion-empty';p.textContent=ready?'目前沒有符合條件的紀錄。可以選一位會員，留下第一段陪伴。':'正在載入…';$('companionList').append(p);}
-    rows.forEach(r=>{
-      const card=document.createElement('article');card.className='companion-card';
+    const groups=new Map();
+    rows.forEach(r=>{const key=r.memberKey||'record:'+r.id;if(!groups.has(key))groups.set(key,[]);groups.get(key).push(r);});
+    groups.forEach((items,key)=>{
+      const group=document.createElement('details');group.className='companion-person';group.dataset.memberKey=key;group.open=expandedGroups.has(key);
+      const member=memberList.find(m=>m.key===key);
+      const latest=[...items].sort((a,b)=>(b.date+' '+b.time).localeCompare(a.date+' '+a.time))[0];
+      const follows=items.filter(r=>r.followDate&&!r.followDone&&r.status!=='已取消'&&!r.archived).sort((a,b)=>a.followDate.localeCompare(b.followDate));
+      const summary=document.createElement('summary');summary.className='companion-person-summary';
+      summary.innerHTML=`<span class="companion-person-name">${escText(member?.name||latest.memberName)}</span><span class="companion-person-count">${items.length} 筆紀錄</span><span class="companion-person-meta">最近服務 ${escText(latest.date)}${follows.length?' · '+(follows[0].followDate<=C.today()?'待關心 ':'下次關心 ')+escText(follows[0].followDate):''}</span><span class="companion-expand-hint" aria-hidden="true"></span>`;
+      group.append(summary);
+      const timeline=document.createElement('div');timeline.className='companion-timeline';group.append(timeline);
+      [...items].sort((a,b)=>(b.date+' '+b.time).localeCompare(a.date+' '+a.time)).forEach(r=>{
+      const card=document.createElement('details');card.className='companion-card companion-record';card.dataset.recordId=r.id;card.open=expandedRecords.has(r.id);
       const member=memberList.find(m=>m.key===r.memberKey);
       card.innerHTML=`<div class="companion-card-head"><div><small>${escText(r.date)} ${escText(r.time)} ${r.bookingId?'・預約 #'+escText(r.bookingId):'・獨立服務紀錄'}</small><h3>${escText(member?.name||r.memberName)} <span>${escText(r.service)}</span></h3></div><span class="companion-badge">${escText(r.status)}</span></div>${r.plan?'<p class="companion-plan">陪伴方案：'+escText(r.plan)+'</p>':''}<div class="companion-notes">${[['對談前',r.before],['對談後與下一步',r.after],['體驗回饋',r.feedback]].map(([label,value])=>`<section><h4>${label}</h4>${label==='體驗回饋'?'<p>'+escText(value||'尚未記錄')+'</p>':noteHtml(value)}</section>`).join('')}</div><p class="companion-tagline">${C.tags(r.tags).map(t=>'<span>'+escText(t)+'</span>').join('')}</p>${r.followDate?`<p class="companion-follow">${r.followDone?'✓ 已完成關心':r.followDate<=C.today()?'待關心':'預定關心'} · ${escText(r.followDate)}<br>${escText(r.followNote)}</p>`:''}<div class="companion-card-actions"></div>`;
+      const body=document.createElement('div');body.className='companion-record-body';while(card.firstChild)body.append(card.firstChild);
+      const recordSummary=document.createElement('summary');recordSummary.className='companion-record-summary';
+      recordSummary.innerHTML=`<span class="companion-record-date">${escText(r.date)}${r.time?' '+escText(r.time):''}</span><span class="companion-record-service">${escText(r.service)}</span><span class="companion-badge">${escText(r.status)}</span><span class="companion-record-tags">${C.tags(r.tags).slice(0,3).map(escText).join(' · ')}${C.tags(r.tags).length>3?'…':''}${r.followDate?' · '+(r.followDone?'已關心 ':'關心 ')+escText(r.followDate):''}</span>`;
+      card.append(recordSummary,body);
       const actions=card.querySelector('.companion-card-actions');
       function button(label,fn){const el=document.createElement('button');el.type='button';el.className='table-action-btn secondary';el.textContent=label;el.onclick=fn;actions.append(el);}
       button('查看／編輯',()=>edit(r));
       if(r.followDate&&!r.archived)button(r.followDone?'重新開啟追蹤':'完成關心',()=>persist(r,{...r,followDone:!r.followDone}));
       button(r.archived?'還原紀錄':'封存',()=>persist(r,{...r,archived:!r.archived}));
-      $('companionList').append(card);
+      timeline.append(card);
+      });
+      $('companionList').append(group);
     });
     $('companionTags').replaceChildren();
     if(mode==='feedback') C.tagCounts(C.filter(records,{memberKey,date:$('companionDate').value})).forEach(([tag,n])=>{const b=document.createElement('button');b.type='button';b.textContent=tag+' · '+n+' 次';b.onclick=()=>{$('companionQuery').value=tag;render();};$('companionTags').append(b);});

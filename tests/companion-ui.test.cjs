@@ -61,3 +61,18 @@ test('UI: missing required fields show a useful error and keep notes until corre
  f.elements.date.value='2026-11-11';f.elements.service.value='';await x.submit();assert.match(x.el('companionFormMessage').textContent,/服務類型/);
  f.elements.service.value='頌缽體驗';await x.submit();assert.equal(x.el('companionDialog').open,false);assert.equal(x.store.companionRecords['new-1'].before,'先填了很多內容');
 }finally{x.dom.window.close();}});
+test('UI: compact groups keep same-person history together without merging names, preserve expansion and filter dates',async()=>{const x=setup();try{
+ x.w.BoriCompanion.openForBooking(1);await x.submit();const base=x.store.companionRecords['new-1'];
+ x.store.companionRecords.second={...base,date:'2026-11-12',before:'另一段完整內容'};
+ x.store.users.memberB.name='測試甲';x.emit('users');
+ x.store.companionRecords.other={...base,memberKey:'memberB',memberId:'2',date:'2026-11-11'};
+ x.emit('companionRecords');x.el('companionMember').value='';x.el('companionMember').dispatchEvent(new x.w.Event('change'));
+ let groups=x.el('companionList').querySelectorAll('.companion-person');assert.equal(groups.length,2);assert.equal([...groups].every(g=>!g.open),true);
+ let group=[...groups].find(g=>g.dataset.memberKey==='memberA');assert.match(group.querySelector('summary').textContent,/2 筆紀錄/);
+ assert.deepEqual([...group.querySelectorAll('.companion-record-date')].map(e=>e.textContent.slice(0,10)),['2026-11-12','2026-11-10']);
+ assert.equal([...group.querySelectorAll('.companion-record')].every(r=>!r.open),true);
+ group.open=true;group.querySelector('.companion-record').open=true;x.w.BoriCompanion.render();
+ group=x.el('companionList').querySelector('[data-member-key="memberA"]');assert.equal(group.open,true);assert.equal(group.querySelector('.companion-record').open,true);assert.match(group.textContent,/另一段完整內容/);
+ x.el('companionDate').value='2026-11-12';x.el('companionDate').dispatchEvent(new x.w.Event('change'));
+ assert.equal(x.el('companionList').querySelectorAll('.companion-person').length,1);assert.equal(x.el('companionList').querySelectorAll('.companion-record').length,1);
+}finally{x.dom.window.close();}});
