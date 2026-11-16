@@ -1,0 +1,90 @@
+{
+  "companionAdmins": {
+    ".read": false,
+    ".write": false,
+    "$uid": {
+      ".read": "auth != null && auth.uid === $uid"
+    }
+  },
+  "companionRecords": {
+    ".read": "auth != null && root.child('companionAdmins').child(auth.uid).val() === true",
+    ".indexOn": [
+      "memberKey",
+      "date",
+      "followDate"
+    ],
+    "$recordId": {
+      ".write": "auth != null && root.child('companionAdmins').child(auth.uid).val() === true && newData.exists()",
+      ".validate": "newData.hasChildren(['service','plan','before','after','feedback','tags','followNote','memberKey','memberId','memberName','bookingId','createdBy','updatedBy','date','followDate','time','status','followDone','archived','createdAt','updatedAt','revision']) && (data.exists() || (root.child('users').child(newData.child('memberKey').val()).exists() && root.child('users').child(newData.child('memberKey').val()).child('id').val() + '' === newData.child('memberId').val() && (newData.child('bookingId').val() === '' || root.child('bookings').child(newData.child('bookingId').val()).child('userId').val() + '' === newData.child('memberId').val())))",
+      "service": {
+        ".validate": "newData.isString() && newData.val().length <= 300 && newData.val().length > 0"
+      },
+      "plan": {
+        ".validate": "newData.isString() && newData.val().length <= 300"
+      },
+      "before": {
+        ".validate": "newData.isString() && newData.val().length <= 10000"
+      },
+      "after": {
+        ".validate": "newData.isString() && newData.val().length <= 10000"
+      },
+      "feedback": {
+        ".validate": "newData.isString() && newData.val().length <= 10000"
+      },
+      "tags": {
+        ".validate": "newData.isString() && newData.val().length <= 300"
+      },
+      "followNote": {
+        ".validate": "newData.isString() && newData.val().length <= 10000"
+      },
+      "memberKey": {
+        ".validate": "newData.isString() && newData.val().length <= 300 && (!data.exists() || newData.val() === data.val())"
+      },
+      "memberId": {
+        ".validate": "newData.isString() && newData.val().length <= 300 && (!data.exists() || newData.val() === data.val())"
+      },
+      "memberName": {
+        ".validate": "newData.isString() && newData.val().length <= 300 && (!data.exists() || newData.val() === data.val())"
+      },
+      "bookingId": {
+        ".validate": "newData.isString() && newData.val().length <= 300 && (!data.exists() || newData.val() === data.val())"
+      },
+      "createdBy": {
+        ".validate": "newData.isString() && newData.val().length <= 300 && (!data.exists() || newData.val() === data.val()) && newData.val() === (data.exists() ? data.val() : auth.uid)"
+      },
+      "updatedBy": {
+        ".validate": "newData.isString() && newData.val() === auth.uid"
+      },
+      "date": {
+        ".validate": "newData.isString() && newData.val().matches(/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/)"
+      },
+      "followDate": {
+        ".validate": "newData.isString() && (newData.val() === '' || newData.val().matches(/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/))"
+      },
+      "time": {
+        ".validate": "newData.isString() && (newData.val() === '' || newData.val().matches(/^([01][0-9]|2[0-3]):[0-5][0-9]$/))"
+      },
+      "status": {
+        ".validate": "newData.val() === '待開始' || newData.val() === '陪伴中' || newData.val() === '已完成' || newData.val() === '已取消'"
+      },
+      "followDone": {
+        ".validate": "newData.isBoolean()"
+      },
+      "archived": {
+        ".validate": "newData.isBoolean()"
+      },
+      "createdAt": {
+        ".validate": "newData.isNumber() && ((!data.exists() && newData.val() === now) || (data.exists() && newData.val() === data.val()))"
+      },
+      "updatedAt": {
+        ".validate": "newData.isNumber() && newData.val() === now"
+      },
+      "revision": {
+        ".validate": "newData.isNumber() && ((!data.exists() && newData.val() === 1) || (data.exists() && newData.val() === data.val() + 1))"
+      },
+      "$other": {
+        ".validate": false
+      }
+    }
+  }
+}
